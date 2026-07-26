@@ -143,6 +143,30 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
+function sitemapXml(skillNames) {
+  const urls = [
+    { loc: SITE_URL, priority: "0.9" },
+    ...skillNames.sort().map((name) => ({
+      loc: `${SITE_URL}s/${encodeURIComponent(name)}.html`,
+      priority: "0.7",
+    })),
+  ];
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls
+  .map(
+    ({ loc, priority }) => `  <url>
+    <loc>${esc(loc)}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>${priority}</priority>
+  </url>`,
+  )
+  .join("\n")}
+</urlset>
+`;
+}
+
 function stripMd(s) {
   return String(s ?? "")
     .replace(/`([^`]+)`/g, "$1")
@@ -872,7 +896,8 @@ ${whenHtml}${shotsSectionHtml}
   }
 
   await fs.writeFile(path.join(DOCS, ".nojekyll"), "");
-  console.log(`Built docs/index.html + ${Object.keys(skills).length} skill pages into docs/s/`);
+  await fs.writeFile(path.join(DOCS, "sitemap.xml"), sitemapXml(Object.keys(skills)));
+  console.log(`Built docs/index.html + ${Object.keys(skills).length} skill pages + docs/sitemap.xml`);
 }
 
 await main();

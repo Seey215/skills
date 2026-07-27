@@ -11,11 +11,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://mr-kelly.github.io/skills/s/app-in-skill-creator.html</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://mr-kelly.github.io/skills/s/kelly-ads.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -37,6 +32,11 @@
   </url>
   <url>
     <loc>https://mr-kelly.github.io/skills/s/kelly-ai-newsroom.html</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://mr-kelly.github.io/skills/s/kelly-app-creator.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

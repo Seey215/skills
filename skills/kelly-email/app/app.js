@@ -1,5 +1,5 @@
 // Thin entry point: every real implementation lives under ./js/*.js as plain
-// ES modules (no build step, no framework — see app-in-skill-creator's
+// ES modules (no build step, no framework — see kelly-app-creator's
 // runtime-architecture.md). This file only wires the modules together and
 // bootstraps the page.
 import { toast } from "./js/api.js";

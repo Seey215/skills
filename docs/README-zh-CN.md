@@ -67,7 +67,7 @@
 
 ## App-in-Skill 规范基线
 
-全部 60 个 `kelly-*` 工作流都按仓库内的 `app-in-skill-creator` contract 完成审计。这套共同基线落实在代码里，不只是文档约定：
+全部 60 个 `kelly-*` 工作流都按仓库内的 `kelly-app-creator` contract 完成审计。这套共同基线落实在代码里，不只是文档约定：
 
 - **首次使用 onboarding** —— 每个 App 在读取 live data 前都有识别 provider 的 setup route。浏览器只引导用户进入 provider 自己的安全配置流程，不收集密码或 API key。
 - **确定性 handoff** —— 每个工作流都带 UI state validator；agent 到 App 的交接文件缺失或格式错误时会明确失败。使用 Busabase 的工作流还声明带 fingerprint 的 schema manifest。
@@ -97,12 +97,12 @@
 
 ## Skills
 
-`kelly-*` 是日常业务工具；`agent-rules`、`app-in-skill-creator`、`publish-skills` 这类 helper skills 用来维护这个工作区本身。
+`kelly-*` 是日常业务工具；`agent-rules`、`kelly-app-creator`、`publish-skills` 这类 helper skills 用来维护这个工作区本身。
 
 | Skill | 做什么 | 什么时候用 | 详情 |
 | --- | --- | --- | --- |
 | `agent-rules` | 让 Codex、Claude Code、Copilot、Kiro、Cursor、Gemini 等 agent 共享同一套规则和 skills。 | 设置多 agent repo、检查规则漂移、修复 rule/skill symlink 时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/agent-rules.html?lang=zh) |
-| `app-in-skill-creator` | 记录和脚手架化 App-in-Skill 模式：本地 review UI、handoff 文件、锁、脚本、安全边界，以及可选截图规范——只有明确需要或已有截图时，才放进 skill 内部的 `assets/screenshots/`。 | 构建带浏览器 review queue、approval desk、dashboard 或本地 workflow 的 skill 时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/app-in-skill-creator.html?lang=zh) |
+| `kelly-app-creator` | 记录和脚手架化 App-in-Skill 模式：本地 review UI、handoff 文件、锁、脚本、安全边界，以及可选截图规范——只有明确需要或已有截图时，才放进 skill 内部的 `assets/screenshots/`。旧名 `app-in-skill-creator` 保留为兼容软链接。 | 构建带浏览器 review queue、approval desk、dashboard 或本地 workflow 的 skill 时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-app-creator.html?lang=zh) |
 | `publish-skills` | 把 agent skills 和 MCP servers 发布到各大市场和注册表：扫描私密数据、用 `gh skill` 校验、切版本、接 Claude `/plugin` 和 Codex marketplace，并准备 MCP Registry 和精选商店。 | 发布、上架、分发 skills、plugins 或 MCP servers 到 skills.sh、Claude Code、Codex 或 MCP Registry 时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/publish-skills.html?lang=zh) |
 | `kelly-email` | AI 辅助 inbox-zero：跨邮箱 triage 未读邮件、起草回复、准备清理动作，并在本地 UI 里人工批准后执行。 | 处理未读邮件、写 support 回复、批准后归档/标记已读，或用 App-in-Skill UI 管理邮件时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-email.html?lang=zh) |
 | `kelly-finance` | 构建和审计财务三表模型、经营预测、预算、现金 runway、SaaS/unit economics 包，以及可交付的 Excel 财务输出。 | 做财务三表、融资预测、董事会财务包、情景分析、资产负债表检查、营运资本/资本开支/债务 schedule，或修三表勾稽错误时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-finance.html?lang=zh) |

@@ -131,7 +131,7 @@ const GROUPS = [
     id: "workspace",
     en: "Workspace Helpers",
     zh: "工作区工具",
-    skills: ["agent-rules", "app-in-skill-creator", "publish-skills"],
+    skills: ["agent-rules", "kelly-app-creator", "publish-skills"],
   },
 ];
 

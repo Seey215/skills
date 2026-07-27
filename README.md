@@ -67,7 +67,7 @@ This is not ad-hoc: the pattern follows the **[App-in-Skill specification](https
 
 ## App-in-Skill Compliance
 
-All 60 `kelly-*` workflows are audited against the repository's `app-in-skill-creator` contract. The shared baseline is enforced in code, not left as documentation-only guidance:
+All 60 `kelly-*` workflows are audited against the repository's `kelly-app-creator` contract. The shared baseline is enforced in code, not left as documentation-only guidance:
 
 - **First-run onboarding** — every app exposes a provider-aware setup route before live data is used. Setup points users to the provider's own secure configuration flow and never collects passwords or API keys in the browser UI.
 - **Deterministic handoff** — every workflow ships a UI-state validator and fails loudly when the agent-to-app handoff is absent or malformed. Busabase-backed workflows also declare a fingerprinted schema manifest.
@@ -97,12 +97,12 @@ The audit gate runs repository lint and type checks, validates every skill packa
 
 ## Skills
 
-The `kelly-*` skills are the everyday business tools. Helper skills such as `agent-rules`, `app-in-skill-creator`, and `publish-skills` support the workspace itself.
+The `kelly-*` skills are the everyday business tools. Helper skills such as `agent-rules`, `kelly-app-creator`, and `publish-skills` support the workspace itself.
 
 | Skill | What It Does | When To Use It | Details |
 | --- | --- | --- | --- |
 | `agent-rules` | Keeps rules and skills for Codex, Claude Code, Copilot, Kiro, Cursor, and Gemini aligned from one source of truth. It creates and verifies symlinks so agents share `AGENTS.md` and `.agents/skills/`. | Use it when setting up a repo for multiple coding agents, checking agent rule drift, or fixing broken skill/rule symlinks. | [View ↗](https://mr-kelly.github.io/skills/s/agent-rules.html) |
-| `app-in-skill-creator` | Documents and scaffolds the App-in-Skill pattern: local review UI, handoff files, locks, scripts, safe approval boundaries, and optional skill-local screenshots under `assets/screenshots/` only when screenshots are requested or already exist. | Use it when building a skill that needs a browser-based review queue, approval desk, dashboard, or lightweight local workflow. | [View ↗](https://mr-kelly.github.io/skills/s/app-in-skill-creator.html) |
+| `kelly-app-creator` | Documents and scaffolds the App-in-Skill pattern: local review UI, handoff files, locks, scripts, safe approval boundaries, and optional skill-local screenshots under `assets/screenshots/` only when screenshots are requested or already exist. Still reachable under the legacy name `app-in-skill-creator`, which is a compatibility symlink. | Use it when building a skill that needs a browser-based review queue, approval desk, dashboard, or lightweight local workflow. | [View ↗](https://mr-kelly.github.io/skills/s/kelly-app-creator.html) |
 | `publish-skills` | Publishes agent skills and MCP servers to marketplaces and registries: security-scans for private data, validates with `gh skill`, cuts a release, wires the Claude `/plugin` and Codex marketplaces, and preps the MCP Registry and curated stores. | Use it when publishing, releasing, or listing skills, plugins, or MCP servers to skills.sh, Claude Code, Codex, or the MCP Registry. | [View ↗](https://mr-kelly.github.io/skills/s/publish-skills.html) |
 | `kelly-email` | Runs an AI-assisted inbox-zero workflow across configured email accounts. It triages unread mail, drafts replies, prepares cleanup actions, and uses a local UI for human approval before execution. | Use it when processing unread email, drafting support replies, archiving or marking messages read after approval, or managing email through an App-in-Skill UI. | [View ↗](https://mr-kelly.github.io/skills/s/kelly-email.html) |
 | `kelly-finance` | Builds and audits finance three-statement models, operating forecasts, budgets, cash runway models, SaaS/unit-economics packs, and Excel-ready finance outputs. | Use it when making 财务三表, investor projections, board finance packs, scenario cases, balance-sheet checks, working-capital schedules, capex/debt schedules, or repairing broken model links. | [View ↗](https://mr-kelly.github.io/skills/s/kelly-finance.html) |

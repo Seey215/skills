@@ -1,10 +1,10 @@
 ---
-name: app-in-skill-creator
+name: kelly-app-creator
 license: MIT
-description: "Create or update App-in-Skill patterns: Codex skills that bundle a local provider-backed web app for review, approval, dashboards, or lightweight workflows. Use when the user wants a skill with an embedded local UI, provider handoff, local files, Busabase, locks, app launcher, schemas, or a reusable App-in-Skill scaffold."
+description: "Create or update App-in-Skill patterns: Codex skills that bundle a local provider-backed web app for review, approval, dashboards, or lightweight workflows. Use when the user invokes $kelly-app-creator (or the legacy alias $app-in-skill-creator), or wants a skill with an embedded local UI, provider handoff, local files, Busabase, locks, app launcher, schemas, or a reusable App-in-Skill scaffold."
 ---
 
-# App-in-Skill Creator
+# Kelly App Creator (App-in-Skill Creator)
 
 ## Purpose
 

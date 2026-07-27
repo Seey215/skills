@@ -44,8 +44,8 @@
       "strict": false,
       "skills": [
         "./skills/agent-rules",
-        "./skills/app-in-skill-creator",
         "./skills/kelly-ads",
+        "./skills/kelly-app-creator",
         "./skills/kelly-audit",
         "./skills/kelly-writer",
         "./skills/kelly-crm",

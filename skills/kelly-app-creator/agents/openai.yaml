@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kelly App Creator"
+  short_description: "Scaffold skills with local review UIs"
+  default_prompt: "Use $kelly-app-creator to design a file-backed local UI inside my skill."

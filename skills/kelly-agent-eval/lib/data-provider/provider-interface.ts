@@ -1,6 +1,6 @@
 // The polymorphic contract shared by every provider (local-file today; a
 // future postgres/aitable/notion/busabase backend later). See
-// references/provider-interface.ts in app-in-skill-creator for the origin of
+// references/provider-interface.ts in kelly-app-creator for the origin of
 // this pattern. Adapted to the Agent Eval & Regression Board domain: cases are
 // reviewed (mark_blocking / mark_acceptable), and a separate release verdict
 // (approve_release / block_release) is recorded once per run.

@@ -1,7 +1,7 @@
 // Provider contract for kelly-disclosure-tracker. The app server and scripts
 // depend on this interface, not on node:fs directly, so the same UI logic can run
 // against a local-file store today and a shared/cloud store later without a
-// rewrite (see the Data Provider Spectrum in app-in-skill-creator/SKILL.md).
+// rewrite (see the Data Provider Spectrum in kelly-app-creator/SKILL.md).
 
 import type { Batch, Config, ConfigResult, Decision, DecisionsFile } from "../../app/server/types.ts";
 

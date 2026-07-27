@@ -1,5 +1,5 @@
 // The polymorphic data-provider contract for kelly-llm-gateway. Adapted from
-// app-in-skill-creator/references/provider-interface.ts. Every provider (the
+// kelly-app-creator/references/provider-interface.ts. Every provider (the
 // default local-file provider, and future db/cloud backends) implements this
 // same shape so the Hono app and scripts can call `getProvider()` without
 // knowing the backend. `class … implements DataProvider` is checked at author

@@ -11,7 +11,7 @@ import { store } from "./store.js";
 // back into render()/refreshHyperframeStatus()/shotsForEpisode() — functions
 // that live in modules which themselves depend on this one (bindForm). Rather
 // than a direct circular import, app.js registers the real implementations
-// once every module has loaded. See frontend-modules.md in app-in-skill-creator.
+// once every module has loaded. See frontend-modules.md in kelly-app-creator.
 const hooks = {
   render: () => {},
   refreshHyperframeStatus: async () => {},

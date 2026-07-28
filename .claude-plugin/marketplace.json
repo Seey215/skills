@@ -45,7 +45,7 @@
       "skills": [
         "./skills/agent-rules",
         "./skills/kelly-ads",
-        "./skills/kelly-app-creator",
+        "./skills/kelly-app-skill-creator",
         "./skills/kelly-audit",
         "./skills/kelly-writer",
         "./skills/kelly-crm",
@@ -54,6 +54,7 @@
         "./skills/kelly-email",
         "./skills/kelly-feedback",
         "./skills/kelly-inquiry",
+        "./skills/kelly-invest-stock",
         "./skills/kelly-lesson",
         "./skills/kelly-listing",
         "./skills/kelly-messenger",

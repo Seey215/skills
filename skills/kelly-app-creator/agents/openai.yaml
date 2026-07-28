@@ -1,4 +1,0 @@
-interface:
-  display_name: "Kelly App Creator"
-  short_description: "Design Busabase human-and-Agent operating workflows"
-  default_prompt: "Use $kelly-app-creator with $busabase and $busabase-app-creator to design a Busabase-only Research, Plan, Action, Retrospective app."

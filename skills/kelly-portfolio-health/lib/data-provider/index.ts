@@ -3,7 +3,7 @@ import { type DataProvider, assertProvider } from "./provider-interface.ts";
 
 // Provider selector. KELLY_PORTFOLIO_HEALTH_DATA_PROVIDER=local (default).
 // Reserve postgres / aitable / notion / busabase for future implementations —
-// see kelly-app-creator's Data Provider Spectrum.
+// see kelly-app-skill-creator's Data Provider Spectrum.
 let cached: DataProvider | null = null;
 
 export function getProvider(): DataProvider {

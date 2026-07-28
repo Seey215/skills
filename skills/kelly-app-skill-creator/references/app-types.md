@@ -1,4 +1,4 @@
-# App Types
+# Busabase App Types
 
 Choose the smallest product shape that supports the recurring operation. `$busabase-app-creator` decides the technical resource and UI implementation.
 

@@ -15,7 +15,7 @@ import type {
 // This module is the only place app/server code touches persistence, and it
 // only ever goes through lib/data-provider — never node:fs directly — so the
 // same logic can later run against a cloud provider (see Data Provider
-// Spectrum in the kelly-app-creator skill).
+// Spectrum in the kelly-app-skill-creator skill).
 
 export async function ensureDirs(): Promise<void> {
   // No-op placeholder kept for launcher symmetry with other App-in-Skills;

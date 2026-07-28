@@ -1,5 +1,5 @@
 // The polymorphic contract shared by every data provider (local files today;
-// postgres/aitable/notion/busabase later). Adapt of the kelly-app-creator
+// postgres/aitable/notion/busabase later). Adapt of the kelly-app-skill-creator
 // template to the deal-scoring queue's file contract.
 
 export interface ReviewInput {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kelly Invest Stock"
+  short_description: "Monitor China stocks with no-key JavaScript data"
+  default_prompt: "Use $kelly-invest-stock to create a read-only Busabase China stock portfolio and research workflow with no-key JavaScript market data."

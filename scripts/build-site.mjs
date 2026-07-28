@@ -45,7 +45,7 @@ const GROUPS = [
     id: "invest",
     en: "Investing & Wealth",
     zh: "投资与财富",
-    skills: ["kelly-invest-webull", "kelly-family-office", "kelly-family-fund"],
+    skills: ["kelly-invest-webull", "kelly-invest-stock", "kelly-family-office", "kelly-family-fund"],
   },
   {
     id: "ecommerce",
@@ -131,9 +131,14 @@ const GROUPS = [
     id: "workspace",
     en: "Workspace Helpers",
     zh: "工作区工具",
-    skills: ["agent-rules", "kelly-app-creator", "publish-skills"],
+    skills: ["agent-rules", "kelly-app-skill-creator", "publish-skills"],
   },
 ];
+
+const LEGACY_SKILL_REDIRECTS = new Map([
+  ["app-in-skill-creator", "kelly-app-skill-creator"],
+  ["kelly-app-creator", "kelly-app-skill-creator"],
+]);
 
 function esc(s) {
   return String(s ?? "")
@@ -735,8 +740,7 @@ function skillSidebar(s) {
     <nav class="side-links">
       <a href="${REPO_URL}/tree/main/skills/${s.folder}" target="_blank" rel="noopener">${bilingual("Source", "源码")} ↗</a>
       <a href="${REPO_URL}/blob/main/skills/${s.folder}/SKILL.md" target="_blank" rel="noopener">SKILL.md ↗</a>
-      <a href="${REPO_URL}/blob/main/skills/${s.folder}/README.md" target="_blank" rel="noopener">README ↗</a>
-    </nav>
+${s.hasReadme ? `      <a href="${REPO_URL}/blob/main/skills/${s.folder}/README.md" target="_blank" rel="noopener">README ↗</a>\n` : ""}    </nav>
   </section>
 </aside>`;
 }
@@ -826,8 +830,8 @@ async function main() {
       </div>
       <div class="audit-note">
         ${bilingual(
-          "<strong>App-in-Skill compliance audited.</strong> All 60 workflows include provider-safe setup, validated handoffs, explicit approval boundaries, and maintainable ESM/CSS structure.",
-          "<strong>App-in-Skill 规范已审计。</strong>60 个工作流均包含 provider-safe setup、validated handoff、明确审批边界与可维护的 ESM/CSS 结构。",
+          "<strong>Workflow contracts are explicit.</strong> New operating apps use the Busabase Research, Plan, Action, and Retrospective contract; existing local apps retain their audited safety baseline.",
+          "<strong>工作流契约明确。</strong>新的运营应用使用 Busabase Research、Plan、Action、Retrospective 契约；现有本地应用保留已审计的安全基线。",
         )}
       </div>
       ${homeMobileControls(visibleGroups)}
@@ -892,6 +896,20 @@ ${whenHtml}${shotsSectionHtml}
     await fs.writeFile(
       path.join(PAGES_DIR, `${s.name}.html`),
       pageShell({ title: `${s.name} — mr-kelly/skills`, body, rel: "../" }),
+    );
+  }
+
+  for (const [legacyName, currentName] of LEGACY_SKILL_REDIRECTS) {
+    const target = `${currentName}.html`;
+    await fs.writeFile(
+      path.join(PAGES_DIR, `${legacyName}.html`),
+      `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Moved — ${currentName}</title>
+<link rel="canonical" href="${SITE_URL}s/${target}">
+<meta http-equiv="refresh" content="0; url=${target}">
+<script>location.replace(${JSON.stringify(target)} + location.search + location.hash);</script>
+</head><body><p><code>${legacyName}</code> is now <code>${currentName}</code>. Redirecting to <a href="${target}">${currentName}</a>&hellip;</p></body></html>\n`,
     );
   }
 

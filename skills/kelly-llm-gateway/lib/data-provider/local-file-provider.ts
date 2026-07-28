@@ -2,7 +2,7 @@
 // app/.data/. Delegates to the same modules the Hono app uses (app/server/
 // store.ts, decisions.ts) so the UI and any future script/agent path stay in
 // sync. Reserve provider names `postgres`, `aitable`, `notion`, `busabase` for
-// later cloud-backed implementations — see kelly-app-creator SKILL.md's
+// later cloud-backed implementations — see kelly-app-skill-creator SKILL.md's
 // Data Provider Spectrum.
 
 import { recordAnomalyAck, recordRolloutDecision } from "../../app/server/decisions.ts";

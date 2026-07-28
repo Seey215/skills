@@ -238,12 +238,12 @@ h2.group {
         <span class="en">Agent skills for daily business operations. Each App-in-Skill pairs an operating procedure for the agent with a local browser UI where a human reviews, approves, edits, and hands work back — dashboards for money, CRM, chat, SEO, market intel, ops, and more.</span><span class="zh">服务日常业务的 agent skills。每个 App-in-Skill 都由两部分组成：给 agent 的操作规程 + 一个本地浏览器操作台，供人 review、批准、编辑并把任务交还给 agent —— 覆盖资金、CRM、聊天聚合、SEO、市场情报、运维等场景。</span>
       </p>
       <div class="stats">
-        <span><strong>65</strong><span class="en">skills</span><span class="zh">个 skills</span></span>
+        <span><strong>66</strong><span class="en">skills</span><span class="zh">个 skills</span></span>
         <span><strong>62</strong><span class="en">bundled App UIs</span><span class="zh">个内置 App UI</span></span>
         <span><strong>0</strong><span class="en">npm dependencies</span><span class="zh">npm 依赖</span></span>
       </div>
       <div class="audit-note">
-        <span class="en"><strong>App-in-Skill compliance audited.</strong> All 60 workflows include provider-safe setup, validated handoffs, explicit approval boundaries, and maintainable ESM/CSS structure.</span><span class="zh"><strong>App-in-Skill 规范已审计。</strong>60 个工作流均包含 provider-safe setup、validated handoff、明确审批边界与可维护的 ESM/CSS 结构。</span>
+        <span class="en"><strong>Workflow contracts are explicit.</strong> New operating apps use the Busabase Research, Plan, Action, and Retrospective contract; existing local apps retain their audited safety baseline.</span><span class="zh"><strong>工作流契约明确。</strong>新的运营应用使用 Busabase Research、Plan、Action、Retrospective 契约；现有本地应用保留已审计的安全基线。</span>
       </div>
       <div class="home-mobile-controls">
   <section class="install-strip">
@@ -384,6 +384,13 @@ After installation, list the available skills and help me choose the right one f
   <div class="body">
     <span class="name">kelly-invest-webull<span class="pill"><span class="en">App UI</span><span class="zh">App UI</span></span></span>
     <span class="desc"><span class="en">Aggregates a personal Webull brokerage account into a local read-only portfolio dashboard: holdings, cost basis, market value, unrealized P/L, day change, and allocation by asset type. Read-only — it never places or cancels orders.</span><span class="zh">通过 Webull OpenAPI 把个人券商账户聚合成本地只读投资组合 dashboard：持仓、成本、市值、未实现盈亏、当日涨跌和按资产类别的配置。只读——绝不下单或撤单。</span></span>
+  </div>
+</a>
+<a class="card" href="s/kelly-invest-stock.html">
+  <div class="thumb empty">⚙️</div>
+  <div class="body">
+    <span class="name">kelly-invest-stock</span>
+    <span class="desc"><span class="en">Designs a Busabase-only, read-only China stock portfolio and research desk using exact-pinned, no-key JavaScript market data from stock-sdk. It keeps user-entered holdings separate from public prices and never trades.</span><span class="zh">使用固定版本、免 Key、纯 JavaScript 的 stock-sdk 行情数据设计 Busabase-only、只读的中国股票持仓与研究台。用户持仓与公开行情分开保存，绝不交易。</span></span>
   </div>
 </a>
 <a class="card" href="s/kelly-family-office.html">
@@ -793,11 +800,11 @@ After installation, list the available skills and help me choose the right one f
     <span class="desc"><span class="en">Keeps rules and skills for Codex, Claude Code, Copilot, Kiro, Cursor, and Gemini aligned from one source of truth. It creates and verifies symlinks so agents share AGENTS.md and .agents/skills/.</span><span class="zh">让 Codex、Claude Code、Copilot、Kiro、Cursor、Gemini 等 agent 共享同一套规则和 skills。</span></span>
   </div>
 </a>
-<a class="card" href="s/kelly-app-creator.html">
+<a class="card" href="s/kelly-app-skill-creator.html">
   <div class="thumb empty">⚙️</div>
   <div class="body">
-    <span class="name">kelly-app-creator</span>
-    <span class="desc"><span class="en">Documents and scaffolds the App-in-Skill pattern: local review UI, handoff files, locks, scripts, safe approval boundaries, and optional skill-local screenshots under assets/screenshots/ only when screenshots are requested or already exist. Still reachable under the legacy name app-in-skill-creator, which is a compatibility symlink.</span><span class="zh">记录和脚手架化 App-in-Skill 模式：本地 review UI、handoff 文件、锁、脚本、安全边界，以及可选截图规范——只有明确需要或已有截图时，才放进 skill 内部的 assets/screenshots/。旧名 app-in-skill-creator 保留为兼容软链接。</span></span>
+    <span class="name">kelly-app-skill-creator</span>
+    <span class="desc"><span class="en">Designs Busabase-only human-and-Agent operating apps around Research, Plan, Action, and Retrospective, delegating connection and implementation to $busabase and $busabase-app-creator. The previous names kelly-app-creator and app-in-skill-creator remain compatibility aliases.</span><span class="zh">围绕 Research、Plan、Action、Retrospective 设计 Busabase-only 的人类与 Agent 运营应用，并把连接与技术实现交给 $busabase 和 $busabase-app-creator。旧名 kelly-app-creator、app-in-skill-creator 保留为兼容别名。</span></span>
   </div>
 </a>
 <a class="card" href="s/publish-skills.html">
@@ -841,10 +848,10 @@ After installation, list the available skills and help me choose the right one f
 </section>
   <section class="side-card">
     <h3><span class="en">Categories</span><span class="zh">分类</span></h3>
-    <div class="category-list"><button class="category-button active" type="button" data-category-filter="all" onclick="mkSetCategory('all')"><span class="en">All skills</span><span class="zh">全部 skills</span><span class="count">65</span></button>
+    <div class="category-list"><button class="category-button active" type="button" data-category-filter="all" onclick="mkSetCategory('all')"><span class="en">All skills</span><span class="zh">全部 skills</span><span class="count">66</span></button>
 <button class="category-button" type="button" data-category-filter="finance" onclick="mkSetCategory('finance')"><span class="en">Finance &amp; Back Office</span><span class="zh">经营台账</span><span class="count">7</span></button>
 <button class="category-button" type="button" data-category-filter="legal" onclick="mkSetCategory('legal')"><span class="en">Legal Knowledge</span><span class="zh">法律知识库</span><span class="count">4</span></button>
-<button class="category-button" type="button" data-category-filter="invest" onclick="mkSetCategory('invest')"><span class="en">Investing &amp; Wealth</span><span class="zh">投资与财富</span><span class="count">3</span></button>
+<button class="category-button" type="button" data-category-filter="invest" onclick="mkSetCategory('invest')"><span class="en">Investing &amp; Wealth</span><span class="zh">投资与财富</span><span class="count">4</span></button>
 <button class="category-button" type="button" data-category-filter="ecommerce" onclick="mkSetCategory('ecommerce')"><span class="en">Cross-Border E-commerce</span><span class="zh">跨境电商</span><span class="count">5</span></button>
 <button class="category-button" type="button" data-category-filter="comms" onclick="mkSetCategory('comms')"><span class="en">Comms &amp; Service</span><span class="zh">沟通与协作</span><span class="count">5</span></button>
 <button class="category-button" type="button" data-category-filter="growth" onclick="mkSetCategory('growth')"><span class="en">Growth &amp; Market</span><span class="zh">增长与市场</span><span class="count">5</span></button>

@@ -1,6 +1,6 @@
 // Machine-readable storage manifest for kelly-demo-video-factory.
 // Mirrors the live schema validated against a running Busabase instance on 2026-07-11/12.
-// See references/private-config-and-providers.md (kelly-app-creator) for the manifest contract.
+// See references/private-config-and-providers.md (kelly-app-skill-creator) for the manifest contract.
 
 export const BUSABASE_SCHEMA = {
   provider: "busabase",

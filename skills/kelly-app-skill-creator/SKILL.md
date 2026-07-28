@@ -1,9 +1,9 @@
 ---
-name: kelly-app-creator
+name: kelly-app-skill-creator
 description: Design human-and-Agent operating apps on Busabase using Research, Plan, Action, and Retrospective workflows. Use when a user wants an approval queue, research desk, planner, action console, operating dashboard, control panel, or collaboration workspace. This skill is Busabase-only and must use both `$busabase` and `$busabase-app-creator`; it does not define a local provider, runtime, data layer, or deployment path of its own.
 ---
 
-# Kelly App Creator
+# Kelly App Skill Creator
 
 Turn a recurring human-and-Agent operating process into a focused Busabase app. Own the product workflow and delegation contract, not the Busabase implementation.
 

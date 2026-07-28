@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>publish-skills — mr-kelly/skills</title>
+<title>kelly-app-skill-creator — mr-kelly/skills</title>
 <meta name="description" content="Kelly's App-in-Skill business tools — agent skills that bundle a local review UI.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%2318181b%22%2F%3E%3Ctext%20x%3D%2216%22%20y%3D%2222%22%20font-size%3D%2217%22%20font-weight%3D%22700%22%20font-family%3D%22sans-serif%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EK%3C%2Ftext%3E%3C%2Fsvg%3E">
 <style>
@@ -234,65 +234,65 @@ h2.group {
   <main class="skill-main">
     <section class="skill-hero">
       <a class="crumb" href="../index.html"><span class="en">&larr; All skills</span><span class="zh">&larr; 全部 skills</span></a>
-      <h1>publish-skills</h1>
-      <p><span class="en">Publishes agent skills and MCP servers to marketplaces and registries: security-scans for private data, validates with gh skill, cuts a release, wires the Claude /plugin and Codex marketplaces, and preps the MCP Registry and curated stores.</span><span class="zh">把 agent skills 和 MCP servers 发布到各大市场和注册表：扫描私密数据、用 gh skill 校验、切版本、接 Claude /plugin 和 Codex marketplace，并准备 MCP Registry 和精选商店。</span></p>
+      <h1>kelly-app-skill-creator</h1>
+      <p><span class="en">Designs Busabase-only human-and-Agent operating apps around Research, Plan, Action, and Retrospective, delegating connection and implementation to $busabase and $busabase-app-creator. The previous names kelly-app-creator and app-in-skill-creator remain compatibility aliases.</span><span class="zh">围绕 Research、Plan、Action、Retrospective 设计 Busabase-only 的人类与 Agent 运营应用，并把连接与技术实现交给 $busabase 和 $busabase-app-creator。旧名 kelly-app-creator、app-in-skill-creator 保留为兼容别名。</span></p>
       <section class="install-strip mobile-skill-install">
   <div>
     <strong><span class="en">Install</span><span class="zh">安装</span></strong>
-    <span class="note"><span class="en">Install publish-skills or copy a ready prompt for your agent.</span><span class="zh">安装 publish-skills，或复制现成提示给 agent。</span></span>
+    <span class="note"><span class="en">Install kelly-app-skill-creator or copy a ready prompt for your agent.</span><span class="zh">安装 kelly-app-skill-creator，或复制现成提示给 agent。</span></span>
   </div>
   <div class="install-actions">
-    <code class="command-code" id="mobile-install-publish-skills-npx" data-copy-value="npx skills add mr-kelly/skills --skill publish-skills">npx skills add mr-kelly/skills
---skill publish-skills</code>
+    <code class="command-code" id="mobile-install-kelly-app-skill-creator-npx" data-copy-value="npx skills add mr-kelly/skills --skill kelly-app-skill-creator">npx skills add mr-kelly/skills
+--skill kelly-app-skill-creator</code>
 <div class="install-action-row">
-  <button class="copy-button" type="button" data-copy="mobile-install-publish-skills-npx"><span class="en">Copy</span><span class="zh">复制</span></button>
-  <button class="copy-button secondary" type="button" data-copy="mobile-install-publish-skills-prompt"><span class="en">Copy prompt</span><span class="zh">复制提示</span></button>
+  <button class="copy-button" type="button" data-copy="mobile-install-kelly-app-skill-creator-npx"><span class="en">Copy</span><span class="zh">复制</span></button>
+  <button class="copy-button secondary" type="button" data-copy="mobile-install-kelly-app-skill-creator-prompt"><span class="en">Copy prompt</span><span class="zh">复制提示</span></button>
 </div>
-<textarea id="mobile-install-publish-skills-prompt" hidden readonly>Install publish-skills from https://mr-kelly.github.io/skills/ for this agent, then use it for my next task.
+<textarea id="mobile-install-kelly-app-skill-creator-prompt" hidden readonly>Install kelly-app-skill-creator from https://mr-kelly.github.io/skills/ for this agent, then use it for my next task.
 
 Run:
-npx skills add mr-kelly/skills --skill publish-skills
+npx skills add mr-kelly/skills --skill kelly-app-skill-creator
 
-After it is installed, invoke the skill as $publish-skills.</textarea>
+After it is installed, invoke the skill as $kelly-app-skill-creator.</textarea>
 <details class="install-more">
   <summary><span class="en">Claude Code</span><span class="zh">Claude Code</span></summary>
   <div class="details-body">
-    <code class="command-code" id="mobile-install-publish-skills-claude">/plugin marketplace add mr-kelly/skills
+    <code class="command-code" id="mobile-install-kelly-app-skill-creator-claude">/plugin marketplace add mr-kelly/skills
 /plugin install mr-kelly-skills</code>
-    <button class="copy-button subtle" type="button" data-copy="mobile-install-publish-skills-claude"><span class="en">Copy Claude commands</span><span class="zh">复制 Claude 命令</span></button>
+    <button class="copy-button subtle" type="button" data-copy="mobile-install-kelly-app-skill-creator-claude"><span class="en">Copy Claude commands</span><span class="zh">复制 Claude 命令</span></button>
   </div>
 </details>
   </div>
 </section>
     </section>
-    <div class="panel"><h3><span class="en">When to use it</span><span class="zh">什么时候用</span></h3><p><span class="en">Use it when publishing, releasing, or listing skills, plugins, or MCP servers to skills.sh, Claude Code, Codex, or the MCP Registry.</span><span class="zh">发布、上架、分发 skills、plugins 或 MCP servers 到 skills.sh、Claude Code、Codex 或 MCP Registry 时使用。</span></p></div>
+    <div class="panel"><h3><span class="en">When to use it</span><span class="zh">什么时候用</span></h3><p><span class="en">Use it when building a Busabase research desk, review queue, planner, action console, operating dashboard, control panel, or collaboration workspace.</span><span class="zh">构建 Busabase 研究台、审阅队列、计划看板、行动控制台、运营概览、控制面板或协作工作区时使用。</span></p></div>
 
   </main>
   <aside class="skill-sidebar">
   <section class="side-card install-card">
   <div>
     <h2><span class="en">Install</span><span class="zh">安装</span></h2>
-    <p><span class="en">Install publish-skills without leaving this page.</span><span class="zh">不用离开这个页面，直接安装 publish-skills。</span></p>
+    <p><span class="en">Install kelly-app-skill-creator without leaving this page.</span><span class="zh">不用离开这个页面，直接安装 kelly-app-skill-creator。</span></p>
   </div>
   <div class="install-actions">
-    <code class="command-code" id="install-publish-skills-npx" data-copy-value="npx skills add mr-kelly/skills --skill publish-skills">npx skills add mr-kelly/skills
---skill publish-skills</code>
+    <code class="command-code" id="install-kelly-app-skill-creator-npx" data-copy-value="npx skills add mr-kelly/skills --skill kelly-app-skill-creator">npx skills add mr-kelly/skills
+--skill kelly-app-skill-creator</code>
 <div class="install-action-row">
-  <button class="copy-button" type="button" data-copy="install-publish-skills-npx"><span class="en">Copy</span><span class="zh">复制</span></button>
-  <button class="copy-button secondary" type="button" data-copy="install-publish-skills-prompt"><span class="en">Copy prompt</span><span class="zh">复制提示</span></button>
+  <button class="copy-button" type="button" data-copy="install-kelly-app-skill-creator-npx"><span class="en">Copy</span><span class="zh">复制</span></button>
+  <button class="copy-button secondary" type="button" data-copy="install-kelly-app-skill-creator-prompt"><span class="en">Copy prompt</span><span class="zh">复制提示</span></button>
 </div>
-<textarea id="install-publish-skills-prompt" hidden readonly>Install publish-skills from https://mr-kelly.github.io/skills/ for this agent, then use it for my next task.
+<textarea id="install-kelly-app-skill-creator-prompt" hidden readonly>Install kelly-app-skill-creator from https://mr-kelly.github.io/skills/ for this agent, then use it for my next task.
 
 Run:
-npx skills add mr-kelly/skills --skill publish-skills
+npx skills add mr-kelly/skills --skill kelly-app-skill-creator
 
-After it is installed, invoke the skill as $publish-skills.</textarea>
+After it is installed, invoke the skill as $kelly-app-skill-creator.</textarea>
 <details class="side-details">
   <summary><span class="en">Claude Code</span><span class="zh">Claude Code</span></summary>
   <div class="details-body">
-    <code class="command-code" id="install-publish-skills-claude">/plugin marketplace add mr-kelly/skills
+    <code class="command-code" id="install-kelly-app-skill-creator-claude">/plugin marketplace add mr-kelly/skills
 /plugin install mr-kelly-skills</code>
-    <button class="copy-button subtle" type="button" data-copy="install-publish-skills-claude"><span class="en">Copy Claude commands</span><span class="zh">复制 Claude 命令</span></button>
+    <button class="copy-button subtle" type="button" data-copy="install-kelly-app-skill-creator-claude"><span class="en">Copy Claude commands</span><span class="zh">复制 Claude 命令</span></button>
   </div>
 </details>
   </div>
@@ -300,8 +300,9 @@ After it is installed, invoke the skill as $publish-skills.</textarea>
   <section class="side-card">
     <h3><span class="en">Links</span><span class="zh">链接</span></h3>
     <nav class="side-links">
-      <a href="https://github.com/mr-kelly/skills/tree/main/skills/publish-skills" target="_blank" rel="noopener"><span class="en">Source</span><span class="zh">源码</span> ↗</a>
-      <a href="https://github.com/mr-kelly/skills/blob/main/skills/publish-skills/SKILL.md" target="_blank" rel="noopener">SKILL.md ↗</a>
+      <a href="https://github.com/mr-kelly/skills/tree/main/skills/kelly-app-skill-creator" target="_blank" rel="noopener"><span class="en">Source</span><span class="zh">源码</span> ↗</a>
+      <a href="https://github.com/mr-kelly/skills/blob/main/skills/kelly-app-skill-creator/SKILL.md" target="_blank" rel="noopener">SKILL.md ↗</a>
+      <a href="https://github.com/mr-kelly/skills/blob/main/skills/kelly-app-skill-creator/README.md" target="_blank" rel="noopener">README ↗</a>
     </nav>
   </section>
 </aside>

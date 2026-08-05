@@ -113,7 +113,7 @@ export const busabaseProvider = {
     if (!runtimeClient || !base || !cursor) throw new Error(`SCHEMA_INCOMPLETE: ${baseKey}`);
     return readPage(runtimeClient, base, cursor);
   },
-  async updateStrategyStage(recordId, stage) {
+  async updateStrategyStage(recordId, stage, baseCommitId = null) {
     if (!allowedWrites.has("records.changeRequest")) {
       throw new Error("PROCEDURE_DENIED: records.changeRequest");
     }
@@ -125,6 +125,7 @@ export const busabaseProvider = {
       fields: { status: stage },
       message: `Mark strategy ${stage} — manual virtual-ledger maturity label`,
       author: "kelly-invest-stock-ui",
+      ...(baseCommitId ? { baseCommitId } : {}),
       autoMerge: true,
     });
     return { persisted: result?.materialized === true, changeRequestId: result?.id || "" };

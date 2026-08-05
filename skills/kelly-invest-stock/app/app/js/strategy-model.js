@@ -19,6 +19,7 @@ const normalizeStrategy = (record) => {
   const stage = STAGES.includes(requestedStage) ? requestedStage : "L1";
   return {
     id: record.id || fields.key,
+    baseCommitId: record.headCommit?.id || record.headCommitId || null,
     key: String(fields.key || record.id || ""),
     name: String(fields.name || "未命名策略"),
     family: String(fields.family || "独立策略"),

@@ -9,8 +9,8 @@ test("groups strategies into L1, L2, and L3 and sorts each stage by confidence",
   const desk = createStrategyDesk([
     record("low", "strategies", { key: "low", name: "低分", status: "L1", confidence: 45 }),
     record("high", "strategies", { key: "high", name: "高分", status: "L1", confidence: 76 }),
-    record("paper", "strategies", { key: "paper", name: "镜像", status: "L2", confidence: 62 }),
-    record("graduate", "strategies", { key: "graduate", name: "实盘", status: "L3", confidence: 80 }),
+    record("advanced", "strategies", { key: "advanced", name: "进阶", status: "L2", confidence: 62 }),
+    record("confidence", "strategies", { key: "confidence", name: "高置信", status: "L3", confidence: 80 }),
   ]);
 
   assert.deepEqual(

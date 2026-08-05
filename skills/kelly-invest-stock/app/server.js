@@ -132,7 +132,7 @@ const assertOAuthSupported = async (oauthRequest) => {
   throw new Error(`Busabase OAuth 暂不可用（HTTP ${response.status}）。`);
 };
 
-app.get("/health", (context) => context.json({ ok: true, app: "kelly-invest-stock", mode: "read-only" }));
+app.get("/health", (context) => context.json({ ok: true, app: "kelly-invest-stock", mode: "virtual-ledger" }));
 
 app.get("/auth/status", async (context) => {
   try {

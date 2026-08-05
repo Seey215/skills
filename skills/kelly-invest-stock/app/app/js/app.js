@@ -435,9 +435,12 @@ const bindEvents = () => {
         control.disabled = true;
       });
       try {
-        const result = await activeProvider.updateStrategyStage(strategy.id, stage);
+        const result = await activeProvider.updateStrategyStage(strategy.id, stage, strategy.baseCommitId);
         if (!result.persisted) {
           showToast(`已提交 ${stage} 标记，等待 Busabase 审批。`);
+          root.querySelectorAll("[data-stage-value]").forEach((control) => {
+            control.disabled = false;
+          });
           return;
         }
         await load();

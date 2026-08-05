@@ -226,7 +226,7 @@ def test_busabase_provisioning(browser) -> None:
                         "fields": {
                             "name": "测试策略",
                             "key": "integration-fixture",
-                            "status": "验证中",
+                            "status": "L1",
                         },
                         "message": "Seed Kelly Invest Stock integration fixture",
                         "submittedBy": "kelly-skills-test",

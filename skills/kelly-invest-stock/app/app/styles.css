@@ -1143,6 +1143,10 @@ input:focus-visible {
   grid-template-rows: auto minmax(0, 1fr);
 }
 
+.workspace-content {
+  display: contents;
+}
+
 .strategy-detail-view {
   min-width: 0;
   min-height: 0;
@@ -1285,7 +1289,7 @@ input:focus-visible {
 }
 
 .portfolio-holdings-head {
-  margin: 18px 0 9px;
+  margin: 0 0 9px;
 }
 
 .portfolio-holdings-head > div {
@@ -1299,6 +1303,12 @@ input:focus-visible {
   overflow-x: auto;
   border: 1px solid var(--line);
   scrollbar-gutter: stable;
+}
+
+.portfolio-account-footer {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
 }
 
 .portfolio-table {
@@ -1339,6 +1349,18 @@ input:focus-visible {
 .portfolio-table th:last-child,
 .portfolio-table td:last-child {
   border-right: 0;
+}
+
+.portfolio-table th:first-child,
+.portfolio-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  box-shadow: 1px 0 0 #edf0f2;
+}
+
+.portfolio-table th:first-child {
+  z-index: 2;
 }
 
 .portfolio-table tbody tr:last-child td {

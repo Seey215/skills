@@ -1,6 +1,6 @@
 import { createRuntimeClient } from "../busabase-client.js";
-import { appConfig } from "../config.js?v=0.8.0";
-import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.8.0";
+import { appConfig } from "../config.js?v=0.8.1";
+import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.8.1";
 
 const allowedReads = new Set(appConfig.permissions.readProcedures);
 const allowedSetup = new Set(appConfig.permissions.setupProcedures);

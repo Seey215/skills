@@ -1,6 +1,6 @@
-import { appConfig } from "./config.js?v=0.8.0";
-import { getProvider } from "./providers/index.js?v=0.8.0";
-import { createRegressionSnapshot, createStrategyDesk } from "./strategy-model.js?v=0.8.0";
+import { appConfig } from "./config.js?v=0.8.1";
+import { getProvider } from "./providers/index.js?v=0.8.1";
+import { createRegressionSnapshot, createStrategyDesk } from "./strategy-model.js?v=0.8.1";
 
 const root = document.querySelector("#app");
 const money = new Intl.NumberFormat("zh-CN", {
@@ -16,6 +16,7 @@ const quote = new Intl.NumberFormat("zh-CN", {
 });
 
 const DETAIL_TABS = ["portfolio", "logic", "backtest"];
+const STRATEGY_LIST_VIEWS = new Set(["strategies", "l1", "l2", "l3"]);
 
 const viewMeta = {
   strategies: { label: "策略", noun: "个策略", eyebrow: "STRATEGY DESK" },
@@ -224,11 +225,11 @@ const renderPortfolioTab = (strategy, investedRate) => {
     return '<section class="strategy-detail-tab-panel portfolio-panel" role="tabpanel"><div class="ledger-missing"><strong>该策略没有独立虚拟账户</strong><p>补齐虚拟账户后，这里会展示股票、现金、权重与盈亏。</p></div></section>';
   }
   return `<section class="strategy-detail-tab-panel portfolio-panel" role="tabpanel">
-    <div class="portfolio-account-head"><div><p class="eyebrow">VIRTUAL PORTFOLIO</p><h3>${escapeHtml(account.name)}</h3></div><span>${strategy.positions.length} 只股票 · 现金 ${formatPercent(account.cashRate, false)}</span></div>
-    <div class="portfolio-account-facts">${fact("当前净值", money.format(account.nav))}${fact("名义本金", money.format(account.nominalCapital))}${fact("虚拟盈亏", money.format(account.pnl), tone(account.pnl))}${fact("可用现金", money.format(account.cash))}</div>
-    <div class="capital-allocation portfolio-allocation"><div><span>股票仓位</span><strong>${formatPercent(investedRate, false)}</strong></div><div><i style="width:${Math.max(0, Math.min(100, (investedRate || 0) * 100))}%"></i></div><small>股票市值 ${money.format(account.nav - account.cash)} · 现金 ${money.format(account.cash)}</small></div>
-    <div class="portfolio-holdings-head"><div><h3>组合持仓</h3><span>按组合权重排序</span></div><span>参考价仅用于虚拟账本估值</span></div>
+    <div class="portfolio-holdings-head"><div><h3>组合持仓</h3><span>${escapeHtml(account.name)}</span></div><span>${strategy.positions.length} 只股票 · 现金 ${formatPercent(account.cashRate, false)}</span></div>
     ${renderStrategyPositions(strategy)}
+    <div class="portfolio-account-footer"><div class="portfolio-account-head"><div><p class="eyebrow">ACCOUNT SNAPSHOT</p><h3>虚拟账户摘要</h3></div><span>参考价仅用于虚拟账本估值</span></div>
+    <div class="portfolio-account-facts">${fact("当前净值", money.format(account.nav))}${fact("名义本金", money.format(account.nominalCapital))}${fact("虚拟盈亏", money.format(account.pnl), tone(account.pnl))}${fact("可用现金", money.format(account.cash))}</div>
+    <div class="capital-allocation portfolio-allocation"><div><span>股票仓位</span><strong>${formatPercent(investedRate, false)}</strong></div><div><i style="width:${Math.max(0, Math.min(100, (investedRate || 0) * 100))}%"></i></div><small>股票市值 ${money.format(account.nav - account.cash)} · 现金 ${money.format(account.cash)}</small></div></div>
     <p class="ledger-stamp">账本更新于 ${escapeHtml(account.updatedAt)} · 不连接券商，不产生真实订单</p>
   </section>`;
 };
@@ -357,6 +358,12 @@ const renderHelp =
   </div>
 </section></div>`;
 
+const renderStrategyListContent = (items, meta) => `${contentRoute.view === "strategies" ? "" : renderFunnel()}${renderSummaryStrip()}${
+  items.length
+    ? renderStrategyTable(items, contentRoute.view === "strategies" ? "策略与虚拟账本" : meta.label)
+    : '<section class="strategy-overview"><div class="empty-state">当前阶段没有策略。</div></section>'
+}`;
+
 const renderApp = () => {
   const items = itemsForView(contentRoute.view);
   const selected = contentRoute.id ? desk.strategies.find((item) => item.id === contentRoute.id) || null : null;
@@ -368,17 +375,35 @@ const renderApp = () => {
     ? `${renderSummaryStrip()}${renderRegression()}`
     : strategyDetail
     ? `<section class="strategy-detail-view detail-panel">${renderStrategyDetail(selected)}</section>`
-    : `${contentRoute.view === "strategies" ? "" : renderFunnel()}${renderSummaryStrip()}${
-        items.length
-          ? renderStrategyTable(items, contentRoute.view === "strategies" ? "策略与虚拟账本" : meta.label)
-          : '<section class="strategy-overview"><div class="empty-state">当前阶段没有策略。</div></section>'
-      }`;
+    : renderStrategyListContent(items, meta);
   root.innerHTML = `<div class="app-shell ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}">${renderSidebar()}<main class="main strategy-main ${strategyDetail ? "strategy-detail-mode" : ""}">
-    <div class="mobile-topbar"><button class="mobile-sidebar-toggle" type="button" data-mobile-sidebar aria-controls="appSidebar" aria-label="打开侧栏"><span class="sidebar-toggle-icon" aria-hidden="true"></span></button><div class="mobile-topbar-copy"><div class="mobile-view-title">${workspaceTitle}</div><div class="mobile-view-meta">${strategyDetail ? escapeHtml(selected.name) : `${items.length} ${meta.noun}`}</div></div><button class="mobile-help-button" type="button" data-open-help aria-label="帮助与设置">帮助</button></div>
-    <header class="workspace-head"><div><p class="eyebrow">${meta.eyebrow}</p><h1>${workspaceTitle}</h1></div><div class="workspace-status">${currentState.provider.name === "demo" ? '<span class="snapshot-badge">DEMO</span>' : '<span class="status-dot"></span>'}<span>${escapeHtml(currentState.provider.asOf || "Busabase 当前数据")}</span><span class="read-only">虚拟模式</span><button type="button" data-refresh>刷新</button></div></header>
-    ${mainContent}
+    <div class="mobile-topbar"><button class="mobile-sidebar-toggle" type="button" data-mobile-sidebar aria-controls="appSidebar" aria-label="打开侧栏"><span class="sidebar-toggle-icon" aria-hidden="true"></span></button><div class="mobile-topbar-copy"><div class="mobile-view-title" data-mobile-view-title>${workspaceTitle}</div><div class="mobile-view-meta" data-mobile-view-meta>${strategyDetail ? escapeHtml(selected.name) : `${items.length} ${meta.noun}`}</div></div><button class="mobile-help-button" type="button" data-open-help aria-label="帮助与设置">帮助</button></div>
+    <header class="workspace-head"><div><p class="eyebrow" data-workspace-eyebrow>${meta.eyebrow}</p><h1 data-workspace-title>${workspaceTitle}</h1></div><div class="workspace-status">${currentState.provider.name === "demo" ? '<span class="snapshot-badge">DEMO</span>' : '<span class="status-dot"></span>'}<span>${escapeHtml(currentState.provider.asOf || "Busabase 当前数据")}</span><span class="read-only">虚拟模式</span><button type="button" data-refresh>刷新</button></div></header>
+    <div class="workspace-content" data-workspace-content>${mainContent}</div>
   </main></div><div id="sidebarScrim" class="sidebar-scrim" hidden></div>${parseHash().view === "settings" ? renderHelp() : ""}<div class="toast" role="status" aria-live="polite" hidden></div>`;
   bindEvents();
+};
+
+const patchStrategyListRoute = () => {
+  const workspace = root.querySelector("[data-workspace-content]");
+  if (!workspace) return false;
+  const items = itemsForView(contentRoute.view);
+  const meta = viewMeta[contentRoute.view];
+  root.querySelector(".strategy-main")?.classList.remove("strategy-detail-mode");
+  root.querySelectorAll(".filters [data-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === contentRoute.view);
+  });
+  const eyebrow = root.querySelector("[data-workspace-eyebrow]");
+  const title = root.querySelector("[data-workspace-title]");
+  const mobileTitle = root.querySelector("[data-mobile-view-title]");
+  const mobileMeta = root.querySelector("[data-mobile-view-meta]");
+  if (eyebrow) eyebrow.textContent = meta.eyebrow;
+  if (title) title.textContent = meta.label;
+  if (mobileTitle) mobileTitle.textContent = meta.label;
+  if (mobileMeta) mobileMeta.textContent = `${items.length} ${meta.noun}`;
+  workspace.innerHTML = renderStrategyListContent(items, meta);
+  bindEvents(workspace);
+  return true;
 };
 
 const renderSetup = (error) => {
@@ -467,43 +492,43 @@ const renderConnectSetup = (status = {}) => {
   });
 };
 
-const bindEvents = () => {
-  root.querySelectorAll("[data-view]").forEach((button) =>
+const bindEvents = (scope = root) => {
+  scope.querySelectorAll("[data-view]").forEach((button) =>
     button.addEventListener("click", () => {
       setMobileSidebarOpen(false);
       setMobileDetailOpen(false);
       navigate({ view: button.dataset.view, id: null });
     }),
   );
-  root.querySelectorAll("[data-select-id]").forEach((button) =>
+  scope.querySelectorAll("[data-select-id]").forEach((button) =>
     button.addEventListener("click", () => {
       if (isMobileLayout()) setMobileDetailOpen(true);
       navigate({ view: contentRoute.view, id: button.dataset.selectId, tab: "portfolio" });
     }),
   );
-  root.querySelectorAll(".strategy-table-row[data-select-id]").forEach((row) =>
+  scope.querySelectorAll(".strategy-table-row[data-select-id]").forEach((row) =>
     row.addEventListener("keydown", (event) => {
       if (!["Enter", " "].includes(event.key)) return;
       event.preventDefault();
       row.click();
     }),
   );
-  root.querySelectorAll("[data-regression-id]").forEach((button) =>
+  scope.querySelectorAll("[data-regression-id]").forEach((button) =>
     button.addEventListener("click", () => {
       navigate({ view: "regression", id: button.dataset.regressionId });
     }),
   );
-  root.querySelectorAll("[data-open-strategy-id]").forEach((button) =>
+  scope.querySelectorAll("[data-open-strategy-id]").forEach((button) =>
     button.addEventListener("click", () => {
       navigate({ view: "strategies", id: button.dataset.openStrategyId, tab: "portfolio" });
     }),
   );
-  root.querySelectorAll("[data-detail-tab]").forEach((button) =>
+  scope.querySelectorAll("[data-detail-tab]").forEach((button) =>
     button.addEventListener("click", () => {
       navigate({ view: contentRoute.view, id: contentRoute.id, tab: button.dataset.detailTab });
     }),
   );
-  root.querySelectorAll("[data-stage-value]").forEach((button) =>
+  scope.querySelectorAll("[data-stage-value]").forEach((button) =>
     button.addEventListener("click", async () => {
       const strategy = desk.strategies.find((item) => item.id === contentRoute.id);
       const stage = button.dataset.stageValue;
@@ -530,37 +555,37 @@ const bindEvents = () => {
       }
     }),
   );
-  root.querySelector("[data-sidebar-toggle]")?.addEventListener("click", () => {
+  scope.querySelector("[data-sidebar-toggle]")?.addEventListener("click", () => {
     if (isMobileLayout()) setMobileSidebarOpen(false);
     else {
       sidebarCollapsed = !sidebarCollapsed;
       renderApp();
     }
   });
-  root.querySelector("[data-mobile-sidebar]")?.addEventListener("click", () => setMobileSidebarOpen(true));
-  root.querySelector("#sidebarScrim")?.addEventListener("click", () => setMobileSidebarOpen(false));
-  root.querySelector("[data-back-to-list]")?.addEventListener("click", () => {
+  scope.querySelector("[data-mobile-sidebar]")?.addEventListener("click", () => setMobileSidebarOpen(true));
+  scope.querySelector("#sidebarScrim")?.addEventListener("click", () => setMobileSidebarOpen(false));
+  scope.querySelector("[data-back-to-list]")?.addEventListener("click", () => {
     setMobileDetailOpen(false);
     navigate({ view: contentRoute.view, id: null, tab: null }, { replace: true });
   });
-  root.querySelectorAll("[data-open-help]").forEach((button) =>
+  scope.querySelectorAll("[data-open-help]").forEach((button) =>
     button.addEventListener("click", () => {
       lastContentHash = routeHash(contentRoute);
       window.location.hash = "#/settings/guide";
     }),
   );
-  root.querySelector("[data-close-help]")?.addEventListener("click", () => {
+  scope.querySelector("[data-close-help]")?.addEventListener("click", () => {
     window.location.hash = lastContentHash;
   });
-  root.querySelector("#helpModal")?.addEventListener("click", (event) => {
+  scope.querySelector("#helpModal")?.addEventListener("click", (event) => {
     if (event.target.id === "helpModal") window.location.hash = lastContentHash;
   });
-  root.querySelectorAll("[data-help-tab]").forEach((button) =>
+  scope.querySelectorAll("[data-help-tab]").forEach((button) =>
     button.addEventListener("click", () => {
       window.location.hash = `#/settings/${button.dataset.helpTab}`;
     }),
   );
-  root.querySelector("[data-refresh]")?.addEventListener("click", async () => {
+  scope.querySelector("[data-refresh]")?.addEventListener("click", async () => {
     if (currentState.provider.name === "demo") showToast("演示数据为 2026-08-05 固定快照。");
     else await load();
   });
@@ -568,13 +593,22 @@ const bindEvents = () => {
 
 const applyRoute = () => {
   const route = parseHash();
+  const previousRoute = contentRoute;
   if (route.view === "settings") helpTab = route.tab;
   else {
     contentRoute = route;
     lastContentHash = routeHash(route);
     if (isMobileLayout()) setMobileDetailOpen(Boolean(route.id) && route.view !== "regression");
   }
-  if (currentState) renderApp();
+  if (!currentState) return;
+  const canPatchList =
+    route.view !== "settings" &&
+    !root.querySelector("#helpModal") &&
+    STRATEGY_LIST_VIEWS.has(previousRoute.view) &&
+    STRATEGY_LIST_VIEWS.has(contentRoute.view) &&
+    !previousRoute.id &&
+    !contentRoute.id;
+  if (!canPatchList || !patchStrategyListRoute()) renderApp();
 };
 
 const load = async () => {

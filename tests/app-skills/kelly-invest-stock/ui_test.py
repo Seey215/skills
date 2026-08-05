@@ -68,6 +68,15 @@ def test_demo_ui(browser, base_url: str) -> None:
     assert page.locator(".content").count() == 0
     assert_no_horizontal_overflow(page)
 
+    page.locator("#appSidebar").evaluate("element => { element.dataset.routeIdentity = 'stable-sidebar'; }")
+    page.locator(".workspace-head").evaluate("element => { element.dataset.routeIdentity = 'stable-header'; }")
+    page.get_by_role("button", name="打开L1 基础观察", exact=True).click()
+    page.get_by_role("heading", name="L1 基础观察", exact=True).wait_for()
+    assert page.locator("#appSidebar").get_attribute("data-route-identity") == "stable-sidebar"
+    assert page.locator(".workspace-head").get_attribute("data-route-identity") == "stable-header"
+    page.get_by_role("button", name="打开策略", exact=True).click()
+    page.get_by_role("heading", name="策略", exact=True).wait_for()
+
     first_row = page.locator('.strategy-table-row[data-select-id="strategy-munger"] .strategy-col')
     first_row.click()
     assert "/strategy-" in page.url and page.url.endswith("/portfolio")

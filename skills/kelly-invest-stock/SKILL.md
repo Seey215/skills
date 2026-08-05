@@ -114,9 +114,19 @@ rules.
   Settings. Do not add a separate Virtual Ledger tab.
 - Make the Strategy route a large full-width table that combines strategy summary
   and ledger reality. Clicking the entire row opens Strategy Detail.
-- Put strategy rules, the manual L1/L2/L3 segmented control, account summary, and
-  positions together in Strategy Detail.
+- Put the manual L1/L2/L3 segmented control and compact performance summary at
+  the top of Strategy Detail. Below it, use shareable hash-routed tabs in this
+  order: `组合持仓`, `策略逻辑`, `回测表现`.
+- Open `组合持仓` by default. Make it the dominant detail surface with account
+  NAV/capital/cash/P&L, invested-versus-cash allocation, and a full-width table
+  showing Chinese security name, six-digit code, quantity, virtual entry price,
+  reference price, virtual market value, portfolio weight, and virtual P/L. Keep
+  cash visible as part of the portfolio rather than hiding it in a summary.
 - Make L1/L2/L3 routes filter strategies, not stocks.
+- Treat Strategy/L1/L2/L3 navigation as an in-memory strategy filter after the
+  desk has loaded. Preserve the sidebar and workspace header DOM, update only
+  the main strategy content, and do not refetch Busabase or show a full-page
+  loading state for these route changes.
 - Make Regression a dated strategy backtest table aligned with `invest-ui`:
   report date, start/end dates, window label, methodology, coverage, total
   return, CAGR, volatility, Sharpe, maximum drawdown, and benchmark-relative

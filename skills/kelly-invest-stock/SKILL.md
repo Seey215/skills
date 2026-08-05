@@ -114,9 +114,16 @@ the strategy.
 Keep the first screen as the operating desk, not a landing page:
 
 - Fixed desktop sidebar with a human-attention summary and navigation for Strategy,
-  L1, L2, L3, Virtual Ledger, and Help & Settings.
+  L1, L2, L3, and Help & Settings. Do not create a separate Virtual Ledger tab;
+  the ledger belongs to its strategy.
 - A visible L1 -> L2 -> L3 funnel with counts and distinct but restrained stage colors.
-- Desktop list/detail split for strategy, candidate, and virtual account views.
+- Open Strategy as a full-width comparison table that combines the strategy name,
+  concise thesis, L1/L2/L3 counts, virtual NAV and capital, return, benchmark,
+  excess return, drawdown, cash, and current virtual positions.
+- Make the entire strategy row open a dedicated strategy detail route. Put the
+  complete strategy rules, candidate stages, virtual account summary, and virtual
+  positions together on that detail screen.
+- Use the desktop list/detail split for candidate views only.
 - On mobile, use the shared off-canvas sidebar and separate list/detail route; keep
   a sticky back action and prevent horizontal overflow at 390px and 360px widths.
 - Show strategy rules, candidate score components, evidence, invalidation, next
@@ -141,7 +148,8 @@ Keep the first screen as the operating desk, not a landing page:
 Finish only when:
 
 - `pnpm --dir app dev` starts the complete local Hono application;
-- Strategy, L1, L2, L3, and Virtual Ledger routes work on desktop and mobile;
+- Strategy overview/detail and L1/L2/L3 routes work on desktop and mobile, with
+  virtual-ledger information integrated into strategy overview and detail;
 - each strategy has explicit selection and invalidation rules plus a virtual account;
 - candidate detail shows scores, evidence, invalidation, stage, and next review;
 - the four-resource declaration and lazy provisioning pass fixture tests, including

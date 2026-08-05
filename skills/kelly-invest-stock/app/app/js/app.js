@@ -1,6 +1,6 @@
-import { appConfig } from "./config.js?v=0.3.0";
-import { getProvider } from "./providers/index.js?v=0.3.0";
-import { createStrategyDesk } from "./strategy-model.js?v=0.3.0";
+import { appConfig } from "./config.js?v=0.5.0";
+import { getProvider } from "./providers/index.js?v=0.5.0";
+import { createStrategyDesk } from "./strategy-model.js?v=0.5.0";
 
 const root = document.querySelector("#app");
 const money = new Intl.NumberFormat("zh-CN", {
@@ -15,7 +15,6 @@ const viewMeta = {
   l1: { label: "L1 初筛", noun: "个候选", eyebrow: "DISCOVERY" },
   l2: { label: "L2 纸面验证", noun: "个候选", eyebrow: "PAPER VALIDATION" },
   l3: { label: "L3 毕业观察", noun: "个候选", eyebrow: "GRADUATION WATCH" },
-  ledger: { label: "虚拟账本", noun: "个账户", eyebrow: "VIRTUAL LEDGER" },
 };
 
 let currentState;
@@ -47,9 +46,10 @@ const parseHash = () => {
   if (parts[0] === "settings") {
     return { view: "settings", tab: ["guide", "resources", "connection"].includes(parts[1]) ? parts[1] : "guide" };
   }
+  const view = viewMeta[parts[0]] ? parts[0] : "strategies";
   return {
-    view: viewMeta[parts[0]] ? parts[0] : "strategies",
-    id: parts[1] ? decodeURIComponent(parts[1]) : null,
+    view,
+    id: view === parts[0] && parts[1] ? decodeURIComponent(parts[1]) : null,
   };
 };
 
@@ -91,32 +91,10 @@ const itemsForView = (view) => {
   if (view === "l1") return desk.levels.L1;
   if (view === "l2") return desk.levels.L2;
   if (view === "l3") return desk.levels.L3;
-  if (view === "ledger") return desk.strategies.filter((strategy) => strategy.account);
   return [];
 };
 
 const stageBadge = (stage) => `<span class="stage-badge stage-${stage.toLowerCase()}">${stage}</span>`;
-
-const renderStageMix = (
-  strategy,
-) => `<span class="stage-mix" aria-label="L1 ${strategy.stageCounts.L1}，L2 ${strategy.stageCounts.L2}，L3 ${strategy.stageCounts.L3}">
-  ${["L1", "L2", "L3"].map((stage) => `<i class="mix-${stage.toLowerCase()}" style="--mix:${strategy.candidates.length ? strategy.stageCounts[stage] : 0}"></i>`).join("")}
-</span>`;
-
-const renderStrategyRow = (
-  strategy,
-  active,
-  index,
-) => `<button class="work-row strategy-row ${active ? "active" : ""}" type="button" data-select-id="${escapeHtml(strategy.id)}">
-  <span class="row-marker" aria-hidden="true"></span>
-  <span class="row-rank">${String(index + 1).padStart(2, "0")}</span>
-  <span class="row-main">
-    <span class="row-kicker">${escapeHtml(strategy.family)} · ${escapeHtml(strategy.status)}</span>
-    <span class="row-title"><strong>${escapeHtml(strategy.name)}</strong>${renderStageMix(strategy)}</span>
-    <span class="row-subtitle">${strategy.candidates.length} 个候选 · ${strategy.positions.length} 个虚拟持仓 · ${escapeHtml(strategy.rebalance)}</span>
-  </span>
-  <span class="row-value"><strong class="${tone(strategy.account?.returnRate ?? null)}">${formatPercent(strategy.account?.returnRate ?? null)}</strong><span class="excess-value ${tone(strategy.account?.excessReturn ?? null)}">超额 ${formatPercent(strategy.account?.excessReturn ?? null)}</span></span>
-</button>`;
 
 const renderCandidateRow = (
   candidate,
@@ -131,29 +109,56 @@ const renderCandidateRow = (
   <span class="row-score score-${candidate.confidence >= 70 ? "high" : candidate.confidence >= 58 ? "mid" : "low"}"><strong>${candidate.confidence}</strong><span>综合分</span></span>
 </button>`;
 
-const renderLedgerRow = (
-  strategy,
-  active,
-) => `<button class="work-row ledger-row ${active ? "active" : ""}" type="button" data-select-id="${escapeHtml(strategy.id)}">
-  <span class="row-marker" aria-hidden="true"></span>
-  <span class="row-main">
-    <span class="row-kicker">${escapeHtml(strategy.account.name)}</span>
-    <span class="row-title"><strong>${escapeHtml(strategy.name)}</strong></span>
-    <span class="row-subtitle">${strategy.positions.length} 个虚拟持仓 · 现金 ${formatPercent(strategy.account.cashRate, false)}</span>
-    <span class="row-allocation"><i style="width:${Math.max(0, Math.min(100, (1 - (strategy.account.cashRate || 0)) * 100))}%"></i></span>
-  </span>
-  <span class="row-value"><strong>${money.format(strategy.account.nav)}</strong><span class="${tone(strategy.account.excessReturn)}">超额 ${formatPercent(strategy.account.excessReturn)}</span></span>
-</button>`;
-
-const renderRows = (view, items, selectedId) => {
-  if (!items.length) return '<div class="empty-state">当前分层没有候选。</div>';
-  return items
-    .map((item, index) => {
-      if (view === "strategies") return renderStrategyRow(item, item.id === selectedId, index);
-      if (view === "ledger") return renderLedgerRow(item, item.id === selectedId);
-      return renderCandidateRow(item, item.id === selectedId);
-    })
+const strategyStageSummary = (strategy) =>
+  ["L1", "L2", "L3"]
+    .map(
+      (stage) =>
+        `<span class="table-stage table-stage-${stage.toLowerCase()}"><b>${stage}</b>${strategy.stageCounts[stage]}</span>`,
+    )
     .join("");
+
+const strategyPositionSummary = (strategy) => {
+  if (!strategy.account) return '<span class="ledger-cell-missing">账户待补齐</span>';
+  if (!strategy.positions.length)
+    return `<strong>现金</strong><small>${formatPercent(strategy.account.cashRate, false)}</small>`;
+  return `<strong>${strategy.positions
+    .slice(0, 3)
+    .map((position) => escapeHtml(position.code))
+    .join(
+      " · ",
+    )}</strong><small>${strategy.positions.length} 个持仓 · 现金 ${formatPercent(strategy.account.cashRate, false)}</small>`;
+};
+
+const renderStrategyTable = () => `<section class="strategy-overview" aria-label="策略与虚拟账本总览">
+  <div class="strategy-overview-head"><div><strong>策略与虚拟账本</strong><span>${desk.strategies.length} 个策略 · 点击整行查看详情</span></div><span>按虚拟收益排序</span></div>
+  <div class="strategy-table-wrap">
+    <table class="strategy-table">
+      <thead><tr><th class="rank-col">#</th><th class="strategy-col">策略</th><th class="thesis-col">策略简述</th><th>候选分层</th><th class="number-col">账本 NAV</th><th class="number-col">收益 / 基准</th><th class="number-col">超额</th><th class="number-col">最大回撤</th><th class="positions-col">实际虚拟持仓</th><th class="open-col"><span class="sr-only">打开</span></th></tr></thead>
+      <tbody>${desk.strategies
+        .map((strategy, index) => {
+          const account = strategy.account;
+          const accountIssue = strategy.accountCount !== 1;
+          return `<tr class="strategy-table-row ${accountIssue ? "account-issue" : ""}" data-select-id="${escapeHtml(strategy.id)}" tabindex="0" role="link" aria-label="打开策略 ${escapeHtml(strategy.name)}">
+            <td class="rank-col">${String(index + 1).padStart(2, "0")}</td>
+            <td class="strategy-col"><strong>${escapeHtml(strategy.name)}</strong><span>${escapeHtml(strategy.family)} · ${escapeHtml(strategy.status)}</span></td>
+            <td class="thesis-col"><p>${escapeHtml(strategy.thesis)}</p><span>${escapeHtml(strategy.rebalance)} · ${escapeHtml(strategy.benchmark)}</span></td>
+            <td><div class="table-stages">${strategyStageSummary(strategy)}</div><small>${strategy.candidates.length} 个候选</small></td>
+            <td class="number-col"><strong>${account ? money.format(account.nav) : "--"}</strong><span>本金 ${account ? money.format(account.nominalCapital) : "--"}</span></td>
+            <td class="number-col"><strong class="${tone(account?.returnRate ?? null)}">${formatPercent(account?.returnRate ?? null)}</strong><span>基准 ${formatPercent(account?.benchmarkReturn ?? null)}</span></td>
+            <td class="number-col"><strong class="${tone(account?.excessReturn ?? null)}">${formatPercent(account?.excessReturn ?? null)}</strong></td>
+            <td class="number-col"><strong class="negative">${formatPercent(account?.maxDrawdown ?? null, false)}</strong></td>
+            <td class="positions-col">${strategyPositionSummary(strategy)}</td>
+            <td class="open-col" aria-hidden="true">›</td>
+          </tr>`;
+        })
+        .join("")}</tbody>
+    </table>
+  </div>
+</section>`;
+
+const renderRows = (items, selectedId) => {
+  if (!items.length) return '<div class="empty-state">当前分层没有候选。</div>';
+  return items.map((item) => renderCandidateRow(item, item.id === selectedId)).join("");
 };
 
 const fact = (label, value, extraClass = "") =>
@@ -175,12 +180,33 @@ const renderStageLanes = (strategy) =>
     )
     .join("")}</div>`;
 
+const renderStrategyPositions = (strategy) =>
+  `<div class="position-table"><div class="position-table-head"><span>标的</span><span>权重</span><span>盈亏</span></div>${
+    strategy.positions
+      .map(
+        (position) =>
+          `<div class="position-table-row"><span><strong>${escapeHtml(position.code)}</strong><small>数量 ${position.quantity} · 成本 ${position.entryPrice === null ? "--" : `$${price.format(position.entryPrice)}`} · 参考 ${position.latestPrice === null ? "--" : `$${price.format(position.latestPrice)}`}</small><i><b style="width:${Math.max(0, Math.min(100, (position.weight || 0) * 100))}%"></b></i></span><span>${formatPercent(position.weight, false)}</span><span class="${tone(position.pnl)}">${position.pnl === null ? "--" : money.format(position.pnl)}</span></div>`,
+      )
+      .join("") || '<div class="empty-state">暂无虚拟持仓。</div>'
+  }</div>`;
+
 const renderStrategyDetail = (strategy) => {
   const account = strategy.account;
   const investedRate = account?.cashRate === null || account?.cashRate === undefined ? null : 1 - account.cashRate;
+  const accountWarning = !account
+    ? `<section class="ledger-missing"><strong>该策略没有独立虚拟账户</strong><p>缺少 strategy_key 为 <code>${escapeHtml(strategy.key)}</code> 的 ledger-accounts 记录，因此不计入组合 NAV、收益或现金比例。</p></section>`
+    : strategy.accountCount > 1
+      ? `<section class="ledger-integrity-detail"><strong>检测到 ${strategy.accountCount} 个同策略账户</strong><span>当前仅采用第一条记录参与汇总，需合并为一个独立账本。</span></section>`
+      : "";
+  const ledgerSections = account
+    ? `<section class="detail-section"><div class="section-head-inline"><h3>虚拟账户</h3><span>${escapeHtml(account.name)}</span></div><div class="fact-grid">${fact("当前净值", money.format(account.nav))}${fact("名义本金", money.format(account.nominalCapital))}${fact("虚拟盈亏", money.format(account.pnl), tone(account.pnl))}${fact("现金", money.format(account.cash))}</div></section>
+      <section class="detail-section"><h3>虚拟持仓</h3>${renderStrategyPositions(strategy)}</section>
+      <p class="ledger-stamp">账本更新于 ${escapeHtml(account.updatedAt)} · 不连接券商，不产生真实订单</p>`
+    : '<section class="detail-section"><h3>账本边界</h3><p class="detail-copy">每个策略必须恰好对应一个虚拟账户，持仓使用相同 strategy_key；修复通过受信任的 Busabase 工作流完成。</p></section>';
   return `<div class="detail-scroll">
-    <button class="back-to-list" type="button" data-back-to-list>&larr; 返回策略</button>
+    <button class="strategy-detail-back back-to-list" type="button" data-back-to-list>&larr; 返回策略总览</button>
     <div class="detail-heading"><div><p class="eyebrow">${escapeHtml(strategy.family)}</p><h2>${escapeHtml(strategy.name)}</h2></div><span class="status-pill">${escapeHtml(strategy.status)}</span></div>
+    ${accountWarning}
     <div class="strategy-performance">
       <div class="confidence-dial" style="--score:${strategy.confidence}"><span><strong>${strategy.confidence}</strong><small>置信度</small></span></div>
       <div><span>虚拟收益</span><strong class="${tone(account?.returnRate ?? null)}">${formatPercent(account?.returnRate ?? null)}</strong><small>基准 ${formatPercent(account?.benchmarkReturn ?? null)}</small></div>
@@ -188,9 +214,11 @@ const renderStrategyDetail = (strategy) => {
       <div><span>最大回撤</span><strong class="negative">${formatPercent(account?.maxDrawdown ?? null, false)}</strong><small>${escapeHtml(strategy.rebalance)}</small></div>
     </div>
     <div class="capital-allocation"><div><span>虚拟资金使用</span><strong>${formatPercent(investedRate, false)}</strong></div><div><i style="width:${Math.max(0, Math.min(100, (investedRate || 0) * 100))}%"></i></div><small>持仓 ${money.format((account?.nav || 0) - (account?.cash || 0))} · 现金 ${money.format(account?.cash || 0)}</small></div>
-    <section class="detail-section"><h3>核心假设</h3><p class="detail-copy">${escapeHtml(strategy.thesis)}</p></section>
-    <section class="detail-section"><h3>选股与失效</h3><dl class="detail-list"><div><dt>入选规则</dt><dd>${escapeHtml(strategy.selectionRule)}</dd></div><div><dt>失效条件</dt><dd>${escapeHtml(strategy.invalidationRule)}</dd></div><div><dt>复核频率</dt><dd>${escapeHtml(strategy.rebalance)}</dd></div></dl></section>
-    <section class="detail-section"><h3>候选分层</h3>${renderStageLanes(strategy)}</section>
+    <div class="strategy-detail-columns"><div>
+      <section class="detail-section"><h3>核心假设</h3><p class="detail-copy">${escapeHtml(strategy.thesis)}</p></section>
+      <section class="detail-section"><h3>选股与失效</h3><dl class="detail-list"><div><dt>入选规则</dt><dd>${escapeHtml(strategy.selectionRule)}</dd></div><div><dt>失效条件</dt><dd>${escapeHtml(strategy.invalidationRule)}</dd></div><div><dt>复核频率</dt><dd>${escapeHtml(strategy.rebalance)}</dd></div></dl></section>
+      <section class="detail-section"><h3>候选分层</h3>${renderStageLanes(strategy)}</section>
+    </div><div class="strategy-ledger-column">${ledgerSections}</div></div>
   </div>`;
 };
 
@@ -213,23 +241,8 @@ const renderCandidateDetail = (candidate) => {
   </div>`;
 };
 
-const renderLedgerDetail = (strategy) => {
-  const account = strategy.account;
-  return `<div class="detail-scroll">
-    <button class="back-to-list" type="button" data-back-to-list>&larr; 返回虚拟账本</button>
-    <div class="detail-heading"><div><p class="eyebrow">VIRTUAL ACCOUNT</p><h2>${escapeHtml(strategy.name)}</h2></div><span class="status-pill">模拟</span></div>
-    <div class="ledger-hero"><div><span>当前净值</span><strong>${money.format(account.nav)}</strong><small>本金 ${money.format(account.nominalCapital)}</small></div><div><span>累计收益</span><strong class="${tone(account.returnRate)}">${formatPercent(account.returnRate)}</strong><small class="${tone(account.excessReturn)}">超额 ${formatPercent(account.excessReturn)}</small></div></div>
-    <div class="capital-allocation"><div><span>账户仓位</span><strong>${formatPercent(1 - (account.cashRate || 0), false)}</strong></div><div><i style="width:${Math.max(0, Math.min(100, (1 - (account.cashRate || 0)) * 100))}%"></i></div><small>持仓 ${money.format(account.nav - account.cash)} · 现金 ${money.format(account.cash)}</small></div>
-    <section class="detail-section"><h3>账户摘要</h3><div class="fact-grid">${fact("虚拟盈亏", money.format(account.pnl), tone(account.pnl))}${fact("超额收益", formatPercent(account.excessReturn), tone(account.excessReturn))}${fact("基准收益", formatPercent(account.benchmarkReturn))}${fact("最大回撤", formatPercent(account.maxDrawdown, false), "negative")}</div></section>
-    <section class="detail-section"><h3>虚拟持仓</h3><div class="position-table"><div class="position-table-head"><span>标的</span><span>权重</span><span>盈亏</span></div>${strategy.positions.map((position) => `<div class="position-table-row"><span><strong>${escapeHtml(position.code)}</strong><small>成本 ${position.entryPrice === null ? "--" : `$${price.format(position.entryPrice)}`} · 参考 ${position.latestPrice === null ? "--" : `$${price.format(position.latestPrice)}`}</small><i><b style="width:${Math.max(0, Math.min(100, (position.weight || 0) * 100))}%"></b></i></span><span>${formatPercent(position.weight, false)}</span><span class="${tone(position.pnl)}">${position.pnl === null ? "--" : money.format(position.pnl)}</span></div>`).join("") || '<div class="empty-state">暂无虚拟持仓。</div>'}</div></section>
-    <p class="ledger-stamp">更新于 ${escapeHtml(account.updatedAt)} · 不连接券商，不产生真实订单</p>
-  </div>`;
-};
-
 const renderDetail = (view, item) => {
   if (!item) return '<div class="empty-detail">从左侧选择一条记录</div>';
-  if (view === "strategies") return renderStrategyDetail(item);
-  if (view === "ledger") return renderLedgerDetail(item);
   return renderCandidateDetail(item);
 };
 
@@ -247,16 +260,16 @@ const renderFunnel = () => `<section class="workflow-band"><div class="funnel" a
 </div><div class="workflow-pulse"><span><strong>${desk.strategies.length}</strong> 策略</span><span><strong>${desk.candidates.length}</strong> 候选</span><span class="${tone(desk.ledger.excessReturn)}"><strong>${formatPercent(desk.ledger.excessReturn)}</strong> 组合超额</span></div></section>`;
 
 const renderSidebar = () => {
+  const hasLedgerIssues = desk.integrity.issueCount > 0;
   const counts = {
     strategies: desk.strategies.length,
     l1: desk.levels.L1.length,
     l2: desk.levels.L2.length,
     l3: desk.levels.L3.length,
-    ledger: desk.accounts.length,
   };
   return `<aside class="sidebar ${sidebarCollapsed ? "collapsed" : ""}" id="appSidebar">
     <div class="brand"><div class="brand-icon" aria-hidden="true">KS</div><div class="brand-copy"><div class="brand-title">Kelly Invest Stock</div><div class="brand-subtitle">策略实验台</div></div><button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="appSidebar" aria-expanded="${!sidebarCollapsed}" aria-label="切换侧栏" title="切换侧栏"><span class="sidebar-toggle-icon" aria-hidden="true"></span></button></div>
-    <section class="human-work" aria-labelledby="humanWorkTitle"><div class="human-work-eyebrow">需要你</div><div id="humanWorkTitle" class="human-work-title">候选推进</div><button class="human-work-primary" type="button" data-view="l1"><span><strong>${desk.attention.l1}</strong><span>L1 证据待补</span></span></button><div class="human-work-secondary"><button type="button" data-view="l2"><strong>${desk.attention.l2}</strong><span>纸面验证</span></button><button type="button" data-view="l3"><strong>${desk.attention.l3}</strong><span>毕业观察</span></button></div></section>
+    <section class="human-work" aria-labelledby="humanWorkTitle"><div class="human-work-eyebrow">需要你</div><div id="humanWorkTitle" class="human-work-title">${hasLedgerIssues ? "账本完整性" : "候选推进"}</div><button class="human-work-primary" type="button" data-view="${hasLedgerIssues ? "strategies" : "l1"}"><span><strong>${hasLedgerIssues ? desk.integrity.issueCount : desk.attention.l1}</strong><span>${hasLedgerIssues ? "项策略账本待处理" : "L1 证据待补"}</span></span></button><div class="human-work-secondary"><button type="button" data-view="l2"><strong>${desk.attention.l2}</strong><span>纸面验证</span></button><button type="button" data-view="l3"><strong>${desk.attention.l3}</strong><span>毕业观察</span></button></div></section>
     <div class="sidebar-separator"></div>
     <nav class="filters" aria-label="工作流导航">${Object.entries(viewMeta)
       .map(
@@ -268,7 +281,11 @@ const renderSidebar = () => {
   </aside>`;
 };
 
-const renderSummaryStrip = () => `<section class="summary-strip" aria-label="虚拟账本摘要">
+const renderSummaryStrip = () => `${
+  desk.integrity.isComplete
+    ? ""
+    : `<section class="ledger-integrity-band" role="status"><strong>账本数据不完整</strong><span>${desk.integrity.missingAccountStrategyKeys.length} 个策略缺账户 · ${desk.integrity.duplicateAccountStrategyKeys.length} 个策略账户重复 · ${desk.integrity.orphanAccountIds.length + desk.integrity.orphanPositionIds.length} 条孤立记录</span></section>`
+}<section class="summary-strip" aria-label="策略账本组合摘要">
   <div><span>名义本金</span><strong>${money.format(desk.ledger.nominalCapital)}</strong></div>
   <div><span>当前净值</span><strong>${money.format(desk.ledger.nav)}</strong></div>
   <div><span>虚拟盈亏</span><strong class="${tone(desk.ledger.pnl)}">${money.format(desk.ledger.pnl)}</strong></div>
@@ -290,13 +307,24 @@ const renderHelp =
 
 const renderApp = () => {
   const items = itemsForView(contentRoute.view);
-  const selected = items.find((item) => item.id === contentRoute.id) || items[0] || null;
+  const strategyView = contentRoute.view === "strategies";
+  const selected = contentRoute.id
+    ? items.find((item) => item.id === contentRoute.id) || null
+    : strategyView
+      ? null
+      : items[0] || null;
+  const strategyDetail = strategyView && Boolean(selected);
   const meta = viewMeta[contentRoute.view];
-  root.innerHTML = `<div class="app-shell ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}">${renderSidebar()}<main class="main">
-    <div class="mobile-topbar"><button class="mobile-sidebar-toggle" type="button" data-mobile-sidebar aria-controls="appSidebar" aria-label="打开侧栏"><span class="sidebar-toggle-icon" aria-hidden="true"></span></button><div class="mobile-topbar-copy"><div class="mobile-view-title">${meta.label}</div><div class="mobile-view-meta">${items.length} ${meta.noun}</div></div><button class="mobile-help-button" type="button" data-open-help aria-label="帮助与设置">帮助</button></div>
-    <header class="workspace-head"><div><p class="eyebrow">${meta.eyebrow}</p><h1>${meta.label}</h1></div><div class="workspace-status">${currentState.provider.name === "demo" ? '<span class="snapshot-badge">DEMO</span>' : '<span class="status-dot"></span>'}<span>${escapeHtml(currentState.provider.asOf || "Busabase 当前数据")}</span><span class="read-only">只读</span><button type="button" data-refresh>刷新</button></div></header>
-    ${contentRoute.view === "ledger" ? renderSummaryStrip() : renderFunnel()}
-    <section class="content"><div class="list-panel"><div class="list-head"><div><strong>${meta.label}</strong><span>${items.length} ${meta.noun}</span></div>${["l1", "l2", "l3"].includes(contentRoute.view) ? "<span>按综合分排序</span>" : ""}</div><div class="work-list">${renderRows(contentRoute.view, items, selected?.id)}</div></div><aside class="detail-panel">${renderDetail(contentRoute.view, selected)}</aside></section>
+  const workspaceTitle = strategyDetail ? "策略详情" : meta.label;
+  const mainContent = strategyView
+    ? strategyDetail
+      ? `<section class="strategy-detail-view detail-panel">${renderStrategyDetail(selected)}</section>`
+      : `${renderSummaryStrip()}${renderStrategyTable()}`
+    : `${renderFunnel()}<section class="content"><div class="list-panel"><div class="list-head"><div><strong>${meta.label}</strong><span>${items.length} ${meta.noun}</span></div><span>按综合分排序</span></div><div class="work-list">${renderRows(items, selected?.id)}</div></div><aside class="detail-panel">${renderDetail(contentRoute.view, selected)}</aside></section>`;
+  root.innerHTML = `<div class="app-shell ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}">${renderSidebar()}<main class="main ${strategyView ? "strategy-main" : ""} ${strategyDetail ? "strategy-detail-mode" : ""}">
+    <div class="mobile-topbar"><button class="mobile-sidebar-toggle" type="button" data-mobile-sidebar aria-controls="appSidebar" aria-label="打开侧栏"><span class="sidebar-toggle-icon" aria-hidden="true"></span></button><div class="mobile-topbar-copy"><div class="mobile-view-title">${workspaceTitle}</div><div class="mobile-view-meta">${strategyDetail ? escapeHtml(selected.name) : `${items.length} ${meta.noun}`}</div></div><button class="mobile-help-button" type="button" data-open-help aria-label="帮助与设置">帮助</button></div>
+    <header class="workspace-head"><div><p class="eyebrow">${meta.eyebrow}</p><h1>${workspaceTitle}</h1></div><div class="workspace-status">${currentState.provider.name === "demo" ? '<span class="snapshot-badge">DEMO</span>' : '<span class="status-dot"></span>'}<span>${escapeHtml(currentState.provider.asOf || "Busabase 当前数据")}</span><span class="read-only">只读</span><button type="button" data-refresh>刷新</button></div></header>
+    ${mainContent}
   </main></div><div id="sidebarScrim" class="sidebar-scrim" hidden></div>${parseHash().view === "settings" ? renderHelp() : ""}<div class="toast" role="status" aria-live="polite" hidden></div>`;
   bindEvents();
 };
@@ -401,6 +429,13 @@ const bindEvents = () => {
       navigate({ view: contentRoute.view, id: button.dataset.selectId });
     }),
   );
+  root.querySelectorAll(".strategy-table-row[data-select-id]").forEach((row) =>
+    row.addEventListener("keydown", (event) => {
+      if (!["Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      row.click();
+    }),
+  );
   root.querySelector("[data-sidebar-toggle]")?.addEventListener("click", () => {
     if (isMobileLayout()) setMobileSidebarOpen(false);
     else {
@@ -432,7 +467,7 @@ const bindEvents = () => {
     }),
   );
   root.querySelector("[data-refresh]")?.addEventListener("click", async () => {
-    if (currentState.provider.name === "demo") showToast("演示数据为 2026-07-28 固定快照。");
+    if (currentState.provider.name === "demo") showToast("演示数据为 2026-08-05 固定快照。");
     else await load();
   });
 };

@@ -1,6 +1,6 @@
 import { createRuntimeClient } from "../busabase-client.js";
-import { appConfig } from "../config.js?v=0.3.0";
-import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.3.0";
+import { appConfig } from "../config.js?v=0.5.0";
+import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.5.0";
 
 const allowedReads = new Set(appConfig.permissions.readProcedures);
 const allowedSetup = new Set(appConfig.permissions.setupProcedures);
@@ -44,6 +44,27 @@ const readPage = async (client, base, cursor) => {
   };
 };
 
+export const readAllPages = async (client, base, maxPages = 100) => {
+  const records = [];
+  const seenCursors = new Set();
+  let cursor;
+
+  for (let pageCount = 1; pageCount <= maxPages; pageCount += 1) {
+    const page = await readPage(client, base, cursor);
+    records.push(...page.records);
+    if (!page.nextCursor) {
+      return { records, nextCursor: null, limit: base.readLimit, pageCount };
+    }
+    if (seenCursors.has(page.nextCursor)) {
+      throw new Error(`PAGINATION_LOOP: ${base.key}`);
+    }
+    seenCursors.add(page.nextCursor);
+    cursor = page.nextCursor;
+  }
+
+  throw new Error(`PAGINATION_LIMIT: ${base.key}`);
+};
+
 let runtimeClient;
 let runtimeBases = new Map();
 let pendingSetupError = "";
@@ -70,7 +91,7 @@ export const busabaseProvider = {
     pendingSetupError = "";
     runtimeBases = new Map(resources.bases.map((base) => [base.key, base]));
     const pages = await Promise.all(
-      resources.bases.map(async (base) => [base.key, await readPage(runtimeClient, base)]),
+      resources.bases.map(async (base) => [base.key, await readAllPages(runtimeClient, base)]),
     );
     return {
       provider: {
@@ -81,7 +102,7 @@ export const busabaseProvider = {
       },
       records: pages.flatMap(([, page]) => page.records),
       pageInfo: Object.fromEntries(
-        pages.map(([key, page]) => [key, { nextCursor: page.nextCursor, limit: page.limit }]),
+        pages.map(([key, page]) => [key, { complete: true, limit: page.limit, pageCount: page.pageCount }]),
       ),
     };
   },

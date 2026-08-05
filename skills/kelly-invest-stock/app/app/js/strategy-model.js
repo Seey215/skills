@@ -94,17 +94,24 @@ export function createStrategyDesk(records) {
   const candidates = recordsFor(records, "candidates").map(normalizeCandidate);
   const accounts = recordsFor(records, "ledger-accounts").map(normalizeAccount);
   const positions = recordsFor(records, "ledger-positions").map(normalizePosition);
-  const accountByStrategy = new Map(accounts.map((account) => [account.strategyKey, account]));
+  const accountsByStrategy = new Map();
+  for (const account of accounts) {
+    const strategyAccounts = accountsByStrategy.get(account.strategyKey) || [];
+    strategyAccounts.push(account);
+    accountsByStrategy.set(account.strategyKey, strategyAccounts);
+  }
 
   const strategies = recordsFor(records, "strategies")
     .map(normalizeStrategy)
     .map((strategy) => {
       const strategyCandidates = candidates.filter((candidate) => candidate.strategyKey === strategy.key);
+      const strategyAccounts = accountsByStrategy.get(strategy.key) || [];
       return {
         ...strategy,
         candidates: strategyCandidates,
         positions: positions.filter((position) => position.strategyKey === strategy.key),
-        account: accountByStrategy.get(strategy.key) || null,
+        account: strategyAccounts[0] || null,
+        accountCount: strategyAccounts.length,
         stageCounts: Object.fromEntries(
           ["L1", "L2", "L3"].map((stage) => [
             stage,
@@ -119,21 +126,52 @@ export function createStrategyDesk(records) {
         (left.account?.returnRate ?? Number.NEGATIVE_INFINITY),
     );
 
+  const strategyKeys = new Set(strategies.map((strategy) => strategy.key));
+  const duplicateStrategyKeys = [...strategyKeys].filter(
+    (key) => strategies.filter((strategy) => strategy.key === key).length > 1,
+  );
+  const missingAccountStrategyKeys = strategies
+    .filter((strategy) => strategy.accountCount === 0)
+    .map((strategy) => strategy.key);
+  const duplicateAccountStrategyKeys = strategies
+    .filter((strategy) => strategy.accountCount > 1)
+    .map((strategy) => strategy.key);
+  const orphanAccountIds = accounts
+    .filter((account) => !strategyKeys.has(account.strategyKey))
+    .map((account) => account.id);
+  const orphanPositionIds = positions
+    .filter((position) => !strategyKeys.has(position.strategyKey))
+    .map((position) => position.id);
+  const canonicalAccounts = [
+    ...new Map(
+      strategies.filter((strategy) => strategy.account).map((strategy) => [strategy.account.id, strategy.account]),
+    ).values(),
+  ];
+
   const levels = Object.fromEntries(
     ["L1", "L2", "L3"].map((stage) => [
       stage,
       candidates.filter((candidate) => candidate.stage === stage).sort((a, b) => b.confidence - a.confidence),
     ]),
   );
-  const nominalCapital = accounts.reduce((sum, account) => sum + account.nominalCapital, 0);
-  const nav = accounts.reduce((sum, account) => sum + account.nav, 0);
-  const cash = accounts.reduce((sum, account) => sum + account.cash, 0);
-  const benchmarkValue = accounts.reduce(
+  const nominalCapital = canonicalAccounts.reduce((sum, account) => sum + account.nominalCapital, 0);
+  const nav = canonicalAccounts.reduce((sum, account) => sum + account.nav, 0);
+  const cash = canonicalAccounts.reduce((sum, account) => sum + account.cash, 0);
+  const benchmarkValue = canonicalAccounts.reduce(
     (sum, account) => sum + account.nominalCapital * (account.benchmarkReturn || 0),
     0,
   );
   const returnRate = nominalCapital > 0 ? nav / nominalCapital - 1 : null;
   const benchmarkReturn = nominalCapital > 0 ? benchmarkValue / nominalCapital : null;
+  const integrity = {
+    missingAccountStrategyKeys,
+    duplicateAccountStrategyKeys,
+    duplicateStrategyKeys,
+    orphanAccountIds,
+    orphanPositionIds,
+  };
+  integrity.issueCount = Object.values(integrity).reduce((sum, issues) => sum + issues.length, 0);
+  integrity.isComplete = integrity.issueCount === 0;
 
   return {
     strategies,
@@ -141,6 +179,7 @@ export function createStrategyDesk(records) {
     accounts,
     positions,
     levels,
+    integrity,
     ledger: {
       nominalCapital,
       nav,

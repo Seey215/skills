@@ -56,13 +56,20 @@ def test_demo_ui(browser, base_url: str) -> None:
     page.wait_for_load_state("networkidle")
     assert page.get_by_role("heading", name="策略", exact=True).is_visible()
     assert page.get_by_text("DEMO", exact=True).is_visible()
-    assert page.locator("[data-select-id]").count() >= 4
+    assert page.locator(".strategy-table-row").count() == 3
+    assert page.get_by_role("columnheader", name="策略简述", exact=True).is_visible()
+    assert page.get_by_role("columnheader", name="账本 NAV", exact=True).is_visible()
+    assert page.get_by_role("columnheader", name="实际虚拟持仓", exact=True).is_visible()
+    assert page.locator(".filters", has_text="虚拟账本").count() == 0
+    assert page.locator(".content").count() == 0
     assert_no_horizontal_overflow(page)
 
-    first_row = page.locator("[data-select-id]").first
+    first_row = page.locator('.strategy-table-row[data-select-id="strategy-quality"] .strategy-col')
     first_row.click()
     assert "/strategy-" in page.url
-    assert page.locator(".detail-panel").is_visible()
+    assert page.locator(".strategy-detail-view").is_visible()
+    assert page.get_by_role("heading", name="虚拟账户", exact=True).is_visible()
+    assert page.locator(".strategy-ledger-column .position-table-row").count() == 2
 
     page.get_by_role("button", name="帮助与设置", exact=True).click()
     dialog = page.get_by_role("dialog")
@@ -89,11 +96,13 @@ def test_demo_ui(browser, base_url: str) -> None:
         page.locator("#sidebarScrim").click(position={"x": width - 5, "y": 5})
         assert page.locator("body.sidebar-open").count() == 0
 
-        page.locator("[data-select-id]").first.click()
+        page.locator('.strategy-table-row[data-select-id="strategy-quality"] .strategy-col').click()
         assert page.locator("body.mobile-detail-open").count() == 1
-        assert page.locator(".detail-panel").is_visible()
+        assert page.locator(".strategy-detail-view").is_visible()
+        assert page.get_by_role("heading", name="虚拟账户", exact=True).is_visible()
         page.locator("[data-back-to-list]").click()
         assert page.locator("body.mobile-detail-open").count() == 0
+        assert page.locator(".strategy-table").is_visible()
         assert_no_horizontal_overflow(page)
         assert not errors, errors
         mobile.close()

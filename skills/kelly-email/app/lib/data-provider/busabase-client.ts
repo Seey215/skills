@@ -70,7 +70,7 @@ export function createBusabaseClient() {
   async function inspectResources() {
     const folder = await locateFolder();
     if (!folder) return { folder: null, bases: [], drive: null, missing: [...appConfig.bases] };
-    const children = folder.children || [];
+    const children = (folder as any).children || [];
     const resolvedBases = [];
     const missing = [];
     for (const declaration of appConfig.bases) {
@@ -145,9 +145,10 @@ export function createBusabaseClient() {
         autoMerge: true,
         mergeMode: "replace",
       });
-      if (created?.status && created.status !== "merged") throw new Error(`SETUP_PENDING: ${created.id}`);
-      if (created?.node?.id) {
-        await sdk.nodes.updateMetadata({ nodeId: created.node.id, metadata: ownership("files") });
+      const createdAny = created as any;
+      if (createdAny?.status && createdAny.status !== "merged") throw new Error(`SETUP_PENDING: ${createdAny.id}`);
+      if (createdAny?.node?.id) {
+        await sdk.nodes.updateMetadata({ nodeId: createdAny.node.id, metadata: ownership("files") });
       }
       current = await inspectResources();
     }
@@ -247,10 +248,18 @@ export function createBusabaseClient() {
       folderSlug: appConfig.folder.slug,
       driveSlug: appConfig.drive.slug,
       secretsNamespace: appConfig.vaultNamespace,
-      get baseId() { return appConfig.bases.find((item) => item.key === "reviews")?.baseId || ""; },
-      get contactsBaseId() { return appConfig.bases.find((item) => item.key === "contacts")?.baseId || ""; },
-      get settingsBaseId() { return appConfig.bases.find((item) => item.key === "settings")?.baseId || ""; },
-      get driveId() { return appConfig.drive.nodeId; },
+      get baseId() {
+        return appConfig.bases.find((item) => item.key === "reviews")?.baseId || "";
+      },
+      get contactsBaseId() {
+        return appConfig.bases.find((item) => item.key === "contacts")?.baseId || "";
+      },
+      get settingsBaseId() {
+        return appConfig.bases.find((item) => item.key === "settings")?.baseId || "";
+      },
+      get driveId() {
+        return appConfig.drive.nodeId;
+      },
     },
     provisionResources,
     inspectResources,
@@ -261,8 +270,10 @@ export function createBusabaseClient() {
     listSettingsFields: async () => (await listRecords("settings")).map(recordFields),
     getSettingsFields: async (recordId: string) => recordFields(await getRecord("settings", recordId)),
     upsertRecord: (recordId: string, fields: Fields, message: string) => upsert("reviews", recordId, fields, message),
-    upsertContactRecord: (recordId: string, fields: Fields, message: string) => upsert("contacts", recordId, fields, message),
-    upsertSettingsRecord: (recordId: string, fields: Fields, message: string) => upsert("settings", recordId, fields, message),
+    upsertContactRecord: (recordId: string, fields: Fields, message: string) =>
+      upsert("contacts", recordId, fields, message),
+    upsertSettingsRecord: (recordId: string, fields: Fields, message: string) =>
+      upsert("settings", recordId, fields, message),
     readDriveFile,
     writeDriveFile,
     getSecret: async (name: string) => String(process.env[name] || ""),

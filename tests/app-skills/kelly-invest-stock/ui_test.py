@@ -56,7 +56,7 @@ def test_demo_ui(browser, base_url: str) -> None:
     page.wait_for_load_state("networkidle")
     assert page.get_by_role("heading", name="策略", exact=True).is_visible()
     assert page.get_by_text("DEMO", exact=True).is_visible()
-    assert page.locator(".strategy-table-row").count() == 8
+    assert page.locator(".strategy-table-row").count() == 10
     assert page.get_by_role("columnheader", name="策略简述", exact=True).is_visible()
     assert page.get_by_role("columnheader", name="账本 NAV", exact=True).is_visible()
     assert page.get_by_role("columnheader", name="晋级阶段", exact=True).is_visible()

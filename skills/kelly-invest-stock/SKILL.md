@@ -51,8 +51,9 @@ persistent backend.
   must never silently switch to Demo.
 - Enter Demo only when the user explicitly asks to open or update Demo. Demo data
   is deterministic, clearly labeled, and not persistent.
-- Use recognizable investor-style Demo strategies such as Buffett, Munger, Duan
-  Yongping, Peter Lynch, Howard Marks, Fisher, Graham, or Li Lu style examples.
+- Use 10 recognizable investor-style Demo strategies such as Buffett, Munger,
+  Duan Yongping, Peter Lynch, Howard Marks, Fisher, Graham, Li Lu, Templeton, or
+  Soros style examples.
   Label them as style reproductions; never imply actual holdings, endorsement, or
   current advice.
 - Read and write persistent state through `busabase-sdk`. Stage changes use a

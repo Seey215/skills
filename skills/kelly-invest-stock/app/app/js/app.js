@@ -1,27 +1,34 @@
-import { appConfig } from "./config.js?v=0.6.0";
-import { getProvider } from "./providers/index.js?v=0.6.0";
-import { createRegressionSnapshot, createStrategyDesk } from "./strategy-model.js?v=0.6.0";
+import { appConfig } from "./config.js?v=0.8.0";
+import { getProvider } from "./providers/index.js?v=0.8.0";
+import { createRegressionSnapshot, createStrategyDesk } from "./strategy-model.js?v=0.8.0";
 
 const root = document.querySelector("#app");
 const money = new Intl.NumberFormat("zh-CN", {
   style: "currency",
-  currency: "USD",
+  currency: "CNY",
   maximumFractionDigits: 0,
 });
-const price = new Intl.NumberFormat("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const quote = new Intl.NumberFormat("zh-CN", {
+  style: "currency",
+  currency: "CNY",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const DETAIL_TABS = ["portfolio", "logic", "backtest"];
 
 const viewMeta = {
   strategies: { label: "策略", noun: "个策略", eyebrow: "STRATEGY DESK" },
   l1: { label: "L1 基础观察", noun: "个策略", eyebrow: "VIRTUAL LEDGER" },
   l2: { label: "L2 进阶观察", noun: "个策略", eyebrow: "MANUAL STAGE" },
   l3: { label: "L3 高置信观察", noun: "个策略", eyebrow: "MANUAL STAGE" },
-  regression: { label: "回归", noun: "个策略", eyebrow: "BACKTEST SNAPSHOT" },
+  regression: { label: "回归", noun: "份报告", eyebrow: "BACKTEST REPORT" },
 };
 
 let currentState;
 let activeProvider;
 let desk;
-let contentRoute = { view: "strategies", id: null };
+let contentRoute = { view: "strategies", id: null, tab: null };
 let lastContentHash = "#/strategies";
 let sidebarCollapsed = false;
 let helpTab = "guide";
@@ -52,10 +59,17 @@ const parseHash = () => {
   return {
     view,
     id: view === parts[0] && parts[1] ? decodeURIComponent(parts[1]) : null,
+    tab:
+      view !== "regression" && parts[1]
+        ? DETAIL_TABS.includes(parts[2])
+          ? parts[2]
+          : "portfolio"
+        : null,
   };
 };
 
-const routeHash = ({ view, id }) => `#/${view}${id ? `/${encodeURIComponent(id)}` : ""}`;
+const routeHash = ({ view, id, tab }) =>
+  `#/${view}${id ? `/${encodeURIComponent(id)}` : ""}${id && tab ? `/${tab}` : ""}`;
 
 const navigate = (route, { replace = false } = {}) => {
   const next = routeHash(route);
@@ -105,7 +119,7 @@ const strategyPositionSummary = (strategy) => {
     return `<strong>现金</strong><small>${formatPercent(strategy.account.cashRate, false)}</small>`;
   return `<strong>${strategy.positions
     .slice(0, 3)
-    .map((position) => escapeHtml(position.code))
+    .map((position) => escapeHtml(position.name))
     .join(
       " · ",
     )}</strong><small>${strategy.positions.length} 个持仓 · 现金 ${formatPercent(strategy.account.cashRate, false)}</small>`;
@@ -156,29 +170,92 @@ const renderStageControl = (strategy) => `<div class="stage-control-row"><span>�
   )
   .join("")}</div></div>`;
 
-const renderStrategyPositions = (strategy) =>
-  `<div class="position-table"><div class="position-table-head"><span>标的</span><span>权重</span><span>盈亏</span></div>${
-    strategy.positions
-      .map(
-        (position) =>
-          `<div class="position-table-row"><span><strong>${escapeHtml(position.code)}</strong><small>数量 ${position.quantity} · 成本 ${position.entryPrice === null ? "--" : `$${price.format(position.entryPrice)}`} · 参考 ${position.latestPrice === null ? "--" : `$${price.format(position.latestPrice)}`}</small><i><b style="width:${Math.max(0, Math.min(100, (position.weight || 0) * 100))}%"></b></i></span><span>${formatPercent(position.weight, false)}</span><span class="${tone(position.pnl)}">${position.pnl === null ? "--" : money.format(position.pnl)}</span></div>`,
-      )
-      .join("") || '<div class="empty-state">暂无虚拟持仓。</div>'
-  }</div>`;
+const renderStrategyPositions = (strategy) => {
+  const positionRows = [...strategy.positions]
+    .sort((left, right) => (right.weight || 0) - (left.weight || 0))
+    .map(
+      (position) => `<tr class="portfolio-position-row">
+        <td class="portfolio-security"><strong>${escapeHtml(position.name)}</strong><small>${escapeHtml(position.code)}</small></td>
+        <td class="number-col">${position.quantity}</td>
+        <td class="number-col">${position.entryPrice === null ? "--" : quote.format(position.entryPrice)}</td>
+        <td class="number-col">${position.latestPrice === null ? "--" : quote.format(position.latestPrice)}</td>
+        <td class="number-col"><strong>${money.format(position.marketValue)}</strong></td>
+        <td class="portfolio-weight"><strong>${formatPercent(position.weight, false)}</strong><i><b style="width:${Math.max(0, Math.min(100, (position.weight || 0) * 100))}%"></b></i></td>
+        <td class="number-col ${tone(position.pnl)}"><strong>${position.pnl === null ? "--" : money.format(position.pnl)}</strong></td>
+      </tr>`,
+    )
+    .join("");
+  const cashRow = strategy.account
+    ? `<tr class="portfolio-cash-row"><td class="portfolio-security"><strong>现金</strong><small>虚拟账户可用资金</small></td><td class="number-col">--</td><td class="number-col">--</td><td class="number-col">--</td><td class="number-col"><strong>${money.format(strategy.account.cash)}</strong></td><td class="portfolio-weight"><strong>${formatPercent(strategy.account.cashRate, false)}</strong><i><b style="width:${Math.max(0, Math.min(100, (strategy.account.cashRate || 0) * 100))}%"></b></i></td><td class="number-col">--</td></tr>`
+    : "";
+  return `<div class="portfolio-table-wrap"><table class="portfolio-table"><thead><tr><th>标的</th><th class="number-col">数量</th><th class="number-col">虚拟成本</th><th class="number-col">参考价</th><th class="number-col">虚拟市值</th><th>组合权重</th><th class="number-col">浮动盈亏</th></tr></thead><tbody>${positionRows || (!cashRow ? '<tr><td colspan="7"><div class="empty-state">暂无虚拟持仓。</div></td></tr>' : "")}${cashRow}</tbody></table></div>`;
+};
+
+const isHindsightBacktest = (backtest) => /后视|⚠️/.test(backtest?.method || "");
+
+const renderStrategyBacktest = (strategy) => {
+  const backtest = strategy.backtests[0];
+  if (!backtest) {
+    return '<section class="detail-section strategy-backtest-detail"><h3>历史回测</h3><div class="empty-state">该策略还没有带时间区间的回测报告。</div></section>';
+  }
+  return `<section class="detail-section strategy-backtest-detail"><div class="section-head-inline"><h3>历史回测</h3><span>报告 ${escapeHtml(backtest.reportDate)}</span></div>
+    <div class="backtest-period"><strong>${escapeHtml(backtest.windowStart)} → ${escapeHtml(backtest.windowEnd)}</strong><span>${escapeHtml(backtest.windowLabel)} · ${escapeHtml(backtest.coverage)}</span></div>
+    <div class="backtest-detail-grid">
+      ${fact("方法", escapeHtml(backtest.method))}
+      ${fact("总回报", formatPercent(backtest.totalReturn), tone(backtest.totalReturn))}
+      ${fact("CAGR", formatPercent(backtest.cagr), tone(backtest.cagr))}
+      ${fact("Sharpe", backtest.sharpe === null ? "--" : backtest.sharpe.toFixed(2), tone(backtest.sharpe))}
+      ${fact("最大回撤", formatPercent(backtest.maxDrawdown, false), "negative")}
+      ${fact(`vs ${escapeHtml(backtest.benchmark)}`, formatPercent(backtest.excessReturn), tone(backtest.excessReturn))}
+    </div>
+    ${isHindsightBacktest(backtest) ? `<p class="backtest-warning">${escapeHtml(backtest.sourceNote || "静态篮子存在后视偏差，只用于波动与回撤体检，不构成 Alpha 证据。")}</p>` : `<p class="detail-note">${escapeHtml(backtest.sourceNote)}</p>`}
+  </section>`;
+};
+
+const renderDetailTabs = (strategy, activeTab) => `<nav class="strategy-detail-tabs" role="tablist" aria-label="策略详情视图">
+  <button type="button" role="tab" aria-selected="${activeTab === "portfolio"}" class="${activeTab === "portfolio" ? "active" : ""}" data-detail-tab="portfolio"><span>组合持仓</span><b>${strategy.positions.length}</b></button>
+  <button type="button" role="tab" aria-selected="${activeTab === "logic"}" class="${activeTab === "logic" ? "active" : ""}" data-detail-tab="logic"><span>策略逻辑</span></button>
+  <button type="button" role="tab" aria-selected="${activeTab === "backtest"}" class="${activeTab === "backtest" ? "active" : ""}" data-detail-tab="backtest"><span>回测表现</span><b>${strategy.backtests.length}</b></button>
+</nav>`;
+
+const renderPortfolioTab = (strategy, investedRate) => {
+  const account = strategy.account;
+  if (!account) {
+    return '<section class="strategy-detail-tab-panel portfolio-panel" role="tabpanel"><div class="ledger-missing"><strong>该策略没有独立虚拟账户</strong><p>补齐虚拟账户后，这里会展示股票、现金、权重与盈亏。</p></div></section>';
+  }
+  return `<section class="strategy-detail-tab-panel portfolio-panel" role="tabpanel">
+    <div class="portfolio-account-head"><div><p class="eyebrow">VIRTUAL PORTFOLIO</p><h3>${escapeHtml(account.name)}</h3></div><span>${strategy.positions.length} 只股票 · 现金 ${formatPercent(account.cashRate, false)}</span></div>
+    <div class="portfolio-account-facts">${fact("当前净值", money.format(account.nav))}${fact("名义本金", money.format(account.nominalCapital))}${fact("虚拟盈亏", money.format(account.pnl), tone(account.pnl))}${fact("可用现金", money.format(account.cash))}</div>
+    <div class="capital-allocation portfolio-allocation"><div><span>股票仓位</span><strong>${formatPercent(investedRate, false)}</strong></div><div><i style="width:${Math.max(0, Math.min(100, (investedRate || 0) * 100))}%"></i></div><small>股票市值 ${money.format(account.nav - account.cash)} · 现金 ${money.format(account.cash)}</small></div>
+    <div class="portfolio-holdings-head"><div><h3>组合持仓</h3><span>按组合权重排序</span></div><span>参考价仅用于虚拟账本估值</span></div>
+    ${renderStrategyPositions(strategy)}
+    <p class="ledger-stamp">账本更新于 ${escapeHtml(account.updatedAt)} · 不连接券商，不产生真实订单</p>
+  </section>`;
+};
+
+const renderLogicTab = (strategy) => `<section class="strategy-detail-tab-panel strategy-logic-panel" role="tabpanel">
+  <div class="strategy-thesis-lead"><span>核心假设</span><p>${escapeHtml(strategy.thesis)}</p></div>
+  <div class="strategy-logic-grid">
+    <section class="detail-section"><h3>选股与失效</h3><dl class="detail-list"><div><dt>入选规则</dt><dd>${escapeHtml(strategy.selectionRule)}</dd></div><div><dt>失效条件</dt><dd>${escapeHtml(strategy.invalidationRule)}</dd></div><div><dt>复核频率</dt><dd>${escapeHtml(strategy.rebalance)}</dd></div></dl></section>
+    <section class="detail-section"><h3>策略阶段</h3>${renderStageLanes(strategy)}<p class="detail-note">标记对象是整套策略，不是持仓个股。三个阶段都只使用当前虚拟账本；L2/L3 不连接富途、不接券商 API，也不产生真实订单。</p></section>
+  </div>
+</section>`;
 
 const renderStrategyDetail = (strategy) => {
   const account = strategy.account;
+  const activeTab = DETAIL_TABS.includes(contentRoute.tab) ? contentRoute.tab : "portfolio";
   const investedRate = account?.cashRate === null || account?.cashRate === undefined ? null : 1 - account.cashRate;
   const accountWarning = !account
     ? `<section class="ledger-missing"><strong>该策略没有独立虚拟账户</strong><p>缺少 strategy_key 为 <code>${escapeHtml(strategy.key)}</code> 的 ledger-accounts 记录，因此不计入组合 NAV、收益或现金比例。</p></section>`
     : strategy.accountCount > 1
       ? `<section class="ledger-integrity-detail"><strong>检测到 ${strategy.accountCount} 个同策略账户</strong><span>当前仅采用第一条记录参与汇总，需合并为一个独立账本。</span></section>`
       : "";
-  const ledgerSections = account
-    ? `<section class="detail-section"><div class="section-head-inline"><h3>虚拟账户</h3><span>${escapeHtml(account.name)}</span></div><div class="fact-grid">${fact("当前净值", money.format(account.nav))}${fact("名义本金", money.format(account.nominalCapital))}${fact("虚拟盈亏", money.format(account.pnl), tone(account.pnl))}${fact("现金", money.format(account.cash))}</div></section>
-      <section class="detail-section"><h3>虚拟持仓</h3>${renderStrategyPositions(strategy)}</section>
-      <p class="ledger-stamp">账本更新于 ${escapeHtml(account.updatedAt)} · 不连接券商，不产生真实订单</p>`
-    : '<section class="detail-section"><h3>账本边界</h3><p class="detail-copy">每个策略必须恰好对应一个虚拟账户，持仓使用相同 strategy_key；修复通过受信任的 Busabase 工作流完成。</p></section>';
+  const tabPanel =
+    activeTab === "logic"
+      ? renderLogicTab(strategy)
+      : activeTab === "backtest"
+        ? `<section class="strategy-detail-tab-panel backtest-tab-panel" role="tabpanel">${renderStrategyBacktest(strategy)}</section>`
+        : renderPortfolioTab(strategy, investedRate);
   return `<div class="detail-scroll">
     <button class="strategy-detail-back back-to-list" type="button" data-back-to-list>&larr; 返回策略总览</button>
     <div class="detail-heading"><div><p class="eyebrow">${escapeHtml(strategy.family)}</p><h2>${escapeHtml(strategy.name)}</h2></div>${stageBadge(strategy.stage)}</div>
@@ -190,12 +267,8 @@ const renderStrategyDetail = (strategy) => {
       <div><span>超额收益</span><strong class="${tone(account?.excessReturn ?? null)}">${formatPercent(account?.excessReturn ?? null)}</strong><small>vs ${escapeHtml(strategy.benchmark)}</small></div>
       <div><span>最大回撤</span><strong class="negative">${formatPercent(account?.maxDrawdown ?? null, false)}</strong><small>${escapeHtml(strategy.rebalance)}</small></div>
     </div>
-    <div class="capital-allocation"><div><span>虚拟资金使用</span><strong>${formatPercent(investedRate, false)}</strong></div><div><i style="width:${Math.max(0, Math.min(100, (investedRate || 0) * 100))}%"></i></div><small>持仓 ${money.format((account?.nav || 0) - (account?.cash || 0))} · 现金 ${money.format(account?.cash || 0)}</small></div>
-    <div class="strategy-detail-columns"><div>
-      <section class="detail-section"><h3>核心假设</h3><p class="detail-copy">${escapeHtml(strategy.thesis)}</p></section>
-      <section class="detail-section"><h3>选股与失效</h3><dl class="detail-list"><div><dt>入选规则</dt><dd>${escapeHtml(strategy.selectionRule)}</dd></div><div><dt>失效条件</dt><dd>${escapeHtml(strategy.invalidationRule)}</dd></div><div><dt>复核频率</dt><dd>${escapeHtml(strategy.rebalance)}</dd></div></dl></section>
-      <section class="detail-section"><h3>策略阶段</h3>${renderStageLanes(strategy)}<p class="detail-note">标记对象是整套策略，不是持仓个股。三个阶段都只使用当前虚拟账本；L2/L3 不连接富途、不接券商 API，也不产生真实订单。</p></section>
-    </div><div class="strategy-ledger-column">${ledgerSections}</div></div>
+    ${renderDetailTabs(strategy, activeTab)}
+    ${tabPanel}
   </div>`;
 };
 
@@ -219,7 +292,7 @@ const renderSidebar = () => {
     l1: desk.levels.L1.length,
     l2: desk.levels.L2.length,
     l3: desk.levels.L3.length,
-    regression: "分析",
+    regression: desk.backtests.length,
   };
   return `<aside class="sidebar ${sidebarCollapsed ? "collapsed" : ""}" id="appSidebar">
     <div class="brand"><div class="brand-icon" aria-hidden="true">KS</div><div class="brand-copy"><div class="brand-title">Kelly Invest Stock</div><div class="brand-subtitle">策略实验台</div></div><button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="appSidebar" aria-expanded="${!sidebarCollapsed}" aria-label="切换侧栏" title="切换侧栏"><span class="sidebar-toggle-icon" aria-hidden="true"></span></button></div>
@@ -253,28 +326,22 @@ const renderRegression = () => {
     desk.strategies.find((strategy) => strategy.id === contentRoute.id) ||
     desk.strategies.find((strategy) => strategy.account) ||
     null;
-  if (!selected) return '<section class="regression-view"><div class="empty-state">暂无可回归的策略账本。</div></section>';
-  const snapshot = createRegressionSnapshot(desk, selected);
-  return `<section class="regression-view" aria-label="策略回归体检">
-    <div class="regression-head"><div><strong>策略回归体检</strong><span>固定账本快照 · 不伪造时间序列指标</span></div><div class="regression-total"><span>总盘收益</span><strong class="${tone(snapshot.totalReturn)}">${formatPercent(snapshot.totalReturn)}</strong></div></div>
-    <div class="regression-layout">
-      <div class="regression-strategies"><div class="regression-list-head">选择策略</div>${desk.strategies
+  const latestReport = desk.backtests[0] || null;
+  const rows = desk.strategies
+    .map((strategy) => ({ strategy, backtest: strategy.backtests[0] || null }))
+    .filter(({ backtest }) => backtest)
+    .sort((left, right) => (right.backtest.sharpe ?? Number.NEGATIVE_INFINITY) - (left.backtest.sharpe ?? Number.NEGATIVE_INFINITY));
+  const snapshot = selected ? createRegressionSnapshot(desk, selected) : null;
+  return `<section class="regression-view" aria-label="策略回测与当前账本">
+    <div class="regression-head"><div><strong>策略回测（回归测试）</strong><span>${latestReport ? `最新报告 ${escapeHtml(latestReport.reportDate)} · ${escapeHtml(latestReport.windowLabel)} · 共 ${rows.length} 个策略` : "尚无带时间区间的回测报告"}</span></div><div class="regression-total"><span>当前总盘收益</span><strong class="${tone(desk.ledger.returnRate)}">${formatPercent(desk.ledger.returnRate)}</strong></div></div>
+    <div class="backtest-scroll">
+      ${rows.some(({ backtest }) => isHindsightBacktest(backtest)) ? '<div class="backtest-warning-band"><strong>后视偏差</strong><span>静态等权篮子按当前持仓回放，只用于波动、回撤和横向体检，不构成 Alpha 证据。</span></div>' : ""}
+      ${rows.length ? `<div class="backtest-table-wrap"><table class="backtest-table"><thead><tr><th>策略</th><th>报告日期</th><th>回测区间</th><th>方法</th><th>覆盖</th><th class="number-col">总回报</th><th class="number-col">CAGR</th><th class="number-col">波动</th><th class="number-col">Sharpe</th><th class="number-col">最大回撤</th><th class="number-col">vs 基准</th><th class="open-col"><span class="sr-only">当前贡献</span></th></tr></thead><tbody>${rows
         .map(
-          (strategy) =>
-            `<button type="button" data-regression-id="${escapeHtml(strategy.id)}" class="${strategy.id === selected.id ? "active" : ""}"><span>${stageBadge(strategy.stage)}<strong>${escapeHtml(strategy.name)}</strong></span><b class="${tone(strategy.account?.returnRate ?? null)}">${formatPercent(strategy.account?.returnRate ?? null)}</b></button>`,
+          ({ strategy, backtest }) => `<tr class="${strategy.id === selected?.id ? "active" : ""}"><td><button type="button" class="backtest-strategy-link" data-open-strategy-id="${escapeHtml(strategy.id)}">${escapeHtml(strategy.name)}</button><small>${stageBadge(strategy.stage)} ${escapeHtml(strategy.family)}</small></td><td>${escapeHtml(backtest.reportDate)}</td><td><strong>${escapeHtml(backtest.windowStart)} → ${escapeHtml(backtest.windowEnd)}</strong><small>${escapeHtml(backtest.windowLabel)}</small></td><td><span class="backtest-method ${isHindsightBacktest(backtest) ? "warning" : ""}">${escapeHtml(backtest.method)}</span></td><td>${escapeHtml(backtest.coverage)}</td><td class="number-col ${tone(backtest.totalReturn)}">${formatPercent(backtest.totalReturn)}</td><td class="number-col ${tone(backtest.cagr)}">${formatPercent(backtest.cagr)}</td><td class="number-col">${formatPercent(backtest.volatility, false)}</td><td class="number-col"><strong>${backtest.sharpe === null ? "--" : backtest.sharpe.toFixed(2)}</strong></td><td class="number-col negative">${formatPercent(backtest.maxDrawdown, false)}</td><td class="number-col ${tone(backtest.excessReturn)}">${formatPercent(backtest.excessReturn)}</td><td class="open-col"><button type="button" class="regression-select" data-regression-id="${escapeHtml(strategy.id)}" aria-label="查看${escapeHtml(strategy.name)}当前账本贡献">›</button></td></tr>`,
         )
-        .join("")}</div>
-      <div class="regression-result">
-        <div class="regression-title"><div><p class="eyebrow">${escapeHtml(selected.family)}</p><h2>${escapeHtml(selected.name)}</h2></div>${stageBadge(selected.stage)}</div>
-        <div class="regression-metrics">
-          ${fact("策略收益", formatPercent(snapshot.strategyReturn), tone(snapshot.strategyReturn))}
-          ${fact("总盘收益", formatPercent(snapshot.totalReturn), tone(snapshot.totalReturn))}
-          ${fact("收益贡献", formatPercent(snapshot.contribution), tone(snapshot.contribution))}
-          ${fact("剔除后总盘", formatPercent(snapshot.returnWithoutStrategy), tone(snapshot.returnWithoutStrategy))}
-        </div>
-        <div class="regression-contribution"><div><span>名义本金占比</span><strong>${formatPercent(snapshot.capitalWeight, false)}</strong></div><div><i style="width:${Math.max(0, Math.min(100, (snapshot.capitalWeight || 0) * 100))}%"></i></div></div>
-        <dl class="regression-notes"><div><dt>策略虚拟盈亏</dt><dd class="${tone(selected.account?.pnl ?? null)}">${selected.account ? money.format(selected.account.pnl) : "--"}</dd></div><div><dt>其余策略本金</dt><dd>${money.format(snapshot.remainderCapital)}</dd></div><div><dt>其余策略净值</dt><dd>${money.format(snapshot.remainderNav)}</dd></div><div><dt>口径</dt><dd>收益贡献 = 单策略虚拟盈亏 / 总名义本金；剔除后总盘按其余策略账本重算。</dd></div></dl>
-      </div>
+        .join("")}</tbody></table></div>` : '<div class="empty-state">暂无历史回测。回测结果必须包含报告日期、起点、截止日期和方法，当前账本快照不会代替历史回测。</div>'}
+      ${snapshot ? `<section class="current-contribution"><div class="section-head-inline"><h3>当前虚拟账本快照 · ${escapeHtml(selected.name)}</h3><span>${escapeHtml(selected.account?.updatedAt || "--")}</span></div><div class="regression-metrics">${fact("策略收益", formatPercent(snapshot.strategyReturn), tone(snapshot.strategyReturn))}${fact("总盘收益", formatPercent(snapshot.totalReturn), tone(snapshot.totalReturn))}${fact("收益贡献", formatPercent(snapshot.contribution), tone(snapshot.contribution))}${fact("剔除后总盘", formatPercent(snapshot.returnWithoutStrategy), tone(snapshot.returnWithoutStrategy))}</div><p class="detail-note">当前贡献按账本快照计算，不属于上方历史回测。收益贡献 = 单策略虚拟盈亏 / 总名义本金。</p></section>` : ""}
     </div>
   </section>`;
 };
@@ -284,7 +351,7 @@ const renderHelp =
   <div class="modal-head"><div><div id="helpTitle" class="modal-title">帮助与设置</div><div class="modal-subtitle">Kelly Invest Stock · 策略实验台</div></div><button class="icon-button" type="button" data-close-help aria-label="关闭帮助">关闭</button></div>
   <nav class="modal-tabs" aria-label="帮助与设置标签"><button class="${helpTab === "guide" ? "active" : ""}" type="button" data-help-tab="guide">规则</button><button class="${helpTab === "resources" ? "active" : ""}" type="button" data-help-tab="resources">资源</button><button class="${helpTab === "connection" ? "active" : ""}" type="button" data-help-tab="connection">连接</button></nav>
   <div class="modal-body">
-    <section class="help-tab-panel ${helpTab === "guide" ? "active" : ""}"><h2>策略阶段规则</h2><dl class="settings-list"><div><dt>L1 基础观察</dt><dd>每个新策略默认进入 L1，并拥有独立虚拟账本。</dd></div><div><dt>L2 进阶观察</dt><dd>由人手工标记整套策略，继续使用同一个虚拟账本。</dd></div><div><dt>L3 高置信观察</dt><dd>由人手工标记高成熟度策略；仍是虚拟研究标签，不接富途或真实交易 API。</dd></div><div><dt>回归</dt><dd>用当前账本快照查看单策略收益贡献与剔除后的总盘收益；没有历史净值序列时不计算 Sharpe、Alpha 或 R²。</dd></div></dl></section>
+    <section class="help-tab-panel ${helpTab === "guide" ? "active" : ""}"><h2>策略阶段规则</h2><dl class="settings-list"><div><dt>L1 基础观察</dt><dd>每个新策略默认进入 L1，并拥有独立虚拟账本。</dd></div><div><dt>L2 进阶观察</dt><dd>由人手工标记整套策略，继续使用同一个虚拟账本。</dd></div><div><dt>L3 高置信观察</dt><dd>由人手工标记高成熟度策略；仍是虚拟研究标签，不接富途或真实交易 API。</dd></div><div><dt>回归</dt><dd>历史回测按报告日期、起止区间、方法和统一指标展示；当前账本贡献另列，不冒充历史回测。没有可信历史序列时不生成 Sharpe、Alpha 或 R²。</dd></div></dl></section>
     <section class="help-tab-panel ${helpTab === "resources" ? "active" : ""}"><h2>Busabase 资源</h2><dl class="settings-list"><div><dt>应用根节点</dt><dd><code>${escapeHtml(appConfig.folder.slug)}</code></dd></div><div><dt>结构化数据</dt><dd>${appConfig.bases.map((base) => escapeHtml(base.name)).join("、")}</dd></div><div><dt>秘密数据</dt><dd>无 Vault 要求；本地 OAuth 凭证不进入业务 Base。</dd></div></dl></section>
     <section class="help-tab-panel ${helpTab === "connection" ? "active" : ""}"><h2>连接状态</h2><dl class="settings-list"><div><dt>数据提供方</dt><dd>${currentState.provider.name === "demo" ? "固定只读演示" : "Busabase SDK"}</dd></div><div><dt>Space</dt><dd>${currentState.provider.name === "demo" ? "演示中未连接" : "由当前 AirApp 会话确定"}</dd></div><div><dt>资源版本</dt><dd>Schema v${appConfig.schemaVersion}</dd></div><div><dt>运行边界</dt><dd>本地与 AirApp 使用同一份 Hono 应用源码。</dd></div></dl></section>
   </div>
@@ -324,7 +391,7 @@ const renderSetup = (error) => {
   const title = pending ? "等待工作区审批" : canProvision ? "初始化 Busabase 工作区" : "工作区暂未就绪";
   const resources = appConfig.bases.map((base) => base.name).join("、");
   const body = canProvision
-    ? `<p>将在当前 Space 的应用 Folder 下创建 ${escapeHtml(resources)} 三个 Base。</p><p class="detail-note">结构通过一个 Busabase ChangeRequest 幂等提交；旧版资源不会被删除或继续读取。</p>`
+    ? `<p>将在当前 Space 的应用 Folder 下创建 ${escapeHtml(resources)}，共 ${appConfig.bases.length} 个 Base。</p><p class="detail-note">结构通过一个 Busabase ChangeRequest 幂等提交；旧版资源不会被删除或继续读取。</p>`
     : `<p>${escapeHtml(reason)}</p><p class="detail-note">应用不会要求你手工创建 Node/Base 或复制 ID，也不会切换到本地数据。</p>`;
   const selectedSpace = authStatus?.space ? `${authStatus.space.name} (${authStatus.space.id})` : "当前 AirApp Space";
   root.innerHTML = `<div class="setup-shell"><section class="setup-modal" role="dialog" aria-labelledby="setupTitle"><div class="setup-head"><div class="brand-icon" aria-hidden="true">KS</div><div><p class="eyebrow">WORKSPACE SETUP</p><h1 id="setupTitle">${title}</h1></div></div><div class="setup-body"><p><strong>${escapeHtml(authStatus?.baseUrl || "Busabase")}</strong> 鉴权已就绪。</p><p>目标 Space：<strong>${escapeHtml(selectedSpace)}</strong></p>${body}<div class="setup-notice" data-setup-status hidden></div></div><div class="setup-footer setup-footer-split">${canProvision ? '<button class="connect-button" type="button" data-provision>初始化工作区</button>' : retryOnly ? '<button class="connect-button" type="button" data-retry-setup>重新检查</button>' : ""}<a class="text-link" href="?demo=1#/strategies">进入只读 Demo</a></div></section></div>`;
@@ -411,7 +478,7 @@ const bindEvents = () => {
   root.querySelectorAll("[data-select-id]").forEach((button) =>
     button.addEventListener("click", () => {
       if (isMobileLayout()) setMobileDetailOpen(true);
-      navigate({ view: contentRoute.view, id: button.dataset.selectId });
+      navigate({ view: contentRoute.view, id: button.dataset.selectId, tab: "portfolio" });
     }),
   );
   root.querySelectorAll(".strategy-table-row[data-select-id]").forEach((row) =>
@@ -424,6 +491,16 @@ const bindEvents = () => {
   root.querySelectorAll("[data-regression-id]").forEach((button) =>
     button.addEventListener("click", () => {
       navigate({ view: "regression", id: button.dataset.regressionId });
+    }),
+  );
+  root.querySelectorAll("[data-open-strategy-id]").forEach((button) =>
+    button.addEventListener("click", () => {
+      navigate({ view: "strategies", id: button.dataset.openStrategyId, tab: "portfolio" });
+    }),
+  );
+  root.querySelectorAll("[data-detail-tab]").forEach((button) =>
+    button.addEventListener("click", () => {
+      navigate({ view: contentRoute.view, id: contentRoute.id, tab: button.dataset.detailTab });
     }),
   );
   root.querySelectorAll("[data-stage-value]").forEach((button) =>
@@ -464,7 +541,7 @@ const bindEvents = () => {
   root.querySelector("#sidebarScrim")?.addEventListener("click", () => setMobileSidebarOpen(false));
   root.querySelector("[data-back-to-list]")?.addEventListener("click", () => {
     setMobileDetailOpen(false);
-    navigate({ view: contentRoute.view, id: null }, { replace: true });
+    navigate({ view: contentRoute.view, id: null, tab: null }, { replace: true });
   });
   root.querySelectorAll("[data-open-help]").forEach((button) =>
     button.addEventListener("click", () => {

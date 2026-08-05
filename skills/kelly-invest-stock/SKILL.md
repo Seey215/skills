@@ -1,6 +1,6 @@
 ---
 name: kelly-invest-stock
-description: Build and operate a Busabase-backed stock-strategy experiment desk with a bundled local Hono App-in-Skill, strategy-level L1/L2/L3 manual maturity labels, one virtual ledger per strategy, and portfolio regression/backtest snapshots. Use when the user invokes $kelly-invest-stock or /kelly-invest-stock, wants to define or compare stock strategies, inspect a strategy and its virtual book, manually label strategy maturity, or review virtual performance, drawdown, and contribution to the total book. It never connects to a brokerage, places orders, moves money, or presents generated analysis as personalized investment advice.
+description: Build and operate a Busabase-backed mainland China A-share strategy experiment desk with a bundled local Hono App-in-Skill, strategy-level L1/L2/L3 manual maturity labels, one CNY virtual ledger per strategy, and dated strategy backtest reports. Use when the user invokes $kelly-invest-stock or /kelly-invest-stock, wants to define or compare A-share strategies, inspect a strategy and its virtual book, manually label strategy maturity, or review dated backtests, drawdown, and contribution to the total book. It never connects to a brokerage, places orders, moves money, or presents generated analysis as personalized investment advice.
 ---
 
 # Kelly Invest Stock
@@ -28,6 +28,9 @@ persistent backend.
 
 ## Product Boundary
 
+- Limit the product to mainland China A shares. Preserve six-digit stock codes,
+  show Chinese security names as the primary identity, and use CNY for every
+  virtual account, price, market value, P/L, and portfolio total.
 - Keep every account, position, return, stage, and regression result virtual.
   Never connect to Futu or another brokerage, create order UI, or call a trading
   API.
@@ -53,7 +56,8 @@ persistent backend.
   is deterministic, clearly labeled, and not persistent.
 - Use 10 recognizable investor-style Demo strategies such as Buffett, Munger,
   Duan Yongping, Peter Lynch, Howard Marks, Fisher, Graham, Li Lu, Templeton, or
-  Soros style examples.
+  Soros style examples. Build every Demo basket from clearly labeled A-share
+  examples and use a fixed CNY 1,000,000 nominal account per strategy.
   Label them as style reproductions; never imply actual holdings, endorsement, or
   current advice.
 - Read and write persistent state through `busabase-sdk`. Stage changes use a
@@ -62,14 +66,17 @@ persistent backend.
 
 ## Core Resources
 
-Keep three application-owned Bases under one application Folder:
+Keep four application-owned Bases under one application Folder:
 
 - `strategies`: name, key, family, `status`, thesis, selection rule,
   invalidation rule, review cadence, benchmark, and confidence.
 - `ledger-accounts`: one virtual account per strategy with nominal capital, NAV,
   cash, benchmark return, maximum drawdown, and update time.
 - `ledger-positions`: virtual quantity, entry price, reference price, market
-  value, weight, and strategy key.
+  value, weight, strategy key, six-digit A-share code, and Chinese security name.
+- `strategy-backtests`: dated strategy-level reports with window start/end,
+  methodology, coverage, benchmark, total return, CAGR, volatility, Sharpe,
+  maximum drawdown, benchmark-relative return, and bias/source notes.
 
 Provision missing resources lazily through one Busabase ChangeRequest, re-read
 the Folder, and use only validated materialized IDs. Ignore legacy app-owned
@@ -110,11 +117,16 @@ rules.
 - Put strategy rules, the manual L1/L2/L3 segmented control, account summary, and
   positions together in Strategy Detail.
 - Make L1/L2/L3 routes filter strategies, not stocks.
-- Make Regression a strategy-focused virtual-book retrospective. With only a
-  current ledger snapshot, show strategy return, total-book return, contribution
-  (`strategy P/L / total nominal capital`), and total-book return with the
-  strategy removed. Do not invent Sharpe, Alpha, Beta, R², or a backtest without
-  historical NAV observations.
+- Make Regression a dated strategy backtest table aligned with `invest-ui`:
+  report date, start/end dates, window label, methodology, coverage, total
+  return, CAGR, volatility, Sharpe, maximum drawdown, and benchmark-relative
+  return. Keep hindsight warnings visible. Show current virtual-book contribution
+  (`strategy P/L / total nominal capital`) and the removal case in a clearly
+  separate secondary section. Do not invent a backtest or any historical metric
+  without a stored dated report backed by historical observations.
+- Do not show a rerun action unless a trusted historical-market-data workflow is
+  actually available. A stored report is inspectable data, not an executable
+  backtest engine.
 - On mobile, use the shared off-canvas sidebar, a separate detail route, sticky
   back action, and no horizontal page overflow at 390px or 360px.
 - Keep the virtual-only boundary visible. Do not describe L2 as Futu paper trading
@@ -127,8 +139,12 @@ rules.
 - Calculate total-book return from summed account NAV and summed nominal capital.
 - Calculate regression snapshot contribution as `strategy account P/L / total
   nominal capital`; calculate the removal case from the remaining accounts.
+- Sort and compare dated backtest reports only after checking that report date,
+  window start/end, method, coverage, and benchmark are present.
 - Compare strategies on the same window and benchmark before ranking them.
 - Keep Demo observations fixed and dated. Never present them as live data.
+- Format account and position money in CNY. Show the Chinese security name first
+  and retain the six-digit code as secondary identity.
 
 ## Completion Criteria
 
@@ -139,7 +155,7 @@ Finish only when:
   Regression work on desktop and mobile;
 - every strategy has one virtual account plus explicit selection and invalidation
   rules;
-- the three-resource declaration and lazy provisioning pass fixture tests;
+- the four-resource declaration and lazy provisioning pass fixture tests;
 - normal mode uses Busabase, while Demo is explicit, deterministic, and labeled;
 - no brokerage path, real-money stage, trading action, or personalized investment
   claim exists; and

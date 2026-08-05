@@ -29,7 +29,7 @@ const normalizeStrategy = (record) => {
     selectionRule: String(fields.selection_rule || "尚未记录选股规则。"),
     invalidationRule: String(fields.invalidation_rule || "尚未记录失效条件。"),
     rebalance: String(fields.rebalance || "按需复核"),
-    benchmark: String(fields.benchmark || "--"),
+    benchmark: String(fields.benchmark || "沪深300"),
     confidence: toNumber(fields.confidence),
   };
 };
@@ -76,9 +76,35 @@ const normalizePosition = (record) => {
   };
 };
 
+const normalizeBacktest = (record) => {
+  const fields = fieldsOf(record);
+  return {
+    id: record.id || `${fields.strategy_key || ""}:${fields.report_date || ""}`,
+    strategyKey: String(fields.strategy_key || ""),
+    reportDate: String(fields.report_date || ""),
+    windowStart: String(fields.window_start || ""),
+    windowEnd: String(fields.window_end || ""),
+    windowLabel: String(fields.window_label || ""),
+    method: String(fields.method || ""),
+    coverage: String(fields.coverage || "--"),
+    benchmark: String(fields.benchmark || "沪深300"),
+    totalReturn: toNumber(fields.total_return, null),
+    cagr: toNumber(fields.cagr, null),
+    volatility: toNumber(fields.volatility, null),
+    sharpe: toNumber(fields.sharpe, null),
+    maxDrawdown: toNumber(fields.max_drawdown, null),
+    benchmarkReturn: toNumber(fields.benchmark_return, null),
+    excessReturn: toNumber(fields.excess_return, null),
+    sourceNote: String(fields.source_note || ""),
+  };
+};
+
 export function createStrategyDesk(records) {
   const accounts = recordsFor(records, "ledger-accounts").map(normalizeAccount);
   const positions = recordsFor(records, "ledger-positions").map(normalizePosition);
+  const backtests = recordsFor(records, "strategy-backtests")
+    .map(normalizeBacktest)
+    .sort((left, right) => right.reportDate.localeCompare(left.reportDate));
   const accountsByStrategy = new Map();
   for (const account of accounts) {
     const strategyAccounts = accountsByStrategy.get(account.strategyKey) || [];
@@ -93,6 +119,7 @@ export function createStrategyDesk(records) {
       return {
         ...strategy,
         positions: positions.filter((position) => position.strategyKey === strategy.key),
+        backtests: backtests.filter((backtest) => backtest.strategyKey === strategy.key),
         account: strategyAccounts[0] || null,
         accountCount: strategyAccounts.length,
       };
@@ -119,6 +146,9 @@ export function createStrategyDesk(records) {
   const orphanPositionIds = positions
     .filter((position) => !strategyKeys.has(position.strategyKey))
     .map((position) => position.id);
+  const orphanBacktestIds = backtests
+    .filter((backtest) => !strategyKeys.has(backtest.strategyKey))
+    .map((backtest) => backtest.id);
   const canonicalAccounts = [
     ...new Map(
       strategies.filter((strategy) => strategy.account).map((strategy) => [strategy.account.id, strategy.account]),
@@ -146,6 +176,7 @@ export function createStrategyDesk(records) {
     duplicateStrategyKeys,
     orphanAccountIds,
     orphanPositionIds,
+    orphanBacktestIds,
   };
   integrity.issueCount = Object.values(integrity).reduce((sum, issues) => sum + issues.length, 0);
   integrity.isComplete = integrity.issueCount === 0;
@@ -154,6 +185,7 @@ export function createStrategyDesk(records) {
     strategies,
     accounts,
     positions,
+    backtests,
     levels,
     integrity,
     ledger: {

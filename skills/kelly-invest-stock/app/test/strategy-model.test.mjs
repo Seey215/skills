@@ -107,6 +107,43 @@ test("marks one virtual account per strategy as complete", () => {
   assert.equal(desk.strategies[0].accountCount, 1);
 });
 
+test("associates dated backtest reports with strategies and preserves the evaluation window", () => {
+  const desk = createStrategyDesk([
+    record("strategy-a", "strategies", { key: "a", name: "A" }),
+    record("account-a", "ledger-accounts", { strategy_key: "a", nominal_capital: 100, nav: 101 }),
+    record("backtest-a-new", "strategy-backtests", {
+      strategy_key: "a",
+      report_date: "2026-07-02",
+      window_start: "2024-07-01",
+      window_end: "2026-07-02",
+      window_label: "2年日线（Yahoo复权）",
+      method: "静态等权（后视⚠️）",
+      coverage: "8/8",
+      benchmark: "SPY",
+      total_return: 2.232,
+      cagr: 0.798,
+      volatility: 0.501,
+      sharpe: 1.35,
+      max_drawdown: -0.479,
+      benchmark_return: 0.4,
+      excess_return: 1.832,
+    }),
+    record("backtest-a-old", "strategy-backtests", {
+      strategy_key: "a",
+      report_date: "2025-07-02",
+      window_start: "2023-07-01",
+      window_end: "2025-07-02",
+    }),
+  ]);
+
+  assert.equal(desk.backtests.length, 2);
+  assert.equal(desk.strategies[0].backtests[0].reportDate, "2026-07-02");
+  assert.equal(desk.strategies[0].backtests[0].windowStart, "2024-07-01");
+  assert.equal(desk.strategies[0].backtests[0].windowEnd, "2026-07-02");
+  assert.equal(desk.strategies[0].backtests[0].sharpe, 1.35);
+  assert.equal(desk.integrity.isComplete, true);
+});
+
 test("calculates one strategy contribution and the total-book return without it", () => {
   const desk = createStrategyDesk([
     record("strategy-a", "strategies", { key: "a", name: "A" }),

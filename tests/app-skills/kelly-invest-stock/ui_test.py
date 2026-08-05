@@ -61,6 +61,8 @@ def test_demo_ui(browser, base_url: str) -> None:
     assert page.get_by_role("columnheader", name="账本 NAV", exact=True).is_visible()
     assert page.get_by_role("columnheader", name="晋级阶段", exact=True).is_visible()
     assert page.get_by_role("columnheader", name="账本持仓", exact=True).is_visible()
+    assert page.get_by_text("贵州茅台", exact=True).first.is_visible()
+    assert "¥" in page.locator(".strategy-table").inner_text()
     assert page.locator(".filters", has_text="虚拟账本").count() == 0
     assert page.get_by_role("button", name="打开回归", exact=True).is_visible()
     assert page.locator(".content").count() == 0
@@ -68,17 +70,32 @@ def test_demo_ui(browser, base_url: str) -> None:
 
     first_row = page.locator('.strategy-table-row[data-select-id="strategy-munger"] .strategy-col')
     first_row.click()
-    assert "/strategy-" in page.url
+    assert "/strategy-" in page.url and page.url.endswith("/portfolio")
     assert page.locator(".strategy-detail-view").is_visible()
-    assert page.get_by_role("heading", name="虚拟账户", exact=True).is_visible()
-    assert page.locator(".strategy-ledger-column .position-table-row").count() == 3
+    assert page.get_by_role("tab", name="组合持仓 3", exact=True).get_attribute("aria-selected") == "true"
+    assert page.get_by_role("heading", name="组合持仓", exact=True).is_visible()
+    assert page.locator(".portfolio-table .portfolio-position-row").count() == 3
+    assert page.get_by_role("columnheader", name="虚拟市值", exact=True).is_visible()
+    assert page.get_by_text("现金", exact=True).is_visible()
+    assert page.get_by_text("美的集团", exact=True).is_visible()
+    assert page.get_by_text("000333", exact=False).is_visible()
+    page.get_by_role("tab", name="策略逻辑", exact=True).click()
+    assert page.url.endswith("/logic")
     assert page.get_by_role("heading", name="策略阶段", exact=True).is_visible()
+    page.get_by_role("tab", name="回测表现 1", exact=True).click()
+    assert page.url.endswith("/backtest")
+    assert page.get_by_role("heading", name="历史回测", exact=True).is_visible()
+    assert page.get_by_text("2024-08-05 → 2026-08-05", exact=True).is_visible()
     page.locator('.stage-control button[data-stage-value="L1"]').click()
     assert page.locator(".detail-heading .stage-badge", has_text="L1").is_visible()
 
     page.get_by_role("button", name="打开回归", exact=True).click()
     assert page.get_by_role("heading", name="回归", exact=True).is_visible()
-    assert page.get_by_text("策略回归体检", exact=True).is_visible()
+    assert page.get_by_text("策略回测（回归测试）", exact=True).is_visible()
+    assert page.get_by_role("columnheader", name="报告日期", exact=True).is_visible()
+    assert page.get_by_role("columnheader", name="回测区间", exact=True).is_visible()
+    assert page.locator(".backtest-table tbody tr").count() == 10
+    assert page.get_by_text("后视偏差", exact=True).is_visible()
     assert page.get_by_text("剔除后总盘", exact=True).is_visible()
 
     page.get_by_role("button", name="帮助与设置", exact=True).click()
@@ -109,7 +126,11 @@ def test_demo_ui(browser, base_url: str) -> None:
         page.locator('.strategy-table-row[data-select-id="strategy-munger"] .strategy-col').click()
         assert page.locator("body.mobile-detail-open").count() == 1
         assert page.locator(".strategy-detail-view").is_visible()
-        assert page.get_by_role("heading", name="虚拟账户", exact=True).is_visible()
+        assert page.get_by_role("tab", name="组合持仓 3", exact=True).get_attribute("aria-selected") == "true"
+        assert page.locator(".portfolio-table .portfolio-position-row").count() == 3
+        page.get_by_role("tab", name="策略逻辑", exact=True).click()
+        assert page.get_by_role("heading", name="策略阶段", exact=True).is_visible()
+        page.get_by_role("tab", name="组合持仓 3", exact=True).click()
         page.locator("[data-back-to-list]").click()
         assert page.locator("body.mobile-detail-open").count() == 0
         assert page.locator(".strategy-table").is_visible()
@@ -260,7 +281,7 @@ def test_busabase_provisioning(browser) -> None:
             nodes = read_json(f"{busabase_url}/api/v1/nodes?depth=2")
             keys = resource_keys(nodes)
             assert sorted(keys) == sorted(
-                ["app-root", "strategies", "ledger-accounts", "ledger-positions"]
+                ["app-root", "strategies", "ledger-accounts", "ledger-positions", "strategy-backtests"]
             ), nodes
             change_requests = read_json(f"{busabase_url}/api/v1/change-requests")["changeRequests"]
             structure_requests = [
@@ -277,7 +298,7 @@ def test_busabase_provisioning(browser) -> None:
             timeout=90,
         ):
             nodes = read_json(f"{busabase_url}/api/v1/nodes?depth=2")
-            assert len(resource_keys(nodes)) == 4, nodes
+            assert len(resource_keys(nodes)) == 5, nodes
             strategy_base = find_resource(nodes, "strategies")
             records = read_json(f"{busabase_url}/api/v1/records?baseId={strategy_base['baseId']}")
             record_items = records if isinstance(records, list) else records.get("records", [])

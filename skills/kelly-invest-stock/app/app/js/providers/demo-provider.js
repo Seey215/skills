@@ -1,7 +1,7 @@
 const record = (id, baseKey, fields) => ({ id, baseKey, fields });
 
 const SNAPSHOT_AT = "2026-08-05 14:31 CST";
-const SPY_RETURN = 0.037;
+const CSI300_RETURN = 0.037;
 const stageOverrides = new Map();
 
 const strategySeeds = [
@@ -12,18 +12,18 @@ const strategySeeds = [
     family: "价值 / 护城河",
     stage: "L3",
     confidence: 84,
-    nav: 114800,
-    cash: 22300,
+    nav: 1148000,
+    cash: 224000,
     drawdown: -0.082,
     thesis: "用合理价格持有现金流稳定、资本回报率高且护城河可解释的企业。",
     selection: "优先品牌、成本或网络优势明确的公司；要求自由现金流可持续，避免依赖短期估值扩张。",
     invalidation: "护城河被削弱、资本配置持续恶化，或盈利质量无法支持长期复利假设。",
     rebalance: "半年",
     positions: [
-      ["AAPL", "Apple", 100, 205, 250],
-      ["AXP", "American Express", 100, 265, 300],
-      ["KO", "Coca-Cola", 300, 62, 65],
-      ["OXY", "Occidental Petroleum", 400, 49, 45],
+      ["600519", "贵州茅台", 200, 1420, 1500],
+      ["600036", "招商银行", 5000, 36, 40],
+      ["601088", "中国神华", 5000, 42, 40],
+      ["600900", "长江电力", 8000, 25, 28],
     ],
   },
   {
@@ -33,17 +33,17 @@ const strategySeeds = [
     family: "集中 / 商业质量",
     stage: "L2",
     confidence: 80,
-    nav: 110500,
-    cash: 1000,
+    nav: 1105000,
+    cash: 10000,
     drawdown: -0.096,
     thesis: "少而精地持有商业模式简单、议价能力强、可长期再投资的伟大公司。",
     selection: "组合保持集中；要求管理层理性、单位经济清晰、长期增长不依赖高杠杆。",
     invalidation: "商业质量判断错误，或买入价格使未来十年回报显著低于基准。",
     rebalance: "年度",
     positions: [
-      ["COST", "Costco", 50, 870, 950],
-      ["GOOGL", "Alphabet", 160, 176, 200],
-      ["BRK.B", "Berkshire Hathaway", 60, 455, 500],
+      ["000333", "美的集团", 6000, 68, 75],
+      ["603288", "海天味业", 8000, 45, 42],
+      ["600276", "恒瑞医药", 6000, 48, 51.5],
     ],
   },
   {
@@ -53,17 +53,17 @@ const strategySeeds = [
     family: "本分 / 长坡厚雪",
     stage: "L2",
     confidence: 77,
-    nav: 108200,
-    cash: 18800,
+    nav: 1082000,
+    cash: 188000,
     drawdown: -0.103,
     thesis: "先看懂生意如何长期赚钱，再用足够安全的价格等待价值兑现。",
     selection: "关注用户价值、竞争格局和企业文化；只纳入能用朴素语言解释盈利来源的公司。",
     invalidation: "核心用户价值下降、竞争优势不可持续，或管理层长期偏离股东价值。",
     rebalance: "半年",
     positions: [
-      ["AAPL", "Apple", 180, 210, 250],
-      ["BABA", "Alibaba", 250, 103, 120],
-      ["PDD", "PDD Holdings", 120, 108, 120],
+      ["600519", "贵州茅台", 200, 1450, 1500],
+      ["601318", "中国平安", 8000, 50, 55],
+      ["002027", "分众传媒", 20000, 7.1, 7.7],
     ],
   },
   {
@@ -73,17 +73,17 @@ const strategySeeds = [
     family: "成长 / GARP",
     stage: "L1",
     confidence: 72,
-    nav: 105600,
-    cash: 21100,
+    nav: 1056000,
+    cash: 211000,
     drawdown: -0.121,
     thesis: "从日常可观察的业务变化中寻找盈利增长尚未被充分定价的公司。",
     selection: "增长必须能落到门店、用户或利润；PEG 与资产负债表共同约束买入价格。",
     invalidation: "增长只剩叙事、利润兑现持续落后，或估值已透支多年正常增长。",
     rebalance: "季度",
     positions: [
-      ["SBUX", "Starbucks", 300, 82, 95],
-      ["MELI", "MercadoLibre", 20, 1920, 2150],
-      ["NVO", "Novo Nordisk", 130, 92, 100],
+      ["603345", "安井食品", 3000, 84, 90],
+      ["300033", "同花顺", 1500, 185, 200],
+      ["300896", "爱美客", 1000, 290, 275],
     ],
   },
   {
@@ -93,17 +93,17 @@ const strategySeeds = [
     family: "周期 / 风险控制",
     stage: "L1",
     confidence: 68,
-    nav: 102400,
-    cash: 15400,
+    nav: 1024000,
+    cash: 154000,
     drawdown: -0.074,
     thesis: "在市场情绪和风险溢价极端时逆向配置，把避免永久损失放在追逐涨幅之前。",
     selection: "跟踪信用利差、估值分位和市场共识；仓位随赔率而不是情绪变化。",
     invalidation: "周期判断没有估值保护，或下行风险被错误归类为短期波动。",
     rebalance: "月度",
     positions: [
-      ["TLT", "20+ Year Treasury ETF", 500, 88, 92],
-      ["BAC", "Bank of America", 500, 41, 46],
-      ["KR", "Kroger", 300, 61, 60],
+      ["601088", "中国神华", 5000, 38, 40],
+      ["601225", "陕西煤业", 10000, 26, 24],
+      ["601006", "大秦铁路", 50000, 8.2, 8.6],
     ],
   },
   {
@@ -113,17 +113,17 @@ const strategySeeds = [
     family: "成长 / 深度调研",
     stage: "L3",
     confidence: 75,
-    nav: 107900,
-    cash: 14900,
+    nav: 1079000,
+    cash: 149000,
     drawdown: -0.134,
     thesis: "持有研发能力、销售组织和长期成长空间同时优秀的公司，减少无效换手。",
     selection: "验证产品壁垒、研发效率与管理层诚信；增长空间需显著大于当前收入体量。",
     invalidation: "研发投入不能转化为产品优势，或组织能力无法支撑下一阶段增长。",
     rebalance: "半年",
     positions: [
-      ["MSFT", "Microsoft", 80, 470, 510],
-      ["NVDA", "NVIDIA", 150, 168, 200],
-      ["TSM", "Taiwan Semiconductor", 80, 250, 278],
+      ["300750", "宁德时代", 2000, 235, 260],
+      ["300308", "中际旭创", 1000, 145, 160],
+      ["300760", "迈瑞医疗", 1000, 270, 250],
     ],
   },
   {
@@ -133,17 +133,17 @@ const strategySeeds = [
     family: "深度价值 / 分散",
     stage: "L1",
     confidence: 61,
-    nav: 98500,
-    cash: 19500,
+    nav: 985000,
+    cash: 195000,
     drawdown: -0.158,
     thesis: "用可量化的资产与盈利保护构建分散组合，让价格折扣承担主要安全垫。",
     selection: "低估值必须有资产负债表支撑；分散持有，避免把便宜误判为质量。",
     invalidation: "账面价值持续缩水、债务侵蚀安全边际，或价值陷阱比例长期过高。",
     rebalance: "季度",
     positions: [
-      ["GM", "General Motors", 500, 49, 55],
-      ["CVS", "CVS Health", 500, 63, 70],
-      ["INTC", "Intel", 500, 30, 33],
+      ["600104", "上汽集团", 20000, 15, 16],
+      ["600019", "宝钢股份", 30000, 7.4, 7],
+      ["601668", "中国建筑", 40000, 6.2, 6.5],
     ],
   },
   {
@@ -153,17 +153,17 @@ const strategySeeds = [
     family: "价值 / 长期持有",
     stage: "L1",
     confidence: 79,
-    nav: 112300,
-    cash: 14800,
+    nav: 1123000,
+    cash: 148000,
     drawdown: -0.088,
     thesis: "把股票当作企业所有权，在可理解、可预测且资本配置优秀的生意上集中下注。",
     selection: "要求长期竞争优势、保守财务结构和可信管理层；只在明显低于内在价值时建仓。",
     invalidation: "企业经济特征发生结构性变化，或所有者收益长期偏离原始假设。",
     rebalance: "年度",
     positions: [
-      ["BRK.B", "Berkshire Hathaway", 70, 460, 500],
-      ["GOOGL", "Alphabet", 150, 178, 200],
-      ["BAC", "Bank of America", 500, 40, 45],
+      ["002594", "比亚迪", 2000, 275, 300],
+      ["601658", "邮储银行", 30000, 5.2, 5.5],
+      ["600309", "万华化学", 3000, 75, 70],
     ],
   },
   {
@@ -173,17 +173,17 @@ const strategySeeds = [
     family: "全球价值 / 极度悲观",
     stage: "L1",
     confidence: 66,
-    nav: 103700,
-    cash: 18700,
+    nav: 1037000,
+    cash: 187000,
     drawdown: -0.146,
     thesis: "在全球市场的极度悲观区域寻找价格显著低于长期盈利能力的优质企业。",
     selection: "跨市场比较估值、资产负债表与行业情绪；优先选择坏消息已充分反映但生存能力清晰的公司。",
     invalidation: "低估来自永久性竞争衰退，或公司财务结构无法熬过基本面修复周期。",
     rebalance: "季度",
     positions: [
-      ["EWJ", "iShares MSCI Japan ETF", 300, 70, 74],
-      ["BABA", "Alibaba", 250, 108, 120],
-      ["SHEL", "Shell", 500, 65, 66],
+      ["601899", "紫金矿业", 20000, 18, 20],
+      ["600690", "海尔智家", 10000, 28, 26],
+      ["600887", "伊利股份", 8000, 25, 23.75],
     ],
   },
   {
@@ -193,17 +193,17 @@ const strategySeeds = [
     family: "趋势 / 预期反馈",
     stage: "L2",
     confidence: 70,
-    nav: 106400,
-    cash: 19400,
+    nav: 1064000,
+    cash: 194000,
     drawdown: -0.118,
     thesis: "捕捉基本面与市场预期相互强化的趋势，并在反馈链条反转前主动退出。",
     selection: "要求价格趋势、盈利预期和资金行为同向；仓位随假设验证加减，不把观点当作永久信仰。",
     invalidation: "价格与基本面反馈脱钩、催化被证伪，或趋势反转后仍无法及时减仓。",
     rebalance: "月度",
     positions: [
-      ["META", "Meta Platforms", 60, 650, 720],
-      ["PLTR", "Palantir", 300, 102, 120],
-      ["HOOD", "Robinhood", 150, 62, 52],
+      ["603019", "中科曙光", 2000, 55, 60],
+      ["300059", "东方财富", 10000, 22, 25],
+      ["002371", "北方华创", 1000, 460, 500],
     ],
   },
 ];
@@ -218,7 +218,7 @@ const strategyRecords = strategySeeds.map((seed) =>
     selection_rule: seed.selection,
     invalidation_rule: seed.invalidation,
     rebalance: seed.rebalance,
-    benchmark: "SPY",
+    benchmark: "沪深300",
     confidence: seed.confidence,
   }),
 );
@@ -227,10 +227,10 @@ const accountRecords = strategySeeds.map((seed) =>
   record(`account-${seed.key}`, "ledger-accounts", {
     name: `${seed.name}虚拟账本`,
     strategy_key: seed.key,
-    nominal_capital: 100000,
+    nominal_capital: 1000000,
     nav: seed.nav,
     cash: seed.cash,
-    benchmark_return: SPY_RETURN,
+    benchmark_return: CSI300_RETURN,
     max_drawdown: seed.drawdown,
     updated_at: SNAPSHOT_AT,
   }),
@@ -252,6 +252,36 @@ const positionRecords = strategySeeds.flatMap((seed) =>
   }),
 );
 
+const backtestRecords = strategySeeds.map((seed) => {
+  const accountReturn = seed.nav / 1000000 - 1;
+  const totalReturn = Number((accountReturn * 2.4).toFixed(4));
+  const cagr = Number((Math.sqrt(Math.max(0.01, 1 + totalReturn)) - 1).toFixed(4));
+  const volatility = Number((Math.abs(seed.drawdown) + 0.12).toFixed(4));
+  const method = seed.key === "soros-reflexive-trend" ? "规则信号" : "静态等权（后视⚠️）";
+  return record(`backtest-${seed.key}-2026-08-05`, "strategy-backtests", {
+    name: `${seed.name} · 2026-08-05`,
+    strategy_key: seed.key,
+    report_date: "2026-08-05",
+    window_start: "2024-08-05",
+    window_end: "2026-08-05",
+    window_label: "2年日线（前复权）",
+    method,
+    coverage: method === "规则信号" ? "规则序列" : `${seed.positions.length}/${seed.positions.length}`,
+    benchmark: "沪深300",
+    total_return: totalReturn,
+    cagr,
+    volatility,
+    sharpe: Number(((cagr - 0.018) / volatility).toFixed(2)),
+    max_drawdown: Number((seed.drawdown * 1.35).toFixed(4)),
+    benchmark_return: 0.183,
+    excess_return: Number((totalReturn - 0.183).toFixed(4)),
+    source_note:
+      method === "规则信号"
+        ? "演示规则序列回测；结果为固定示例，不是实时行情。"
+        : "演示静态篮子存在后视偏差，只用于波动与回撤体检，不构成 Alpha 证据。",
+  });
+});
+
 const recordsWithOverrides = () => [
   ...strategyRecords.map((strategy) => ({
     ...strategy,
@@ -262,6 +292,7 @@ const recordsWithOverrides = () => [
   })),
   ...accountRecords,
   ...positionRecords,
+  ...backtestRecords,
 ];
 
 export const demoProvider = {

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "runtimeSpace": "ambient-or-local-selection",
   "resolvedSpaceId": "orglnl02ONE36pXGXTs",
   "provisioning": {
@@ -45,6 +45,16 @@
       "nodeId": "nodms6x5619db2pux3",
       "baseId": "bsems6x5619srj0ffu",
       "schemaVersion": 2,
+      "readLimit": 100
+    },
+    {
+      "key": "strategy-backtests",
+      "kind": "base",
+      "slug": "stock-strategy-backtests-v3",
+      "purpose": "Dated strategy backtest reports, windows, methods, and risk metrics",
+      "nodeId": "nodmsfua9rz99mk2pt",
+      "baseId": "bsemsfua9rzgkknt11",
+      "schemaVersion": 3,
       "readLimit": 100
     }
   ],

@@ -925,85 +925,157 @@ input:focus-visible {
   font-size: 16px;
 }
 
-.regression-layout {
-  display: grid;
-  grid-template-columns: minmax(230px, 30%) minmax(0, 1fr);
+.backtest-scroll {
   min-width: 0;
   min-height: 0;
+  overflow: auto;
 }
 
-.regression-strategies {
+.backtest-warning-band {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 16px;
+  color: #6d501c;
+  background: #fff9ed;
+  border-bottom: 1px solid #ecd7ad;
+  font-size: 9px;
+}
+
+.backtest-warning-band strong {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  color: #8a611d;
+  background: #f9e9c8;
+  border-radius: 3px;
+  font-size: 9px;
+}
+
+.backtest-table-wrap {
   min-width: 0;
   overflow: auto;
-  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
-.regression-list-head {
-  padding: 10px 13px;
-  background: #f8f9fa;
-  border-bottom: 1px solid var(--line);
+.backtest-table {
+  width: 100%;
+  min-width: 1320px;
+  color: #34414a;
+  border-spacing: 0;
+  border-collapse: separate;
+  table-layout: fixed;
+  font-size: 10px;
+}
+
+.backtest-table th,
+.backtest-table td {
+  padding: 10px 9px;
+  vertical-align: middle;
+  background: #fff;
+  border-right: 1px solid #edf0f2;
+  border-bottom: 1px solid #e7eaed;
+}
+
+.backtest-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  color: #6f7b84;
+  text-align: left;
+  background: #f5f7f8;
+  font-size: 9px;
   font-weight: 750;
 }
 
-.regression-strategies button {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  width: 100%;
-  min-height: 50px;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 13px;
-  color: #34414a;
-  text-align: left;
-  background: #fff;
-  border: 0;
-  border-bottom: 1px solid #edf0f2;
-  cursor: pointer;
-}
+.backtest-table th:nth-child(1) { width: 170px; }
+.backtest-table th:nth-child(2) { width: 90px; }
+.backtest-table th:nth-child(3) { width: 210px; }
+.backtest-table th:nth-child(4) { width: 145px; }
+.backtest-table th:nth-child(5) { width: 58px; }
+.backtest-table th:nth-child(6),
+.backtest-table th:nth-child(7),
+.backtest-table th:nth-child(8),
+.backtest-table th:nth-child(9),
+.backtest-table th:nth-child(10),
+.backtest-table th:nth-child(11) { width: 78px; }
+.backtest-table th:nth-child(12) { width: 42px; }
 
-.regression-strategies button:hover,
-.regression-strategies button.active {
-  background: #f5f9f6;
-}
-
-.regression-strategies button.active {
-  box-shadow: inset 3px 0 0 var(--green);
-}
-
-.regression-strategies button > span {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 7px;
-}
-
-.regression-strategies button strong {
-  overflow: hidden;
-  font-size: 10px;
-  text-overflow: ellipsis;
+.backtest-table .number-col {
+  text-align: right;
   white-space: nowrap;
 }
 
-.regression-strategies button b {
-  font-size: 10px;
+.backtest-table tbody tr.active td {
+  background: #f4f8f5;
 }
 
-.regression-result {
-  min-width: 0;
-  padding: 24px 26px 30px;
-  overflow: auto;
+.backtest-table tbody tr:hover td {
+  background: #f8faf9;
 }
 
-.regression-title {
+.backtest-table td small {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
 }
 
-.regression-title h2 {
-  margin: 0;
-  font-size: 19px;
+.backtest-table td small .stage-badge {
+  min-width: 25px;
+  height: 17px;
+  font-size: 8px;
+}
+
+.backtest-strategy-link {
+  padding: 0;
+  color: #253d31;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.backtest-strategy-link:hover,
+.backtest-strategy-link:focus-visible {
+  color: var(--green);
+  text-decoration: underline;
+}
+
+.backtest-method {
+  display: inline-block;
+  padding: 3px 5px;
+  color: #44535d;
+  background: #f0f3f4;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.backtest-method.warning {
+  color: #765619;
+  background: #fff3da;
+}
+
+.regression-select {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: #58666f;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.regression-select:hover,
+.regression-select:focus-visible {
+  color: var(--green);
+  background: #edf5f0;
+  border-color: #cde1d5;
 }
 
 .regression-metrics {
@@ -1014,57 +1086,48 @@ input:focus-visible {
   border-left: 1px solid var(--line);
 }
 
-.regression-contribution {
-  display: grid;
-  gap: 7px;
-  margin-top: 22px;
+.current-contribution {
+  padding: 20px 22px 24px;
 }
 
-.regression-contribution > div:first-child {
+.strategy-backtest-detail {
+  margin-top: 18px;
+}
+
+.backtest-period {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.regression-contribution > div:last-child {
-  height: 7px;
-  background: #e7ece9;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.regression-contribution i {
-  display: block;
-  height: 100%;
-  background: var(--green);
-}
-
-.regression-notes {
-  display: grid;
-  margin: 22px 0 0;
-  border-top: 1px solid var(--line);
-}
-
-.regression-notes > div {
-  display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  gap: 14px;
+  gap: 12px;
   padding: 10px 0;
-  border-bottom: 1px solid #edf0f2;
+  border-bottom: 1px solid var(--line);
 }
 
-.regression-notes dt {
+.backtest-period strong {
+  color: #263b31;
+  font-size: 12px;
+}
+
+.backtest-period span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 9px;
 }
 
-.regression-notes dd {
-  margin: 0;
-  color: #34414a;
-  font-size: 11px;
-  line-height: 1.55;
+.backtest-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  border-left: 1px solid var(--line);
+}
+
+.backtest-warning {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  color: #6d501c;
+  background: #fff9ed;
+  border: 1px solid #ecd7ad;
+  border-radius: 4px;
+  font-size: 9px;
+  line-height: 1.5;
 }
 
 .ledger-cell-missing {
@@ -1123,6 +1186,241 @@ input:focus-visible {
 .strategy-ledger-column {
   border-left: 1px solid var(--line);
   padding-left: 30px;
+}
+
+.strategy-detail-tabs {
+  display: flex;
+  min-height: 46px;
+  align-items: end;
+  gap: 24px;
+  margin-top: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.strategy-detail-tabs button {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  min-height: 45px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+  color: #74808a;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.strategy-detail-tabs button::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: transparent;
+  content: "";
+}
+
+.strategy-detail-tabs button:hover,
+.strategy-detail-tabs button:focus-visible,
+.strategy-detail-tabs button.active {
+  color: #254737;
+}
+
+.strategy-detail-tabs button.active::after {
+  background: var(--green);
+}
+
+.strategy-detail-tabs b {
+  display: grid;
+  min-width: 19px;
+  height: 18px;
+  place-items: center;
+  padding: 0 4px;
+  color: #607068;
+  background: #edf2ef;
+  border-radius: 3px;
+  font-size: 8px;
+}
+
+.strategy-detail-tab-panel {
+  min-width: 0;
+  padding: 22px 0 4px;
+}
+
+.portfolio-account-head,
+.portfolio-holdings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.portfolio-account-head h3,
+.portfolio-holdings-head h3 {
+  margin: 0;
+  color: #25323b;
+  font-size: 14px;
+}
+
+.portfolio-account-head > span,
+.portfolio-holdings-head span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.portfolio-account-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.portfolio-allocation {
+  padding-top: 15px;
+}
+
+.portfolio-holdings-head {
+  margin: 18px 0 9px;
+}
+
+.portfolio-holdings-head > div {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.portfolio-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  scrollbar-gutter: stable;
+}
+
+.portfolio-table {
+  width: 100%;
+  min-width: 850px;
+  color: #34414a;
+  border-spacing: 0;
+  border-collapse: separate;
+  table-layout: fixed;
+  font-size: 10px;
+}
+
+.portfolio-table th,
+.portfolio-table td {
+  padding: 11px 10px;
+  vertical-align: middle;
+  background: #fff;
+  border-right: 1px solid #edf0f2;
+  border-bottom: 1px solid #e7eaed;
+}
+
+.portfolio-table th {
+  color: #78848d;
+  text-align: left;
+  background: #f6f8f9;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.portfolio-table th:first-child { width: 180px; }
+.portfolio-table th:nth-child(2) { width: 72px; }
+.portfolio-table th:nth-child(3),
+.portfolio-table th:nth-child(4) { width: 105px; }
+.portfolio-table th:nth-child(5) { width: 120px; }
+.portfolio-table th:nth-child(6) { width: 105px; }
+.portfolio-table th:nth-child(7) { width: 115px; }
+
+.portfolio-table th:last-child,
+.portfolio-table td:last-child {
+  border-right: 0;
+}
+
+.portfolio-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.portfolio-table tbody tr:hover td {
+  background: #f8faf9;
+}
+
+.portfolio-table .number-col {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.portfolio-security {
+  display: grid;
+  gap: 4px;
+}
+
+.portfolio-security strong {
+  color: #253a30;
+  font-size: 11px;
+}
+
+.portfolio-security small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.portfolio-weight {
+  text-align: right;
+}
+
+.portfolio-weight i {
+  display: block;
+  width: 100%;
+  height: 3px;
+  margin-top: 5px;
+  background: #e5eae7;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.portfolio-weight i b {
+  display: block;
+  height: 100%;
+  background: #5b9476;
+}
+
+.portfolio-cash-row td {
+  background: #fafbfb;
+}
+
+.strategy-thesis-lead {
+  padding: 16px 18px;
+  background: #f6f8f7;
+  border-left: 3px solid #7aa38b;
+}
+
+.strategy-thesis-lead span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.strategy-thesis-lead p {
+  margin: 7px 0 0;
+  color: #2f3e36;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.strategy-logic-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 30px;
+}
+
+.backtest-tab-panel .strategy-backtest-detail {
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .content {
@@ -2572,40 +2870,29 @@ code {
     padding: 8px 13px;
   }
 
-  .regression-layout {
-    display: block;
-    overflow: auto;
+  .backtest-warning-band {
+    align-items: flex-start;
+    padding: 8px 13px;
   }
 
-  .regression-strategies {
-    display: flex;
-    overflow-x: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
+  .backtest-table-wrap {
+    max-width: 100vw;
   }
 
-  .regression-list-head {
-    display: none;
-  }
-
-  .regression-strategies button {
-    flex: 0 0 178px;
-    min-height: 46px;
-    border-right: 1px solid #edf0f2;
-    border-bottom: 0;
-  }
-
-  .regression-strategies button.active {
-    box-shadow: inset 0 -3px 0 var(--green);
-  }
-
-  .regression-result {
-    padding: 20px 16px 28px;
-    overflow: visible;
+  .current-contribution {
+    padding: 17px 13px 22px;
   }
 
   .regression-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .backtest-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .backtest-period {
+    display: grid;
   }
 
   .stage-control-row {
@@ -2634,6 +2921,41 @@ code {
   .strategy-ledger-column {
     padding-left: 0;
     border-left: 0;
+  }
+
+  .strategy-detail-tabs {
+    gap: 0;
+    justify-content: space-between;
+  }
+
+  .strategy-detail-tabs button {
+    flex: 1 1 0;
+    min-height: 44px;
+    justify-content: center;
+    padding: 0 5px;
+    font-size: 10px;
+  }
+
+  .strategy-detail-tab-panel {
+    padding-top: 18px;
+  }
+
+  .portfolio-account-head,
+  .portfolio-holdings-head {
+    align-items: flex-start;
+  }
+
+  .portfolio-account-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .portfolio-table-wrap {
+    max-width: calc(100vw - 32px);
+  }
+
+  .strategy-logic-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
   }
 
   .content {
@@ -2838,13 +3160,22 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .portfolio-account-head,
+  .portfolio-holdings-head {
+    display: grid;
+    gap: 5px;
+  }
+
+  .strategy-detail-tabs button {
+    font-size: 9px;
+  }
+
   .regression-metrics {
     grid-template-columns: 1fr;
   }
 
-  .regression-notes > div {
-    grid-template-columns: 98px minmax(0, 1fr);
-    gap: 9px;
+  .backtest-detail-grid {
+    grid-template-columns: 1fr;
   }
 
   .strategy-performance {

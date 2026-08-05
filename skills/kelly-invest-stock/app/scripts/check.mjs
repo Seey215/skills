@@ -42,14 +42,15 @@ if (packageJson.dependencies["stock-sdk"] !== "2.4.0") {
 if (packageJson.scripts?.start !== "node server.js") {
   throw new Error("AirApp start must only run server.js");
 }
-if (resourceMap.resources?.length !== 4 || resourceMap.vaultRequirements?.length !== 0) {
-  throw new Error("Resource map must declare four non-secret Busabase resources");
+if (resourceMap.resources?.length !== 5 || resourceMap.vaultRequirements?.length !== 0) {
+  throw new Error("Resource map must declare five non-secret Busabase resources");
 }
 if (
   resourceMap.provisioning?.mode !== "lazy" ||
-  !configSource.includes('setupProcedures: ["nodes.createChangeRequest", "nodes.updateMetadata"]') ||
+  !configSource.includes('"bases.fieldChangeRequest"') ||
   !provisioningSource.includes("client.nodes.createChangeRequest") ||
-  !provisioningSource.includes("client.nodes.updateMetadata")
+  !provisioningSource.includes("client.nodes.updateMetadata") ||
+  !provisioningSource.includes("client.bases.fieldChangeRequest")
 ) {
   throw new Error("Lazy Busabase resource provisioning is incomplete");
 }

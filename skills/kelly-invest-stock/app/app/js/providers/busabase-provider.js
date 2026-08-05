@@ -1,10 +1,13 @@
 import { createRuntimeClient } from "../busabase-client.js";
-import { appConfig } from "../config.js?v=0.8.1";
-import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.8.1";
+import { appConfig } from "../config.js?v=0.9.0";
+import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.9.0";
+import { classroomSeedBatches } from "./demo-provider.js?v=0.9.0";
 
 const allowedReads = new Set(appConfig.permissions.readProcedures);
 const allowedSetup = new Set(appConfig.permissions.setupProcedures);
 const allowedWrites = new Set(appConfig.permissions.writeProcedures);
+
+const merged = (result) => result?.materialized === true || result?.status === "merged";
 
 const normalizeFields = (fields) =>
   Object.fromEntries(Object.entries(fields || {}).map(([slug, value]) => [slug.replaceAll("-", "_"), value]));
@@ -101,6 +104,7 @@ export const busabaseProvider = {
         mode: "busabase_sdk_openapi",
         readOnly: false,
         stageWritable: true,
+        reviewWritable: true,
       },
       records: pages.flatMap(([, page]) => page.records),
       pageInfo: Object.fromEntries(
@@ -113,22 +117,104 @@ export const busabaseProvider = {
     if (!runtimeClient || !base || !cursor) throw new Error(`SCHEMA_INCOMPLETE: ${baseKey}`);
     return readPage(runtimeClient, base, cursor);
   },
-  async updateStrategyStage(recordId, stage, baseCommitId = null) {
+  async updateStrategyStage(recordId, stage, baseCommitId = null, approval = {}) {
     if (!allowedWrites.has("records.changeRequest")) {
       throw new Error("PROCEDURE_DENIED: records.changeRequest");
     }
+    if (!allowedWrites.has("bases.createChangeRequest")) {
+      throw new Error("PROCEDURE_DENIED: bases.createChangeRequest");
+    }
     if (!["L1", "L2", "L3"].includes(stage)) throw new Error("INVALID_STAGE");
+    const reason = String(approval.reason || "").trim();
+    if (reason.length < 8) throw new Error("APPROVAL_REASON_REQUIRED: 请至少写 8 个字的人工理由");
+    const fromStage = String(approval.fromStage || "");
+    const strategyKey = String(approval.strategyKey || "");
+    if (!strategyKey) throw new Error("STRATEGY_KEY_REQUIRED");
     const client = runtimeClient || createRuntimeClient();
     const result = await client.records.changeRequest({
       recordId,
       operation: "update",
       fields: { status: stage },
-      message: `Mark strategy ${stage} — manual virtual-ledger maturity label`,
+      message: `Strategy ${fromStage || "--"} → ${stage}: ${reason}`,
       author: "kelly-invest-stock-ui",
       ...(baseCommitId ? { baseCommitId } : {}),
       autoMerge: true,
     });
-    return { persisted: result?.materialized === true, changeRequestId: result?.id || "" };
+    if (!merged(result)) return { persisted: false, changeRequestId: result?.id || "" };
+
+    const reviewBase = runtimeBases.get("strategy-reviews");
+    if (!reviewBase) {
+      return {
+        persisted: true,
+        reviewPersisted: false,
+        changeRequestId: result?.id || "",
+        reviewError: "策略阶段已更新，但策略研究与审批 Base 尚未就绪。",
+      };
+    }
+    const reviewDate = String(approval.reviewDate || new Date().toISOString());
+    try {
+      const reviewResult = await client.bases.createChangeRequest({
+        baseId: reviewBase.baseId,
+        fields: {
+          name: `${approval.strategyName || strategyKey} ${fromStage || "--"} → ${stage}`,
+          "strategy-key": strategyKey,
+          "review-date": reviewDate,
+          "review-type": "approval",
+          "snapshot-nav": approval.snapshotNav ?? null,
+          "snapshot-benchmark-return": approval.snapshotBenchmarkReturn ?? null,
+          "snapshot-max-drawdown": approval.snapshotMaxDrawdown ?? null,
+          "from-stage": fromStage,
+          "to-stage": stage,
+          decision: stage === fromStage ? "保持" : "调整成熟度",
+          reason,
+          reviewer: String(approval.reviewer || "老板"),
+          "change-request-id": result?.id || "",
+        },
+        message: `Record manual strategy approval ${fromStage || "--"} → ${stage}`,
+        submittedBy: "kelly-invest-stock-ui",
+        autoMerge: true,
+      });
+      return {
+        persisted: true,
+        reviewPersisted: merged(reviewResult),
+        changeRequestId: result?.id || "",
+        reviewChangeRequestId: reviewResult?.id || "",
+      };
+    } catch (error) {
+      return {
+        persisted: true,
+        reviewPersisted: false,
+        changeRequestId: result?.id || "",
+        reviewError: String(error?.message || error),
+      };
+    }
+  },
+  async seedClassroomWorkspace() {
+    if (!allowedWrites.has("bases.createBulkChangeRequest")) {
+      throw new Error("PROCEDURE_DENIED: bases.createBulkChangeRequest");
+    }
+    const client = runtimeClient || createRuntimeClient();
+    const bases = [...runtimeBases.values()];
+    if (bases.length !== appConfig.bases.length) throw new Error("SCHEMA_INCOMPLETE: 课堂种子资源尚未就绪");
+    const pages = await Promise.all(bases.map(async (base) => [base.key, await readAllPages(client, base)]));
+    if (pages.some(([, page]) => page.records.length > 0)) {
+      throw new Error("SEED_REQUIRES_EMPTY_WORKSPACE: 课堂种子只能写入完全空白的应用工作区");
+    }
+    const batches = classroomSeedBatches();
+    const requests = [];
+    for (const base of bases) {
+      const records = batches[base.key] || [];
+      if (!records.length) continue;
+      const result = await client.bases.createBulkChangeRequest({
+        baseId: base.baseId,
+        records,
+        message: `Seed Kelly Invest Stock classroom records: ${base.key}`,
+        submittedBy: "kelly-invest-stock-classroom-seed",
+        idempotencyKey: `kelly-invest-stock-classroom-v1-${base.key}`,
+      });
+      requests.push({ baseKey: base.key, id: result?.id || "", status: result?.status || "in_review" });
+    }
+    return { requests };
   },
   async provisionResources() {
     if (!allowedSetup.has("nodes.createChangeRequest")) {
@@ -136,6 +222,9 @@ export const busabaseProvider = {
     }
     if (!allowedSetup.has("nodes.updateMetadata")) {
       throw new Error("PROCEDURE_DENIED: nodes.updateMetadata");
+    }
+    if (!allowedSetup.has("bases.fieldChangeRequest")) {
+      throw new Error("PROCEDURE_DENIED: bases.fieldChangeRequest");
     }
     const client = runtimeClient || createRuntimeClient();
     try {

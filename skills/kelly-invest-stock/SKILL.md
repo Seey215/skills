@@ -1,6 +1,6 @@
 ---
 name: kelly-invest-stock
-description: Build and operate a Busabase-backed mainland China A-share strategy experiment desk with a bundled local Hono App-in-Skill, strategy-level L1/L2/L3 manual maturity labels, one CNY virtual ledger per strategy, and dated strategy backtest reports. Use when the user invokes $kelly-invest-stock or /kelly-invest-stock, wants to define or compare A-share strategies, inspect a strategy and its virtual book, manually label strategy maturity, or review dated backtests, drawdown, and contribution to the total book. It never connects to a brokerage, places orders, moves money, or presents generated analysis as personalized investment advice.
+description: Build and operate a Busabase-backed mainland China A-share strategy experiment desk with a bundled local Hono App-in-Skill, evidence-backed strategy research, strategy-level L1/L2/L3 manual maturity approvals, one CNY virtual ledger per strategy, and dated strategy backtest reports. Use when the user invokes $kelly-invest-stock or /kelly-invest-stock, wants to define or compare A-share strategies, inspect a strategy and its virtual book, record research evidence, manually approve strategy maturity, or review dated backtests, drawdown, and contribution to the total book. It never connects to a brokerage, places orders, moves money, or presents generated analysis as personalized investment advice.
 ---
 
 # Kelly Invest Stock
@@ -61,34 +61,46 @@ persistent backend.
   Label them as style reproductions; never imply actual holdings, endorsement, or
   current advice.
 - Read and write persistent state through `busabase-sdk`. Stage changes use a
-  reviewed `records.changeRequest` update to the strategy record's `status`
-  field. Never persist stage changes in browser storage or local files.
+  `records.changeRequest` update to the strategy record's `status` field and a
+  dated approval record containing the human reason and account snapshot. Never
+  persist stage changes in browser storage or local files.
+- Offer the deterministic classroom seed only in a completely empty Busabase
+  workspace. Submit one reviewable bulk ChangeRequest per Base without automatic
+  merge; the user or Space reviewer decides whether to merge it.
 
 ## Core Resources
 
-Keep four application-owned Bases under one application Folder:
+Keep five application-owned Bases under one application Folder:
 
 - `strategies`: name, key, family, `status`, thesis, selection rule,
-  invalidation rule, review cadence, benchmark, and confidence.
+  invalidation rule, review cadence, next review time, benchmark, and confidence.
 - `ledger-accounts`: one virtual account per strategy with nominal capital, NAV,
-  cash, benchmark return, maximum drawdown, and update time.
+  cash, benchmark return, maximum drawdown, update time, and return baseline date.
 - `ledger-positions`: virtual quantity, entry price, reference price, market
-  value, weight, strategy key, six-digit A-share code, and Chinese security name.
+  value, weight, price source/time, strategy key, six-digit A-share code, and
+  Chinese security name.
 - `strategy-backtests`: dated strategy-level reports with window start/end,
   methodology, coverage, benchmark, total return, CAGR, volatility, Sharpe,
   maximum drawdown, benchmark-relative return, and bias/source notes.
+- `strategy-reviews`: dated research sources, source freshness, supporting and
+  counter evidence, account snapshots, manual stage decisions, reviewer, reason,
+  and the associated ChangeRequest ID.
 
-Provision missing resources lazily through one Busabase ChangeRequest, re-read
-the Folder, and use only validated materialized IDs. Ignore legacy app-owned
-resources outside this declaration; never delete or adopt them implicitly.
+Provision a new empty workspace lazily through one Busabase structure
+ChangeRequest, re-read the Folder, and use only validated materialized IDs. For
+an owned older schema, submit only declared suffix fields through reviewable field
+ChangeRequests, wait for approval, then update resource metadata. Reject reordered,
+changed, or otherwise incompatible fields. Ignore legacy app-owned resources
+outside this declaration; never delete or adopt them implicitly.
 
 ## Operating Loop
 
 ### Research
 
 Define a strategy's thesis, selection rule, invalidation rule, benchmark, review
-cadence, and virtual account before evaluating it. Preserve source and freshness
-for market observations.
+cadence, next review time, and virtual account before evaluating it. Preserve
+research source, source date, supporting evidence, counter evidence, and data
+freshness in a dated review record.
 
 ### Plan
 
@@ -99,8 +111,11 @@ authorization.
 ### Action
 
 Allow reviewed research updates, virtual-ledger records, and mouse-driven manual
-stage marking. Send persistent stage changes through Busabase ChangeRequest and
-reload the canonical record after materialization.
+stage marking. Before promotion, require complete strategy rules, one account with
+a baseline date, dated research evidence, quote provenance, and reconciled NAV.
+Require a human reason and confirmation for every stage change. Send persistent
+stage changes through Busabase ChangeRequest, write the approval timeline record,
+and reload canonical records after materialization.
 
 ### Retrospective
 
@@ -116,13 +131,18 @@ rules.
   and ledger reality. Clicking the entire row opens Strategy Detail.
 - Put the manual L1/L2/L3 segmented control and compact performance summary at
   the top of Strategy Detail. Below it, use shareable hash-routed tabs in this
-  order: `组合持仓`, `策略逻辑`, `回测表现`.
+  order: `组合持仓`, `研究与审批`, `策略逻辑`, `回测表现`.
 - Open `组合持仓` by default. Make it the dominant detail surface with account
   NAV/capital/cash/P&L, invested-versus-cash allocation, and a full-width table
   showing Chinese security name, six-digit code, quantity, virtual entry price,
   reference price, virtual market value, portfolio weight, and virtual P/L. Keep
   cash visible as part of the portfolio rather than hiding it in a summary.
 - Make L1/L2/L3 routes filter strategies, not stocks.
+- Sort the default strategy table by next review time with missing or overdue
+  review dates first. Do not rank the default workflow by return or confidence.
+- In `研究与审批`, show dated positive and counter evidence, source provenance,
+  freshness, stage decisions, human reasons, reviewer, snapshot metrics, and
+  ChangeRequest IDs. Clearly state that Demo approvals reset on full refresh.
 - Treat Strategy/L1/L2/L3 navigation as an in-memory strategy filter after the
   desk has loaded. Preserve the sidebar and workspace header DOM, update only
   the main strategy content, and do not refetch Busabase or show a full-page
@@ -146,6 +166,12 @@ rules.
 
 - Calculate position P/L as `quantity * (latest reference price - virtual entry
   price)` and account return as `NAV / nominal capital - 1`.
+- Treat the account's baseline date as the start of nominal-capital performance.
+  Do not compare, rank, or aggregate returns as comparable when baseline dates or
+  quote provenance are missing. Display missing metrics as unavailable, never as
+  zero.
+- Reconcile each account NAV against cash plus position market values. Flag a
+  mismatch before allowing promotion.
 - Calculate total-book return from summed account NAV and summed nominal capital.
 - Calculate regression snapshot contribution as `strategy account P/L / total
   nominal capital`; calculate the removal case from the remaining accounts.
@@ -165,7 +191,10 @@ Finish only when:
   Regression work on desktop and mobile;
 - every strategy has one virtual account plus explicit selection and invalidation
   rules;
-- the four-resource declaration and lazy provisioning pass fixture tests;
+- the five-resource declaration, additive schema migration, and lazy provisioning
+  pass fixture tests;
+- research evidence and manual approvals persist in Busabase, with reason and
+  account snapshot visible in the strategy timeline;
 - normal mode uses Busabase, while Demo is explicit, deterministic, and labeled;
 - no brokerage path, real-money stage, trading action, or personalized investment
   claim exists; and

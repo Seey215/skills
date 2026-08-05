@@ -96,7 +96,14 @@ def test_demo_ui(browser, base_url: str) -> None:
     assert page.get_by_role("heading", name="历史回测", exact=True).is_visible()
     assert page.get_by_text("2024-08-05 → 2026-08-05", exact=True).is_visible()
     page.locator('.stage-control button[data-stage-value="L1"]').click()
+    page.get_by_role("dialog", name="人工审批策略阶段").wait_for()
+    page.get_by_label("人工理由").fill("研究证据已复核，本次降级用于验证人工审批记录。")
+    page.get_by_role("checkbox").check()
+    page.get_by_role("button", name="确认并提交", exact=True).click()
     assert page.locator(".detail-heading .stage-badge", has_text="L1").is_visible()
+    page.get_by_role("tab", name="研究与审批 2", exact=True).click()
+    assert page.get_by_text("Demo 不持久化", exact=True).is_visible()
+    assert page.get_by_text("研究证据已复核，本次降级用于验证人工审批记录。", exact=True).is_visible()
 
     page.get_by_role("button", name="打开回归", exact=True).click()
     assert page.get_by_role("heading", name="回归", exact=True).is_visible()
@@ -184,6 +191,21 @@ def find_resource(nodes, resource_key: str):
     return None
 
 
+def create_and_merge_record(busabase_url: str, base_id: str, fields: dict, message: str) -> None:
+    change_request = post_json(
+        f"{busabase_url}/api/v1/bases/{base_id}/change-requests",
+        {
+            "fields": fields,
+            "message": message,
+            "submittedBy": "kelly-skills-test",
+        },
+    )
+    post_json(
+        f"{busabase_url}/api/v1/change-requests/merge",
+        {"changeRequestIds": [change_request["id"]]},
+    )
+
+
 def test_busabase_provisioning(browser) -> None:
     busabase_port = free_port()
     app_port = free_port()
@@ -249,22 +271,60 @@ def test_busabase_provisioning(browser) -> None:
 
                 nodes = read_json(f"{busabase_url}/api/v1/nodes?depth=2")
                 strategy_base = find_resource(nodes, "strategies")
+                account_base = find_resource(nodes, "ledger-accounts")
+                review_base = find_resource(nodes, "strategy-reviews")
                 assert strategy_base and strategy_base.get("baseId"), nodes
-                record_cr = post_json(
-                    f"{busabase_url}/api/v1/bases/{strategy_base['baseId']}/change-requests",
+                assert account_base and account_base.get("baseId"), nodes
+                assert review_base and review_base.get("baseId"), nodes
+                create_and_merge_record(
+                    busabase_url,
+                    strategy_base["baseId"],
                     {
-                        "fields": {
-                            "name": "测试策略",
-                            "key": "integration-fixture",
-                            "status": "L1",
-                        },
-                        "message": "Seed Kelly Invest Stock integration fixture",
-                        "submittedBy": "kelly-skills-test",
+                        "name": "测试策略",
+                        "key": "integration-fixture",
+                        "family": "质量价值",
+                        "status": "L1",
+                        "thesis": "持有资本回报率稳定的优质企业。",
+                        "selection-rule": "现金流和资本回报率持续领先。",
+                        "invalidation-rule": "资本回报率连续两个季度下滑。",
+                        "rebalance": "季度复核",
+                        "benchmark": "沪深300",
+                        "confidence": 70,
+                        "next-review-at": "2026-09-01",
                     },
+                    "Seed complete strategy fixture",
                 )
-                post_json(
-                    f"{busabase_url}/api/v1/change-requests/merge",
-                    {"changeRequestIds": [record_cr["id"]]},
+                create_and_merge_record(
+                    busabase_url,
+                    account_base["baseId"],
+                    {
+                        "name": "测试策略虚拟账本",
+                        "strategy-key": "integration-fixture",
+                        "nominal-capital": 100000,
+                        "nav": 100000,
+                        "cash": 100000,
+                        "benchmark-return": 0,
+                        "max-drawdown": 0,
+                        "updated-at": "2026-08-05 15:00 CST",
+                        "baseline-date": "2026-08-01",
+                    },
+                    "Seed complete ledger fixture",
+                )
+                create_and_merge_record(
+                    busabase_url,
+                    review_base["baseId"],
+                    {
+                        "name": "测试策略研究复查",
+                        "strategy-key": "integration-fixture",
+                        "review-date": "2026-08-05 15:00 CST",
+                        "review-type": "research",
+                        "source-note": "公司公告与定期报告。",
+                        "source-as-of": "2026-06-30",
+                        "supporting-evidence": "现金流与资本回报率符合入选规则。",
+                        "counter-evidence": "估值仍高于历史中枢。",
+                        "data-freshness": "已核对",
+                    },
+                    "Seed research evidence fixture",
                 )
 
                 # A fresh app process must discover the existing resources without another setup action.
@@ -282,7 +342,17 @@ def test_busabase_provisioning(browser) -> None:
                     assert page.locator("[data-select-id]", has_text="测试策略").is_visible()
                     page.locator("[data-select-id]", has_text="测试策略").click()
                     page.locator('.stage-control button[data-stage-value="L2"]').click()
+                    page.get_by_role("dialog", name="人工审批策略阶段").wait_for()
+                    assert page.get_by_text("已满足", exact=True).count() == 4
+                    page.get_by_label("人工理由").fill("研究证据与虚拟账本已复核，同意进入进阶观察阶段。")
+                    page.get_by_role("checkbox").check()
+                    page.get_by_role("button", name="确认并提交", exact=True).click()
                     page.locator(".detail-heading .stage-badge", has_text="L2").wait_for()
+                    page.reload()
+                    page.wait_for_load_state("networkidle")
+                    page.locator(".detail-heading .stage-badge", has_text="L2").wait_for()
+                    page.get_by_role("tab", name="研究与审批 2", exact=True).click()
+                    assert page.get_by_text("研究证据与虚拟账本已复核，同意进入进阶观察阶段。", exact=True).is_visible()
                     assert_no_horizontal_overflow(page)
                     assert not unexpected_errors(errors), errors
                     context.close()
@@ -291,6 +361,7 @@ def test_busabase_provisioning(browser) -> None:
             keys = resource_keys(nodes)
             assert sorted(keys) == sorted(
                 ["app-root", "strategies", "ledger-accounts", "ledger-positions", "strategy-backtests"]
+                + ["strategy-reviews"]
             ), nodes
             change_requests = read_json(f"{busabase_url}/api/v1/change-requests")["changeRequests"]
             structure_requests = [
@@ -307,7 +378,7 @@ def test_busabase_provisioning(browser) -> None:
             timeout=90,
         ):
             nodes = read_json(f"{busabase_url}/api/v1/nodes?depth=2")
-            assert len(resource_keys(nodes)) == 5, nodes
+            assert len(resource_keys(nodes)) == 6, nodes
             strategy_base = find_resource(nodes, "strategies")
             records = read_json(f"{busabase_url}/api/v1/records?baseId={strategy_base['baseId']}")
             record_items = records if isinstance(records, list) else records.get("records", [])

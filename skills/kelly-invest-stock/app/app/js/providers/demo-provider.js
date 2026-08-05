@@ -3,6 +3,7 @@ const record = (id, baseKey, fields) => ({ id, baseKey, fields });
 const SNAPSHOT_AT = "2026-08-05 14:31 CST";
 const CSI300_RETURN = 0.037;
 const stageOverrides = new Map();
+const approvalRecords = [];
 
 const strategySeeds = [
   {
@@ -208,7 +209,7 @@ const strategySeeds = [
   },
 ];
 
-const strategyRecords = strategySeeds.map((seed) =>
+const strategyRecords = strategySeeds.map((seed, index) =>
   record(seed.id, "strategies", {
     name: seed.name,
     key: seed.key,
@@ -220,6 +221,7 @@ const strategyRecords = strategySeeds.map((seed) =>
     rebalance: seed.rebalance,
     benchmark: "沪深300",
     confidence: seed.confidence,
+    next_review_at: `2026-08-${String(8 + index).padStart(2, "0")}`,
   }),
 );
 
@@ -233,6 +235,7 @@ const accountRecords = strategySeeds.map((seed) =>
     benchmark_return: CSI300_RETURN,
     max_drawdown: seed.drawdown,
     updated_at: SNAPSHOT_AT,
+    baseline_date: "2026-07-01",
   }),
 );
 
@@ -248,6 +251,8 @@ const positionRecords = strategySeeds.flatMap((seed) =>
       latest_price: latestPrice,
       market_value: marketValue,
       weight: Number((marketValue / seed.nav).toFixed(4)),
+      price_source: "固定课堂快照（演示）",
+      price_as_of: SNAPSHOT_AT,
     });
   }),
 );
@@ -282,6 +287,26 @@ const backtestRecords = strategySeeds.map((seed) => {
   });
 });
 
+const reviewRecords = strategySeeds.map((seed, index) =>
+  record(`review-${seed.key}-2026-08-05`, "strategy-reviews", {
+    name: `${seed.name} · 课堂研究复查`,
+    strategy_key: seed.key,
+    review_date: `2026-08-05 ${String(14 + Math.floor(index / 2)).padStart(2, "0")}:${index % 2 ? "45" : "15"} CST`,
+    review_type: "research",
+    source_note: "公司公告、定期报告与固定课堂行情快照；仅用于演示研究工作流。",
+    source_as_of: "2026-08-05",
+    supporting_evidence: `当前虚拟持仓仍能按“${seed.selection}”逐项复查，账户与持仓口径完整。`,
+    counter_evidence: seed.invalidation,
+    data_freshness: "课堂固定快照 · 已核对",
+    snapshot_nav: seed.nav,
+    snapshot_benchmark_return: CSI300_RETURN,
+    snapshot_max_drawdown: seed.drawdown,
+    decision: "继续观察",
+    reason: "研究材料用于课堂审批演示，不代表投资建议。",
+    reviewer: "Agent 研究员",
+  }),
+);
+
 const recordsWithOverrides = () => [
   ...strategyRecords.map((strategy) => ({
     ...strategy,
@@ -293,7 +318,20 @@ const recordsWithOverrides = () => [
   ...accountRecords,
   ...positionRecords,
   ...backtestRecords,
+  ...reviewRecords,
+  ...approvalRecords,
 ];
+
+const busabaseFields = (fields) =>
+  Object.fromEntries(Object.entries(fields).map(([slug, value]) => [slug.replaceAll("_", "-"), value]));
+
+export const classroomSeedBatches = () => ({
+  strategies: strategyRecords.map((item) => busabaseFields(item.fields)),
+  "ledger-accounts": accountRecords.map((item) => busabaseFields(item.fields)),
+  "ledger-positions": positionRecords.map((item) => busabaseFields(item.fields)),
+  "strategy-backtests": backtestRecords.map((item) => busabaseFields(item.fields)),
+  "strategy-reviews": reviewRecords.map((item) => busabaseFields(item.fields)),
+});
 
 export const demoProvider = {
   name: "demo",
@@ -305,16 +343,38 @@ export const demoProvider = {
         mode: "deterministic_preview",
         readOnly: true,
         stageWritable: true,
+        reviewWritable: true,
         asOf: SNAPSHOT_AT,
       },
       records: recordsWithOverrides(),
       pageInfo: {},
     };
   },
-  async updateStrategyStage(recordId, stage) {
-    if (!strategyRecords.some((strategy) => strategy.id === recordId)) throw new Error("STRATEGY_NOT_FOUND");
+  async updateStrategyStage(recordId, stage, _baseCommitId, approval = {}) {
+    const strategy = strategyRecords.find((item) => item.id === recordId);
+    if (!strategy) throw new Error("STRATEGY_NOT_FOUND");
     if (!["L1", "L2", "L3"].includes(stage)) throw new Error("INVALID_STAGE");
+    const reason = String(approval.reason || "").trim();
+    if (reason.length < 8) throw new Error("APPROVAL_REASON_REQUIRED: 请至少写 8 个字的人工理由");
+    const reviewIndex = approvalRecords.length;
+    approvalRecords.push(
+      record(`demo-approval-${recordId}-${reviewIndex + 1}`, "strategy-reviews", {
+        name: `${strategy.fields.name} ${approval.fromStage || strategy.fields.status} → ${stage}`,
+        strategy_key: strategy.fields.key,
+        review_date: `2026-08-05 ${reviewIndex === 0 ? "20:35" : "20:42"} CST`,
+        review_type: "approval",
+        snapshot_nav: approval.snapshotNav,
+        snapshot_benchmark_return: approval.snapshotBenchmarkReturn,
+        snapshot_max_drawdown: approval.snapshotMaxDrawdown,
+        from_stage: approval.fromStage || strategy.fields.status,
+        to_stage: stage,
+        decision: "调整成熟度",
+        reason,
+        reviewer: approval.reviewer || "老板 Kelly",
+        change_request_id: `demo-cr-${reviewIndex + 1}`,
+      }),
+    );
     stageOverrides.set(recordId, stage);
-    return { persisted: true, transient: true };
+    return { persisted: true, reviewPersisted: true, transient: true };
   },
 };

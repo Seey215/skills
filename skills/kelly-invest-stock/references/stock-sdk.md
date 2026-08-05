@@ -90,9 +90,11 @@ runtime before deployment.
 
 ## Demo Boundary
 
-The bundled Demo uses a fixed, dated US-stock snapshot to exercise strategy and
-virtual-ledger behavior. It must not invoke `stock-sdk`, refresh itself, or present
-its values as current market observations.
+The bundled Demo uses a fixed, dated mainland China A-share snapshot to exercise
+strategy, evidence, approval, and virtual-ledger behavior. Every reference price
+must carry its fixed source label and observation time. The Demo must not invoke
+`stock-sdk`, refresh itself, persist approvals across a full reload, or present its
+values as current market observations.
 
 ## Failure Behavior
 

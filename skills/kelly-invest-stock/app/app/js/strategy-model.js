@@ -13,10 +13,20 @@ const stageLabels = {
   L3: "高置信观察",
 };
 
+const hasText = (value) => String(value || "").trim().length > 0;
+
 const normalizeStrategy = (record) => {
   const fields = fieldsOf(record);
   const requestedStage = fields.stage || fields.status;
   const stage = STAGES.includes(requestedStage) ? requestedStage : "L1";
+  const fieldCompleteness = {
+    family: hasText(fields.family),
+    thesis: hasText(fields.thesis),
+    selectionRule: hasText(fields.selection_rule),
+    invalidationRule: hasText(fields.invalidation_rule),
+    rebalance: hasText(fields.rebalance),
+    benchmark: hasText(fields.benchmark),
+  };
   return {
     id: record.id || fields.key,
     baseCommitId: record.headCommit?.id || record.headCommitId || null,
@@ -31,14 +41,20 @@ const normalizeStrategy = (record) => {
     rebalance: String(fields.rebalance || "按需复核"),
     benchmark: String(fields.benchmark || "沪深300"),
     confidence: toNumber(fields.confidence),
+    nextReviewAt: String(fields.next_review_at || ""),
+    fieldCompleteness,
+    isRuleComplete: Object.values(fieldCompleteness).every(Boolean),
   };
 };
 
 const normalizeAccount = (record) => {
   const fields = fieldsOf(record);
-  const nominalCapital = toNumber(fields.nominal_capital);
-  const nav = toNumber(fields.nav, nominalCapital);
-  const returnRate = nominalCapital > 0 ? nav / nominalCapital - 1 : null;
+  const nominalCapital = toNumber(fields.nominal_capital, null);
+  const nav = toNumber(fields.nav, null);
+  const cash = toNumber(fields.cash, null);
+  const baselineDate = String(fields.baseline_date || "");
+  const hasPerformanceBasis = nominalCapital > 0 && nav !== null && hasText(baselineDate);
+  const returnRate = hasPerformanceBasis ? nav / nominalCapital - 1 : null;
   const benchmarkReturn = toNumber(fields.benchmark_return, null);
   return {
     id: record.id || fields.strategy_key,
@@ -46,14 +62,16 @@ const normalizeAccount = (record) => {
     strategyKey: String(fields.strategy_key || ""),
     nominalCapital,
     nav,
-    cash: toNumber(fields.cash),
-    pnl: nav - nominalCapital,
+    cash,
+    pnl: hasPerformanceBasis ? nav - nominalCapital : null,
     returnRate,
     benchmarkReturn,
     excessReturn: returnRate === null || benchmarkReturn === null ? null : returnRate - benchmarkReturn,
-    cashRate: nav > 0 ? toNumber(fields.cash) / nav : null,
+    cashRate: nav > 0 && cash !== null ? cash / nav : null,
     maxDrawdown: toNumber(fields.max_drawdown, null),
     updatedAt: String(fields.updated_at || "--"),
+    baselineDate,
+    hasCoreMetrics: nominalCapital !== null && nominalCapital > 0 && nav !== null && cash !== null,
   };
 };
 
@@ -70,9 +88,37 @@ const normalizePosition = (record) => {
     quantity,
     entryPrice,
     latestPrice,
-    marketValue: toNumber(fields.market_value, latestPrice === null ? 0 : quantity * latestPrice),
+    marketValue: toNumber(fields.market_value, latestPrice === null ? null : quantity * latestPrice),
     weight: toNumber(fields.weight, null),
     pnl: entryPrice === null || latestPrice === null ? null : quantity * (latestPrice - entryPrice),
+    priceSource: String(fields.price_source || ""),
+    priceAsOf: String(fields.price_as_of || ""),
+    hasCompleteQuote: latestPrice !== null && hasText(fields.price_source) && hasText(fields.price_as_of),
+  };
+};
+
+const normalizeReview = (record) => {
+  const fields = fieldsOf(record);
+  return {
+    id: record.id || `${fields.strategy_key || ""}:${fields.review_date || ""}`,
+    strategyKey: String(fields.strategy_key || ""),
+    name: String(fields.name || "策略记录"),
+    reviewDate: String(fields.review_date || ""),
+    reviewType: String(fields.review_type || "research"),
+    sourceNote: String(fields.source_note || ""),
+    sourceAsOf: String(fields.source_as_of || ""),
+    supportingEvidence: String(fields.supporting_evidence || ""),
+    counterEvidence: String(fields.counter_evidence || ""),
+    dataFreshness: String(fields.data_freshness || ""),
+    snapshotNav: toNumber(fields.snapshot_nav, null),
+    snapshotBenchmarkReturn: toNumber(fields.snapshot_benchmark_return, null),
+    snapshotMaxDrawdown: toNumber(fields.snapshot_max_drawdown, null),
+    fromStage: String(fields.from_stage || ""),
+    toStage: String(fields.to_stage || ""),
+    decision: String(fields.decision || ""),
+    reason: String(fields.reason || ""),
+    reviewer: String(fields.reviewer || ""),
+    changeRequestId: String(fields.change_request_id || ""),
   };
 };
 
@@ -105,6 +151,9 @@ export function createStrategyDesk(records) {
   const backtests = recordsFor(records, "strategy-backtests")
     .map(normalizeBacktest)
     .sort((left, right) => right.reportDate.localeCompare(left.reportDate));
+  const reviews = recordsFor(records, "strategy-reviews")
+    .map(normalizeReview)
+    .sort((left, right) => right.reviewDate.localeCompare(left.reviewDate));
   const accountsByStrategy = new Map();
   for (const account of accounts) {
     const strategyAccounts = accountsByStrategy.get(account.strategyKey) || [];
@@ -116,19 +165,44 @@ export function createStrategyDesk(records) {
     .map(normalizeStrategy)
     .map((strategy) => {
       const strategyAccounts = accountsByStrategy.get(strategy.key) || [];
+      const strategyPositions = positions.filter((position) => position.strategyKey === strategy.key);
+      const strategyReviews = reviews.filter((review) => review.strategyKey === strategy.key);
+      const account = strategyAccounts[0] || null;
+      const positionsComplete = strategyPositions.every((position) => position.hasCompleteQuote && position.marketValue !== null);
+      const calculatedNav =
+        !account || account.cash === null || !positionsComplete
+          ? null
+          : account.cash + strategyPositions.reduce((sum, position) => sum + position.marketValue, 0);
+      const navDifference = calculatedNav === null || !account || account.nav === null ? null : account.nav - calculatedNav;
+      const reconciliationTolerance = !account || account.nav === null ? 1 : Math.max(1, Math.abs(account.nav) * 0.0001);
+      const latestResearch = strategyReviews.find((review) => review.reviewType === "research") || null;
       return {
         ...strategy,
-        positions: positions.filter((position) => position.strategyKey === strategy.key),
+        positions: strategyPositions,
         backtests: backtests.filter((backtest) => backtest.strategyKey === strategy.key),
-        account: strategyAccounts[0] || null,
+        reviews: strategyReviews,
+        latestResearch,
+        account,
         accountCount: strategyAccounts.length,
+        positionsComplete,
+        calculatedNav,
+        navDifference,
+        isReconciled: navDifference !== null && Math.abs(navDifference) <= reconciliationTolerance,
+        hasComparableBaseline: Boolean(account?.baselineDate && strategy.benchmark),
+        isApprovalReady:
+          strategy.isRuleComplete &&
+          strategyAccounts.length === 1 &&
+          Boolean(account?.hasCoreMetrics && account?.baselineDate) &&
+          positionsComplete &&
+          Math.abs(navDifference ?? Number.POSITIVE_INFINITY) <= reconciliationTolerance &&
+          Boolean(latestResearch?.sourceAsOf && latestResearch?.supportingEvidence),
       };
     })
-    .sort(
-      (left, right) =>
-        (right.account?.returnRate ?? Number.NEGATIVE_INFINITY) -
-        (left.account?.returnRate ?? Number.NEGATIVE_INFINITY),
-    );
+    .sort((left, right) => {
+      const leftDue = left.nextReviewAt || "0000-00-00";
+      const rightDue = right.nextReviewAt || "0000-00-00";
+      return leftDue.localeCompare(rightDue) || left.name.localeCompare(right.name, "zh-CN");
+    });
 
   const strategyKeys = new Set(strategies.map((strategy) => strategy.key));
   const duplicateStrategyKeys = [...strategyKeys].filter(
@@ -149,6 +223,18 @@ export function createStrategyDesk(records) {
   const orphanBacktestIds = backtests
     .filter((backtest) => !strategyKeys.has(backtest.strategyKey))
     .map((backtest) => backtest.id);
+  const orphanReviewIds = reviews
+    .filter((review) => !strategyKeys.has(review.strategyKey))
+    .map((review) => review.id);
+  const missingBaselineStrategyKeys = strategies
+    .filter((strategy) => strategy.account && !strategy.account.baselineDate)
+    .map((strategy) => strategy.key);
+  const incompleteQuoteStrategyKeys = strategies
+    .filter((strategy) => !strategy.positionsComplete)
+    .map((strategy) => strategy.key);
+  const unreconciledStrategyKeys = strategies
+    .filter((strategy) => strategy.account && strategy.positionsComplete && !strategy.isReconciled)
+    .map((strategy) => strategy.key);
   const canonicalAccounts = [
     ...new Map(
       strategies.filter((strategy) => strategy.account).map((strategy) => [strategy.account.id, strategy.account]),
@@ -158,18 +244,30 @@ export function createStrategyDesk(records) {
   const levels = Object.fromEntries(
     STAGES.map((stage) => [
       stage,
-      strategies.filter((strategy) => strategy.stage === stage).sort((a, b) => b.confidence - a.confidence),
+      strategies.filter((strategy) => strategy.stage === stage),
     ]),
   );
-  const nominalCapital = canonicalAccounts.reduce((sum, account) => sum + account.nominalCapital, 0);
-  const nav = canonicalAccounts.reduce((sum, account) => sum + account.nav, 0);
-  const cash = canonicalAccounts.reduce((sum, account) => sum + account.cash, 0);
+  const accountMetricsComplete =
+    strategies.length > 0 &&
+    strategies.every(
+      (strategy) =>
+        strategy.accountCount === 1 &&
+        strategy.account?.hasCoreMetrics &&
+        strategy.account?.baselineDate &&
+        strategy.positionsComplete &&
+        strategy.isReconciled,
+    );
+  const benchmarkMetricsComplete =
+    accountMetricsComplete && canonicalAccounts.every((account) => account.benchmarkReturn !== null);
+  const nominalCapital = canonicalAccounts.reduce((sum, account) => sum + (account.nominalCapital || 0), 0);
+  const nav = canonicalAccounts.reduce((sum, account) => sum + (account.nav || 0), 0);
+  const cash = canonicalAccounts.reduce((sum, account) => sum + (account.cash || 0), 0);
   const benchmarkValue = canonicalAccounts.reduce(
-    (sum, account) => sum + account.nominalCapital * (account.benchmarkReturn || 0),
+    (sum, account) => sum + (account.nominalCapital || 0) * (account.benchmarkReturn || 0),
     0,
   );
-  const returnRate = nominalCapital > 0 ? nav / nominalCapital - 1 : null;
-  const benchmarkReturn = nominalCapital > 0 ? benchmarkValue / nominalCapital : null;
+  const returnRate = accountMetricsComplete && nominalCapital > 0 ? nav / nominalCapital - 1 : null;
+  const benchmarkReturn = benchmarkMetricsComplete && nominalCapital > 0 ? benchmarkValue / nominalCapital : null;
   const integrity = {
     missingAccountStrategyKeys,
     duplicateAccountStrategyKeys,
@@ -177,6 +275,10 @@ export function createStrategyDesk(records) {
     orphanAccountIds,
     orphanPositionIds,
     orphanBacktestIds,
+    orphanReviewIds,
+    missingBaselineStrategyKeys,
+    incompleteQuoteStrategyKeys,
+    unreconciledStrategyKeys,
   };
   integrity.issueCount = Object.values(integrity).reduce((sum, issues) => sum + issues.length, 0);
   integrity.isComplete = integrity.issueCount === 0;
@@ -186,18 +288,19 @@ export function createStrategyDesk(records) {
     accounts,
     positions,
     backtests,
+    reviews,
     levels,
     integrity,
     ledger: {
       nominalCapital,
       nav,
-      pnl: nav - nominalCapital,
+      pnl: accountMetricsComplete ? nav - nominalCapital : null,
       returnRate,
       benchmarkReturn,
       excessReturn: returnRate === null || benchmarkReturn === null ? null : returnRate - benchmarkReturn,
       cash,
-      invested: nav - cash,
-      cashRate: nav > 0 ? cash / nav : null,
+      invested: accountMetricsComplete ? nav - cash : null,
+      cashRate: accountMetricsComplete && nav > 0 ? cash / nav : null,
     },
     attention: {
       l1: levels.L1.length,
@@ -213,7 +316,7 @@ export function createRegressionSnapshot(desk, strategy) {
   const totalNav = desk.ledger.nav;
   const strategyCapital = account?.nominalCapital || 0;
   const strategyNav = account?.nav || 0;
-  const strategyPnl = account?.pnl || 0;
+  const strategyPnl = account?.pnl ?? null;
   const remainderCapital = totalCapital - strategyCapital;
   const remainderNav = totalNav - strategyNav;
 
@@ -221,7 +324,7 @@ export function createRegressionSnapshot(desk, strategy) {
     strategy,
     totalReturn: desk.ledger.returnRate,
     strategyReturn: account?.returnRate ?? null,
-    contribution: totalCapital > 0 ? strategyPnl / totalCapital : null,
+    contribution: totalCapital > 0 && strategyPnl !== null ? strategyPnl / totalCapital : null,
     capitalWeight: totalCapital > 0 ? strategyCapital / totalCapital : null,
     returnWithoutStrategy: remainderCapital > 0 ? remainderNav / remainderCapital - 1 : null,
     remainderCapital,

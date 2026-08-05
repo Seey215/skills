@@ -34,7 +34,7 @@ test.after(async () => {
 test("serves health and canonical browser assets", async () => {
   const healthResponse = await fetch(`${baseUrl}/health`);
   assert.equal(healthResponse.status, 200);
-  assert.deepEqual(await healthResponse.json(), { ok: true, app: "kelly-invest-stock", mode: "read-only" });
+  assert.deepEqual(await healthResponse.json(), { ok: true, app: "kelly-invest-stock", mode: "virtual-ledger" });
 
   for (const path of ["/", "/styles.css", "/js/app.js", "/js/config.js"]) {
     const response = await fetch(`${baseUrl}${path}`);

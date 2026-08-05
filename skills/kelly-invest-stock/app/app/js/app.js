@@ -1,6 +1,6 @@
-import { appConfig } from "./config.js?v=0.8.1";
-import { getProvider } from "./providers/index.js?v=0.8.1";
-import { createRegressionSnapshot, createStrategyDesk } from "./strategy-model.js?v=0.8.1";
+import { appConfig } from "./config.js?v=0.9.0";
+import { getProvider } from "./providers/index.js?v=0.9.0";
+import { createRegressionSnapshot, createStrategyDesk } from "./strategy-model.js?v=0.9.0";
 
 const root = document.querySelector("#app");
 const money = new Intl.NumberFormat("zh-CN", {
@@ -15,7 +15,7 @@ const quote = new Intl.NumberFormat("zh-CN", {
   maximumFractionDigits: 2,
 });
 
-const DETAIL_TABS = ["portfolio", "logic", "backtest"];
+const DETAIL_TABS = ["portfolio", "research", "logic", "backtest"];
 const STRATEGY_LIST_VIEWS = new Set(["strategies", "l1", "l2", "l3"]);
 
 const viewMeta = {
@@ -34,6 +34,7 @@ let lastContentHash = "#/strategies";
 let sidebarCollapsed = false;
 let helpTab = "guide";
 let authStatus = null;
+let pendingApproval = null;
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -45,6 +46,8 @@ const escapeHtml = (value) =>
 
 const formatPercent = (value, signed = true) =>
   value === null || !Number.isFinite(value) ? "--" : `${signed && value > 0 ? "+" : ""}${(value * 100).toFixed(1)}%`;
+
+const formatMoney = (value) => (value === null || !Number.isFinite(value) ? "--" : money.format(value));
 
 const tone = (value) => {
   if (value === null || value === 0) return "neutral";
@@ -127,7 +130,7 @@ const strategyPositionSummary = (strategy) => {
 };
 
 const renderStrategyTable = (strategies, title = "策略与虚拟账本") => `<section class="strategy-overview" aria-label="策略与虚拟账本总览">
-  <div class="strategy-overview-head"><div><strong>${escapeHtml(title)}</strong><span>${strategies.length} 个策略 · 点击整行查看详情${currentState.provider.name === "demo" ? " · 大师风格复刻，不代表真实持仓" : ""}</span></div><span>按虚拟收益排序</span></div>
+  <div class="strategy-overview-head"><div><strong>${escapeHtml(title)}</strong><span>${strategies.length} 个策略 · 点击整行查看详情${currentState.provider.name === "demo" ? " · 大师风格复刻，不代表真实持仓" : ""}</span></div><span>待复核优先 · 收益需同起算日比较</span></div>
   <div class="strategy-table-wrap">
     <table class="strategy-table">
       <thead><tr><th class="rank-col">#</th><th class="strategy-col">策略</th><th class="thesis-col">策略简述</th><th>晋级阶段</th><th class="number-col">账本 NAV</th><th class="number-col">收益 / 基准</th><th class="number-col">超额</th><th class="number-col">最大回撤</th><th class="positions-col">账本持仓</th><th class="open-col"><span class="sr-only">打开</span></th></tr></thead>
@@ -138,9 +141,9 @@ const renderStrategyTable = (strategies, title = "策略与虚拟账本") => `<s
           return `<tr class="strategy-table-row ${accountIssue ? "account-issue" : ""}" data-select-id="${escapeHtml(strategy.id)}" tabindex="0" role="link" aria-label="打开策略 ${escapeHtml(strategy.name)}">
             <td class="rank-col">${String(index + 1).padStart(2, "0")}</td>
             <td class="strategy-col"><strong>${escapeHtml(strategy.name)}</strong><span>${escapeHtml(strategy.family)}</span></td>
-            <td class="thesis-col"><p>${escapeHtml(strategy.thesis)}</p><span>${escapeHtml(strategy.rebalance)} · ${escapeHtml(strategy.benchmark)}</span></td>
+            <td class="thesis-col"><p>${escapeHtml(strategy.thesis)}</p><span>下次复核 ${escapeHtml(strategy.nextReviewAt || "待安排")} · ${escapeHtml(strategy.benchmark)}</span></td>
             <td>${strategyStageSummary(strategy)}</td>
-            <td class="number-col"><strong>${account ? money.format(account.nav) : "--"}</strong><span>本金 ${account ? money.format(account.nominalCapital) : "--"}</span></td>
+            <td class="number-col"><strong>${account ? formatMoney(account.nav) : "--"}</strong><span>本金 ${account ? formatMoney(account.nominalCapital) : "--"}</span></td>
             <td class="number-col"><strong class="${tone(account?.returnRate ?? null)}">${formatPercent(account?.returnRate ?? null)}</strong><span>基准 ${formatPercent(account?.benchmarkReturn ?? null)}</span></td>
             <td class="number-col"><strong class="${tone(account?.excessReturn ?? null)}">${formatPercent(account?.excessReturn ?? null)}</strong></td>
             <td class="number-col"><strong class="negative">${formatPercent(account?.maxDrawdown ?? null, false)}</strong></td>
@@ -179,15 +182,15 @@ const renderStrategyPositions = (strategy) => {
         <td class="portfolio-security"><strong>${escapeHtml(position.name)}</strong><small>${escapeHtml(position.code)}</small></td>
         <td class="number-col">${position.quantity}</td>
         <td class="number-col">${position.entryPrice === null ? "--" : quote.format(position.entryPrice)}</td>
-        <td class="number-col">${position.latestPrice === null ? "--" : quote.format(position.latestPrice)}</td>
-        <td class="number-col"><strong>${money.format(position.marketValue)}</strong></td>
+        <td class="number-col price-evidence">${position.latestPrice === null ? "--" : `<strong>${quote.format(position.latestPrice)}</strong><small>${escapeHtml(position.priceSource || "来源缺失")} · ${escapeHtml(position.priceAsOf || "时间缺失")}</small>`}</td>
+        <td class="number-col"><strong>${formatMoney(position.marketValue)}</strong></td>
         <td class="portfolio-weight"><strong>${formatPercent(position.weight, false)}</strong><i><b style="width:${Math.max(0, Math.min(100, (position.weight || 0) * 100))}%"></b></i></td>
         <td class="number-col ${tone(position.pnl)}"><strong>${position.pnl === null ? "--" : money.format(position.pnl)}</strong></td>
       </tr>`,
     )
     .join("");
   const cashRow = strategy.account
-    ? `<tr class="portfolio-cash-row"><td class="portfolio-security"><strong>现金</strong><small>虚拟账户可用资金</small></td><td class="number-col">--</td><td class="number-col">--</td><td class="number-col">--</td><td class="number-col"><strong>${money.format(strategy.account.cash)}</strong></td><td class="portfolio-weight"><strong>${formatPercent(strategy.account.cashRate, false)}</strong><i><b style="width:${Math.max(0, Math.min(100, (strategy.account.cashRate || 0) * 100))}%"></b></i></td><td class="number-col">--</td></tr>`
+    ? `<tr class="portfolio-cash-row"><td class="portfolio-security"><strong>现金</strong><small>虚拟账户可用资金</small></td><td class="number-col">--</td><td class="number-col">--</td><td class="number-col">--</td><td class="number-col"><strong>${formatMoney(strategy.account.cash)}</strong></td><td class="portfolio-weight"><strong>${formatPercent(strategy.account.cashRate, false)}</strong><i><b style="width:${Math.max(0, Math.min(100, (strategy.account.cashRate || 0) * 100))}%"></b></i></td><td class="number-col">--</td></tr>`
     : "";
   return `<div class="portfolio-table-wrap"><table class="portfolio-table"><thead><tr><th>标的</th><th class="number-col">数量</th><th class="number-col">虚拟成本</th><th class="number-col">参考价</th><th class="number-col">虚拟市值</th><th>组合权重</th><th class="number-col">浮动盈亏</th></tr></thead><tbody>${positionRows || (!cashRow ? '<tr><td colspan="7"><div class="empty-state">暂无虚拟持仓。</div></td></tr>' : "")}${cashRow}</tbody></table></div>`;
 };
@@ -215,6 +218,7 @@ const renderStrategyBacktest = (strategy) => {
 
 const renderDetailTabs = (strategy, activeTab) => `<nav class="strategy-detail-tabs" role="tablist" aria-label="策略详情视图">
   <button type="button" role="tab" aria-selected="${activeTab === "portfolio"}" class="${activeTab === "portfolio" ? "active" : ""}" data-detail-tab="portfolio"><span>组合持仓</span><b>${strategy.positions.length}</b></button>
+  <button type="button" role="tab" aria-selected="${activeTab === "research"}" class="${activeTab === "research" ? "active" : ""}" data-detail-tab="research"><span>研究与审批</span><b>${strategy.reviews.length}</b></button>
   <button type="button" role="tab" aria-selected="${activeTab === "logic"}" class="${activeTab === "logic" ? "active" : ""}" data-detail-tab="logic"><span>策略逻辑</span></button>
   <button type="button" role="tab" aria-selected="${activeTab === "backtest"}" class="${activeTab === "backtest" ? "active" : ""}" data-detail-tab="backtest"><span>回测表现</span><b>${strategy.backtests.length}</b></button>
 </nav>`;
@@ -224,15 +228,37 @@ const renderPortfolioTab = (strategy, investedRate) => {
   if (!account) {
     return '<section class="strategy-detail-tab-panel portfolio-panel" role="tabpanel"><div class="ledger-missing"><strong>该策略没有独立虚拟账户</strong><p>补齐虚拟账户后，这里会展示股票、现金、权重与盈亏。</p></div></section>';
   }
+  const integrityMessage = !account.baselineDate
+    ? "缺少收益起算日，当前回报不能与其他起算日不同的策略直接比较。"
+    : !strategy.positionsComplete
+      ? "部分持仓缺少参考价来源或时间，账户汇总属于不完整快照。"
+      : !strategy.isReconciled
+        ? `账户 NAV 与现金加持仓市值相差 ${formatMoney(strategy.navDifference)}，请先核对账本。`
+        : "";
   return `<section class="strategy-detail-tab-panel portfolio-panel" role="tabpanel">
+    ${integrityMessage ? `<div class="portfolio-integrity-warning" role="status"><strong>账本口径待核对</strong><span>${escapeHtml(integrityMessage)}</span></div>` : ""}
     <div class="portfolio-holdings-head"><div><h3>组合持仓</h3><span>${escapeHtml(account.name)}</span></div><span>${strategy.positions.length} 只股票 · 现金 ${formatPercent(account.cashRate, false)}</span></div>
     ${renderStrategyPositions(strategy)}
     <div class="portfolio-account-footer"><div class="portfolio-account-head"><div><p class="eyebrow">ACCOUNT SNAPSHOT</p><h3>虚拟账户摘要</h3></div><span>参考价仅用于虚拟账本估值</span></div>
-    <div class="portfolio-account-facts">${fact("当前净值", money.format(account.nav))}${fact("名义本金", money.format(account.nominalCapital))}${fact("虚拟盈亏", money.format(account.pnl), tone(account.pnl))}${fact("可用现金", money.format(account.cash))}</div>
-    <div class="capital-allocation portfolio-allocation"><div><span>股票仓位</span><strong>${formatPercent(investedRate, false)}</strong></div><div><i style="width:${Math.max(0, Math.min(100, (investedRate || 0) * 100))}%"></i></div><small>股票市值 ${money.format(account.nav - account.cash)} · 现金 ${money.format(account.cash)}</small></div></div>
-    <p class="ledger-stamp">账本更新于 ${escapeHtml(account.updatedAt)} · 不连接券商，不产生真实订单</p>
+    <div class="portfolio-account-facts">${fact("当前净值", formatMoney(account.nav))}${fact("名义本金", formatMoney(account.nominalCapital))}${fact("虚拟盈亏", formatMoney(account.pnl), tone(account.pnl))}${fact("可用现金", formatMoney(account.cash))}${fact("收益起算日", escapeHtml(account.baselineDate || "缺失"))}</div>
+    <div class="capital-allocation portfolio-allocation"><div><span>股票仓位</span><strong>${formatPercent(investedRate, false)}</strong></div><div><i style="width:${Math.max(0, Math.min(100, (investedRate || 0) * 100))}%"></i></div><small>股票市值 ${account.nav === null || account.cash === null ? "--" : formatMoney(account.nav - account.cash)} · 现金 ${formatMoney(account.cash)}</small></div></div>
+    <p class="ledger-stamp">账本更新于 ${escapeHtml(account.updatedAt)} · 起算于 ${escapeHtml(account.baselineDate || "未记录")} · 不连接券商，不产生真实订单</p>
   </section>`;
 };
+
+const reviewTypeLabel = (review) => (review.reviewType === "approval" ? "人工审批" : "研究复查");
+
+const renderReviewItem = (review) => `<article class="review-item review-${escapeHtml(review.reviewType)}">
+  <div class="review-item-head"><div><span>${reviewTypeLabel(review)}</span><strong>${escapeHtml(review.name)}</strong></div><time>${escapeHtml(review.reviewDate || "时间缺失")}</time></div>
+  ${review.reviewType === "approval" ? `<div class="review-stage-change">${stageBadge(review.fromStage || "L1")}<span>→</span>${stageBadge(review.toStage || "L1")}</div><p class="review-reason">${escapeHtml(review.reason || "未记录人工理由")}</p><div class="review-meta">${escapeHtml(review.reviewer || "审批人未记录")}${review.changeRequestId ? ` · CR ${escapeHtml(review.changeRequestId)}` : ""}</div>` : `<div class="research-evidence-grid"><section><span>支持证据</span><p>${escapeHtml(review.supportingEvidence || "尚未记录")}</p></section><section><span>反方证据 / 失效风险</span><p>${escapeHtml(review.counterEvidence || "尚未记录")}</p></section></div><div class="review-meta">来源时间 ${escapeHtml(review.sourceAsOf || "缺失")} · ${escapeHtml(review.dataFreshness || "新鲜度未标记")}</div><p class="research-source">${escapeHtml(review.sourceNote || "来源说明缺失")}</p>`}
+  ${review.snapshotNav === null ? "" : `<div class="review-snapshot">${fact("快照 NAV", formatMoney(review.snapshotNav))}${fact("同期基准", formatPercent(review.snapshotBenchmarkReturn))}${fact("最大回撤", formatPercent(review.snapshotMaxDrawdown, false), "negative")}</div>`}
+</article>`;
+
+const renderResearchTab = (strategy) => `<section class="strategy-detail-tab-panel research-panel" role="tabpanel">
+  <div class="research-head"><div><p class="eyebrow">RESEARCH & APPROVAL</p><h3>研究证据与人工决定</h3></div><span>下次复核 ${escapeHtml(strategy.nextReviewAt || "待安排")}</span></div>
+  ${currentState.provider.name === "demo" ? '<div class="demo-persistence-note"><strong>Demo 不持久化</strong><span>本页审批只用于交互演示；完整刷新会恢复固定快照。课堂作业请使用 Busabase 工作区。</span></div>' : ""}
+  ${strategy.reviews.length ? `<div class="review-timeline">${strategy.reviews.map(renderReviewItem).join("")}</div>` : '<div class="empty-state">还没有研究或审批记录。请让 Agent 将来源、日期、正反证据和复查快照写入策略研究与审批 Base。</div>'}
+</section>`;
 
 const renderLogicTab = (strategy) => `<section class="strategy-detail-tab-panel strategy-logic-panel" role="tabpanel">
   <div class="strategy-thesis-lead"><span>核心假设</span><p>${escapeHtml(strategy.thesis)}</p></div>
@@ -252,7 +278,9 @@ const renderStrategyDetail = (strategy) => {
       ? `<section class="ledger-integrity-detail"><strong>检测到 ${strategy.accountCount} 个同策略账户</strong><span>当前仅采用第一条记录参与汇总，需合并为一个独立账本。</span></section>`
       : "";
   const tabPanel =
-    activeTab === "logic"
+    activeTab === "research"
+      ? renderResearchTab(strategy)
+      : activeTab === "logic"
       ? renderLogicTab(strategy)
       : activeTab === "backtest"
         ? `<section class="strategy-detail-tab-panel backtest-tab-panel" role="tabpanel">${renderStrategyBacktest(strategy)}</section>`
@@ -312,11 +340,11 @@ const renderSidebar = () => {
 const renderSummaryStrip = () => `${
   desk.integrity.isComplete
     ? ""
-    : `<section class="ledger-integrity-band" role="status"><strong>账本数据不完整</strong><span>${desk.integrity.missingAccountStrategyKeys.length} 个策略缺账户 · ${desk.integrity.duplicateAccountStrategyKeys.length} 个策略账户重复 · ${desk.integrity.orphanAccountIds.length + desk.integrity.orphanPositionIds.length} 条孤立记录</span></section>`
+    : `<section class="ledger-integrity-band" role="status"><strong>账本数据不完整</strong><span>${desk.integrity.missingAccountStrategyKeys.length} 个缺账户 · ${desk.integrity.missingBaselineStrategyKeys.length} 个缺起算日 · ${desk.integrity.incompleteQuoteStrategyKeys.length} 个缺价格来源 · ${desk.integrity.unreconciledStrategyKeys.length} 个 NAV 未对账</span></section>`
 }<section class="summary-strip" aria-label="策略账本组合摘要">
-  <div><span>名义本金</span><strong>${money.format(desk.ledger.nominalCapital)}</strong></div>
-  <div><span>当前净值</span><strong>${money.format(desk.ledger.nav)}</strong></div>
-  <div><span>虚拟盈亏</span><strong class="${tone(desk.ledger.pnl)}">${money.format(desk.ledger.pnl)}</strong></div>
+  <div><span>名义本金</span><strong>${formatMoney(desk.ledger.nominalCapital)}</strong></div>
+  <div><span>当前净值</span><strong>${formatMoney(desk.ledger.nav)}</strong></div>
+  <div><span>虚拟盈亏</span><strong class="${tone(desk.ledger.pnl)}">${formatMoney(desk.ledger.pnl)}</strong></div>
   <div><span>累计收益</span><strong class="${tone(desk.ledger.returnRate)}">${formatPercent(desk.ledger.returnRate)}</strong></div>
   <div><span>组合超额</span><strong class="${tone(desk.ledger.excessReturn)}">${formatPercent(desk.ledger.excessReturn)}</strong></div>
   <div><span>现金比例</span><strong>${formatPercent(desk.ledger.cashRate, false)}</strong></div>
@@ -353,10 +381,37 @@ const renderHelp =
   <nav class="modal-tabs" aria-label="帮助与设置标签"><button class="${helpTab === "guide" ? "active" : ""}" type="button" data-help-tab="guide">规则</button><button class="${helpTab === "resources" ? "active" : ""}" type="button" data-help-tab="resources">资源</button><button class="${helpTab === "connection" ? "active" : ""}" type="button" data-help-tab="connection">连接</button></nav>
   <div class="modal-body">
     <section class="help-tab-panel ${helpTab === "guide" ? "active" : ""}"><h2>策略阶段规则</h2><dl class="settings-list"><div><dt>L1 基础观察</dt><dd>每个新策略默认进入 L1，并拥有独立虚拟账本。</dd></div><div><dt>L2 进阶观察</dt><dd>由人手工标记整套策略，继续使用同一个虚拟账本。</dd></div><div><dt>L3 高置信观察</dt><dd>由人手工标记高成熟度策略；仍是虚拟研究标签，不接富途或真实交易 API。</dd></div><div><dt>回归</dt><dd>历史回测按报告日期、起止区间、方法和统一指标展示；当前账本贡献另列，不冒充历史回测。没有可信历史序列时不生成 Sharpe、Alpha 或 R²。</dd></div></dl></section>
-    <section class="help-tab-panel ${helpTab === "resources" ? "active" : ""}"><h2>Busabase 资源</h2><dl class="settings-list"><div><dt>应用根节点</dt><dd><code>${escapeHtml(appConfig.folder.slug)}</code></dd></div><div><dt>结构化数据</dt><dd>${appConfig.bases.map((base) => escapeHtml(base.name)).join("、")}</dd></div><div><dt>秘密数据</dt><dd>无 Vault 要求；本地 OAuth 凭证不进入业务 Base。</dd></div></dl></section>
+    <section class="help-tab-panel ${helpTab === "resources" ? "active" : ""}"><h2>Busabase 资源</h2><dl class="settings-list"><div><dt>应用根节点</dt><dd><code>${escapeHtml(appConfig.folder.slug)}</code></dd></div><div><dt>结构化数据</dt><dd>${appConfig.bases.map((base) => escapeHtml(base.name)).join("、")}</dd></div><div><dt>秘密数据</dt><dd>无 Vault 要求；本地 OAuth 凭证不进入业务 Base。</dd></div></dl>${currentState.provider.name === "busabase" && desk.strategies.length === 0 ? '<div class="classroom-seed"><div><strong>课堂种子</strong><span>仅适用于完全空白的应用工作区；提交 10 个策略及配套虚拟记录，等待 Busabase 审批。</span></div><button type="button" class="connect-button" data-seed-classroom>提交课堂种子</button></div>' : ""}</section>
     <section class="help-tab-panel ${helpTab === "connection" ? "active" : ""}"><h2>连接状态</h2><dl class="settings-list"><div><dt>数据提供方</dt><dd>${currentState.provider.name === "demo" ? "固定只读演示" : "Busabase SDK"}</dd></div><div><dt>Space</dt><dd>${currentState.provider.name === "demo" ? "演示中未连接" : "由当前 AirApp 会话确定"}</dd></div><div><dt>资源版本</dt><dd>Schema v${appConfig.schemaVersion}</dd></div><div><dt>运行边界</dt><dd>本地与 AirApp 使用同一份 Hono 应用源码。</dd></div></dl></section>
   </div>
 </section></div>`;
+
+const renderApprovalModal = () => {
+  if (!pendingApproval) return "";
+  const strategy = desk.strategies.find((item) => item.id === pendingApproval.strategyId);
+  if (!strategy) return "";
+  const targetStage = pendingApproval.stage;
+  const stageIndex = { L1: 1, L2: 2, L3: 3 };
+  const promotion = stageIndex[targetStage] > stageIndex[strategy.stage];
+  const checks = [
+    ["六个策略字段", strategy.isRuleComplete, "假设、选股、失效、基准与复核规则"],
+    ["虚拟账户与起算日", strategy.accountCount === 1 && Boolean(strategy.account?.hasCoreMetrics && strategy.account?.baselineDate), "一策略一账户，收益口径可解释"],
+    ["研究来源与日期", Boolean(strategy.latestResearch?.sourceAsOf && strategy.latestResearch?.supportingEvidence), "至少一份可复查研究"],
+    ["价格与 NAV 对账", strategy.positionsComplete && strategy.isReconciled, "参考价有来源时间，现金加持仓等于 NAV"],
+  ];
+  const ready = checks.every(([, passed]) => passed);
+  return `<div class="modal-backdrop approval-backdrop" id="approvalModal" aria-hidden="false"><section class="modal approval-modal" role="dialog" aria-modal="true" aria-labelledby="approvalTitle">
+    <div class="modal-head"><div><div id="approvalTitle" class="modal-title">人工审批策略阶段</div><div class="modal-subtitle">${escapeHtml(strategy.name)} · ${strategy.stage} → ${targetStage}</div></div><button class="icon-button" type="button" data-close-approval aria-label="关闭审批">关闭</button></div>
+    <form class="approval-form" data-approval-form>
+      <div class="approval-checklist">${checks.map(([label, passed, detail]) => `<div class="approval-check ${passed ? "passed" : "missing"}"><span aria-hidden="true">${passed ? "✓" : "!"}</span><div><strong>${escapeHtml(label)}</strong><small>${escapeHtml(detail)}</small></div><em>${passed ? "已满足" : "待补充"}</em></div>`).join("")}</div>
+      ${promotion && !ready ? '<div class="approval-blocked" role="alert">晋级材料尚不完整。可以取消并补研究，或先将策略保持在当前阶段。</div>' : ""}
+      <label class="approval-field"><span>审批人</span><input type="text" name="reviewer" value="老板 Kelly" maxlength="80" required /></label>
+      <label class="approval-field"><span>人工理由</span><textarea name="reason" rows="4" minlength="8" maxlength="800" placeholder="写明看到了什么证据、仍有哪些风险，以及为什么调整成熟度。" required></textarea></label>
+      <label class="approval-confirm"><input type="checkbox" name="confirmed" required /><span>我确认这是研究成熟度判断，不是买入、实盘或收益承诺。</span></label>
+      <div class="approval-actions"><button type="button" class="secondary-button" data-close-approval>取消</button><button type="submit" class="connect-button" ${promotion && !ready ? "disabled" : ""}>确认并提交</button></div>
+    </form>
+  </section></div>`;
+};
 
 const renderStrategyListContent = (items, meta) => `${contentRoute.view === "strategies" ? "" : renderFunnel()}${renderSummaryStrip()}${
   items.length
@@ -380,8 +435,9 @@ const renderApp = () => {
     <div class="mobile-topbar"><button class="mobile-sidebar-toggle" type="button" data-mobile-sidebar aria-controls="appSidebar" aria-label="打开侧栏"><span class="sidebar-toggle-icon" aria-hidden="true"></span></button><div class="mobile-topbar-copy"><div class="mobile-view-title" data-mobile-view-title>${workspaceTitle}</div><div class="mobile-view-meta" data-mobile-view-meta>${strategyDetail ? escapeHtml(selected.name) : `${items.length} ${meta.noun}`}</div></div><button class="mobile-help-button" type="button" data-open-help aria-label="帮助与设置">帮助</button></div>
     <header class="workspace-head"><div><p class="eyebrow" data-workspace-eyebrow>${meta.eyebrow}</p><h1 data-workspace-title>${workspaceTitle}</h1></div><div class="workspace-status">${currentState.provider.name === "demo" ? '<span class="snapshot-badge">DEMO</span>' : '<span class="status-dot"></span>'}<span>${escapeHtml(currentState.provider.asOf || "Busabase 当前数据")}</span><span class="read-only">虚拟模式</span><button type="button" data-refresh>刷新</button></div></header>
     <div class="workspace-content" data-workspace-content>${mainContent}</div>
-  </main></div><div id="sidebarScrim" class="sidebar-scrim" hidden></div>${parseHash().view === "settings" ? renderHelp() : ""}<div class="toast" role="status" aria-live="polite" hidden></div>`;
+  </main></div><div id="sidebarScrim" class="sidebar-scrim" hidden></div>${parseHash().view === "settings" ? renderHelp() : ""}${renderApprovalModal()}<div class="toast" role="status" aria-live="polite" hidden></div>`;
   bindEvents();
+  if (pendingApproval) root.querySelector('textarea[name="reason"]')?.focus();
 };
 
 const patchStrategyListRoute = () => {
@@ -529,32 +585,63 @@ const bindEvents = (scope = root) => {
     }),
   );
   scope.querySelectorAll("[data-stage-value]").forEach((button) =>
-    button.addEventListener("click", async () => {
+    button.addEventListener("click", () => {
       const strategy = desk.strategies.find((item) => item.id === contentRoute.id);
       const stage = button.dataset.stageValue;
       if (!strategy || strategy.stage === stage) return;
-      root.querySelectorAll("[data-stage-value]").forEach((control) => {
-        control.disabled = true;
-      });
-      try {
-        const result = await activeProvider.updateStrategyStage(strategy.id, stage, strategy.baseCommitId);
-        if (!result.persisted) {
-          showToast(`已提交 ${stage} 标记，等待 Busabase 审批。`);
-          root.querySelectorAll("[data-stage-value]").forEach((control) => {
-            control.disabled = false;
-          });
-          return;
-        }
-        await load();
-        showToast(result.transient ? `已标记为 ${stage}，仅当前 Demo 会话有效。` : `已标记为 ${stage}。`);
-      } catch (error) {
-        showToast(`标记失败：${String(error?.message || error)}`);
-        root.querySelectorAll("[data-stage-value]").forEach((control) => {
-          control.disabled = false;
-        });
-      }
+      pendingApproval = { strategyId: strategy.id, stage };
+      renderApp();
     }),
   );
+  scope.querySelectorAll("[data-close-approval]").forEach((button) =>
+    button.addEventListener("click", () => {
+      pendingApproval = null;
+      renderApp();
+    }),
+  );
+  scope.querySelector("#approvalModal")?.addEventListener("click", (event) => {
+    if (event.target.id !== "approvalModal") return;
+    pendingApproval = null;
+    renderApp();
+  });
+  scope.querySelector("[data-approval-form]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const button = form.querySelector('button[type="submit"]');
+    const strategy = desk.strategies.find((item) => item.id === pendingApproval?.strategyId);
+    const stage = pendingApproval?.stage;
+    if (!strategy || !stage) return;
+    button.disabled = true;
+    try {
+      const data = new FormData(form);
+      const result = await activeProvider.updateStrategyStage(strategy.id, stage, strategy.baseCommitId, {
+        strategyKey: strategy.key,
+        strategyName: strategy.name,
+        fromStage: strategy.stage,
+        reason: data.get("reason"),
+        reviewer: data.get("reviewer"),
+        reviewDate: new Date().toISOString(),
+        snapshotNav: strategy.account?.nav ?? null,
+        snapshotBenchmarkReturn: strategy.account?.benchmarkReturn ?? null,
+        snapshotMaxDrawdown: strategy.account?.maxDrawdown ?? null,
+      });
+      pendingApproval = null;
+      if (!result.persisted) {
+        renderApp();
+        showToast(`已提交 ${stage} 审批，等待 Busabase 审核。`);
+        return;
+      }
+      await load();
+      if (result.reviewError || result.reviewPersisted === false) {
+        showToast(`阶段已更新；审批记录待处理：${result.reviewError || result.reviewChangeRequestId || "等待审核"}`);
+      } else {
+        showToast(result.transient ? `已标记为 ${stage}；Demo 刷新后会恢复固定快照。` : `已标记为 ${stage}，审批理由已记录。`);
+      }
+    } catch (error) {
+      button.disabled = false;
+      showToast(`审批失败：${String(error?.message || error).replace(/^[A-Z_]+:\s*/, "")}`);
+    }
+  });
   scope.querySelector("[data-sidebar-toggle]")?.addEventListener("click", () => {
     if (isMobileLayout()) setMobileSidebarOpen(false);
     else {
@@ -585,8 +672,20 @@ const bindEvents = (scope = root) => {
       window.location.hash = `#/settings/${button.dataset.helpTab}`;
     }),
   );
+  scope.querySelector("[data-seed-classroom]")?.addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      const result = await activeProvider.seedClassroomWorkspace();
+      const pending = result.requests.filter((request) => request.status !== "merged").length;
+      showToast(`已提交 ${result.requests.length} 个课堂种子变更${pending ? `，${pending} 个等待 Busabase 审批` : ""}。`);
+    } catch (error) {
+      button.disabled = false;
+      showToast(`课堂种子未提交：${String(error?.message || error).replace(/^[A-Z_]+:\s*/, "")}`);
+    }
+  });
   scope.querySelector("[data-refresh]")?.addEventListener("click", async () => {
-    if (currentState.provider.name === "demo") showToast("演示数据为 2026-08-05 固定快照。");
+    if (currentState.provider.name === "demo") showToast("Demo 为固定快照；完整刷新会清除本页临时审批。");
     else await load();
   });
 };
@@ -653,6 +752,11 @@ window.addEventListener("resize", () => {
   }
 });
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && pendingApproval) {
+    pendingApproval = null;
+    renderApp();
+    return;
+  }
   if (event.key === "Escape" && parseHash().view === "settings") window.location.hash = lastContentHash;
   if (event.key === "Escape") setMobileSidebarOpen(false);
 });

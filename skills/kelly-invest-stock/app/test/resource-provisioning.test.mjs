@@ -15,9 +15,9 @@ const unmaterializedConfig = {
   bases: appConfig.bases.map((base) => ({ ...base, nodeId: "", baseId: "" })),
 };
 
-test("builds one Folder and four Bases in a single declared structure change", () => {
+test("builds one Folder and five Bases in a single declared structure change", () => {
   const operations = buildProvisionOperations(appConfig, null, appConfig.bases);
-  assert.equal(operations.length, 5);
+  assert.equal(operations.length, 6);
   assert.equal(operations[0].nodeType, "folder");
   assert.equal(operations[0].ref, "app-root");
   const firstBase = operations[1];
@@ -52,7 +52,7 @@ test("accepts only marked resources under the declared Folder", () => {
   };
   const resolved = resolveProvisionedFolder(folder, appConfig);
   assert.equal(resolved.missing.length, 0);
-  assert.equal(resolved.bases.length, 4);
+  assert.equal(resolved.bases.length, 5);
   assert.equal(resolved.repairs.length, 0);
   assert.equal(resolved.bases[0].baseId, "bse_strategies");
 });
@@ -114,9 +114,9 @@ test("submits the declared structure once and reads materialized ids back", asyn
 
   const result = await provisionDeclaredResources(client, unmaterializedConfig);
   assert.equal(submissions.length, 1);
-  assert.equal(submissions[0].operations.length, 5);
+  assert.equal(submissions[0].operations.length, 6);
   assert.equal(submissions[0].autoMerge, true);
-  assert.equal(result.bases.length, 4);
+  assert.equal(result.bases.length, 5);
   assert.equal(result.bases[0].baseId, "bse_strategies");
   assert.deepEqual(depths, [2, 2]);
 });
@@ -163,7 +163,7 @@ test("waits for merged resources to become visible", async () => {
   const result = await provisionDeclaredResources(client, unmaterializedConfig);
   assert.equal(submissions, 1);
   assert.equal(reads, 3);
-  assert.equal(result.bases.length, 4);
+  assert.equal(result.bases.length, 5);
 });
 
 test("falls back from a stale node id to the declared Folder in the selected Space", async () => {
@@ -259,13 +259,13 @@ test("lazily repairs an exact legacy resource set without creating another struc
 
   const result = await provisionDeclaredResources(client, appConfig);
   assert.equal(structureSubmissions, 0);
-  assert.equal(metadataUpdates.length, 5);
+  assert.equal(metadataUpdates.length, 6);
   assert.deepEqual(
     metadataUpdates.map((update) => update.metadata.resourceKey),
     ["app-root", ...appConfig.bases.map((base) => base.key)],
   );
   assert.equal(result.repairs.length, 0);
-  assert.equal(result.bases.length, 4);
+  assert.equal(result.bases.length, 5);
 });
 
 test("does not repair ownership when a legacy Base field fingerprint differs", async () => {
@@ -289,6 +289,70 @@ test("does not repair ownership when a legacy Base field fingerprint differs", a
 
   await assert.rejects(() => provisionDeclaredResources(client, appConfig), /SETUP_CONFLICT/);
   assert.equal(metadataUpdates, 0);
+});
+
+test("adds only declared suffix fields when upgrading an owned older schema", async () => {
+  const oldVersion = appConfig.schemaVersion - 1;
+  const materialized = {
+    node: {
+      id: "nod_root",
+      type: "folder",
+      slug: appConfig.folder.slug,
+      name: appConfig.folder.name,
+      description: appConfig.folder.description,
+      metadata: { appId: appConfig.appId, resourceKey: "app-root", schemaVersion: oldVersion },
+    },
+    children: appConfig.bases.map((base) => ({
+      id: `nod_${base.key}`,
+      baseId: `bse_${base.key}`,
+      type: "base",
+      slug: base.slug,
+      name: base.name,
+      description: base.description,
+      metadata: { appId: appConfig.appId, resourceKey: base.key, schemaVersion: oldVersion },
+    })),
+  };
+  const addedFieldSlugs = [];
+  const fieldCountsToRemove = new Map([
+    ["strategies", 1],
+    ["ledger-accounts", 1],
+    ["ledger-positions", 2],
+  ]);
+  const details = new Map(
+    appConfig.bases.map((base) => {
+      const remove = fieldCountsToRemove.get(base.key) || 0;
+      return [
+        `bse_${base.key}`,
+        {
+          ...baseDetail(base),
+          fields: base.fields.slice(0, base.fields.length - remove).map((field) => ({ ...field })),
+        },
+      ];
+    }),
+  );
+  const client = {
+    nodes: {
+      list: async () => [{ id: "nod_system_root", type: "folder", slug: "root", children: [materialized.node] }],
+      get: async () => materialized,
+      updateMetadata: async ({ nodeId, metadata }) => {
+        const node = nodeId === materialized.node.id ? materialized.node : materialized.children.find((item) => item.id === nodeId);
+        node.metadata = { ...node.metadata, ...metadata };
+      },
+    },
+    bases: {
+      get: async ({ baseId }) => details.get(baseId),
+      fieldChangeRequest: async ({ baseId, slug, name, type, required }) => {
+        details.get(baseId).fields.push({ slug, name, type, required });
+        addedFieldSlugs.push(slug);
+        return { id: `crq_${slug}`, status: "merged" };
+      },
+    },
+  };
+
+  const result = await provisionDeclaredResources(client, appConfig);
+  assert.deepEqual(addedFieldSlugs, ["next-review-at", "baseline-date", "price-source", "price-as-of"]);
+  assert.equal(result.repairs.length, 0);
+  assert.equal(result.bases.length, 5);
 });
 
 test("uses a verified legacy fingerprint when the old Busabase API has no metadata endpoint", async () => {
@@ -315,5 +379,5 @@ test("uses a verified legacy fingerprint when the old Busabase API has no metada
   assert.equal(metadataAttempts, 1);
   assert.equal(result.repairs.length, 0);
   assert.equal(result.compatibilityMode, "verified-legacy-fingerprint");
-  assert.equal(result.bases.length, 4);
+  assert.equal(result.bases.length, 5);
 });

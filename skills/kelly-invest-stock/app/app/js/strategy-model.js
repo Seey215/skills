@@ -6,45 +6,30 @@ const toNumber = (value, fallback = 0) => {
 
 const fieldsOf = (record) => record.fields || record;
 const recordsFor = (records, key) => records.filter((record) => record.baseKey === key);
+const STAGES = ["L1", "L2", "L3"];
+const stageLabels = {
+  L1: "基础观察",
+  L2: "进阶观察",
+  L3: "高置信观察",
+};
 
 const normalizeStrategy = (record) => {
   const fields = fieldsOf(record);
+  const requestedStage = fields.stage || fields.status;
+  const stage = STAGES.includes(requestedStage) ? requestedStage : "L1";
   return {
     id: record.id || fields.key,
     key: String(fields.key || record.id || ""),
     name: String(fields.name || "未命名策略"),
     family: String(fields.family || "独立策略"),
-    status: String(fields.status || "观察中"),
+    stage,
+    stageLabel: stageLabels[stage],
     thesis: String(fields.thesis || "尚未记录核心假设。"),
     selectionRule: String(fields.selection_rule || "尚未记录选股规则。"),
     invalidationRule: String(fields.invalidation_rule || "尚未记录失效条件。"),
     rebalance: String(fields.rebalance || "按需复核"),
     benchmark: String(fields.benchmark || "--"),
     confidence: toNumber(fields.confidence),
-  };
-};
-
-const normalizeCandidate = (record) => {
-  const fields = fieldsOf(record);
-  const stage = ["L1", "L2", "L3"].includes(fields.stage) ? fields.stage : "L1";
-  return {
-    id: record.id || `${fields.exchange || ""}:${fields.code || ""}`,
-    name: String(fields.name || "未命名证券"),
-    code: String(fields.code || ""),
-    exchange: String(fields.exchange || ""),
-    strategyKey: String(fields.strategy_key || ""),
-    stage,
-    confidence: toNumber(fields.confidence),
-    valueScore: toNumber(fields.value_score),
-    qualityScore: toNumber(fields.quality_score),
-    catalystScore: toNumber(fields.catalyst_score),
-    latestPrice: toNumber(fields.latest_price, null),
-    dailyChange: toNumber(fields.daily_change, null),
-    thesis: String(fields.thesis || "尚未记录入选理由。"),
-    evidence: String(fields.evidence || "尚未记录关键证据。"),
-    invalidation: String(fields.invalidation || "尚未记录失效条件。"),
-    nextReview: String(fields.next_review || "待安排"),
-    freshness: String(fields.freshness_status || "unknown"),
   };
 };
 
@@ -91,7 +76,6 @@ const normalizePosition = (record) => {
 };
 
 export function createStrategyDesk(records) {
-  const candidates = recordsFor(records, "candidates").map(normalizeCandidate);
   const accounts = recordsFor(records, "ledger-accounts").map(normalizeAccount);
   const positions = recordsFor(records, "ledger-positions").map(normalizePosition);
   const accountsByStrategy = new Map();
@@ -104,20 +88,12 @@ export function createStrategyDesk(records) {
   const strategies = recordsFor(records, "strategies")
     .map(normalizeStrategy)
     .map((strategy) => {
-      const strategyCandidates = candidates.filter((candidate) => candidate.strategyKey === strategy.key);
       const strategyAccounts = accountsByStrategy.get(strategy.key) || [];
       return {
         ...strategy,
-        candidates: strategyCandidates,
         positions: positions.filter((position) => position.strategyKey === strategy.key),
         account: strategyAccounts[0] || null,
         accountCount: strategyAccounts.length,
-        stageCounts: Object.fromEntries(
-          ["L1", "L2", "L3"].map((stage) => [
-            stage,
-            strategyCandidates.filter((candidate) => candidate.stage === stage).length,
-          ]),
-        ),
       };
     })
     .sort(
@@ -149,9 +125,9 @@ export function createStrategyDesk(records) {
   ];
 
   const levels = Object.fromEntries(
-    ["L1", "L2", "L3"].map((stage) => [
+    STAGES.map((stage) => [
       stage,
-      candidates.filter((candidate) => candidate.stage === stage).sort((a, b) => b.confidence - a.confidence),
+      strategies.filter((strategy) => strategy.stage === stage).sort((a, b) => b.confidence - a.confidence),
     ]),
   );
   const nominalCapital = canonicalAccounts.reduce((sum, account) => sum + account.nominalCapital, 0);
@@ -175,7 +151,6 @@ export function createStrategyDesk(records) {
 
   return {
     strategies,
-    candidates,
     accounts,
     positions,
     levels,
@@ -192,9 +167,31 @@ export function createStrategyDesk(records) {
       cashRate: nav > 0 ? cash / nav : null,
     },
     attention: {
-      l1: levels.L1.filter((candidate) => candidate.freshness !== "fresh").length,
+      l1: levels.L1.length,
       l2: levels.L2.length,
       l3: levels.L3.length,
     },
+  };
+}
+
+export function createRegressionSnapshot(desk, strategy) {
+  const account = strategy?.account || null;
+  const totalCapital = desk.ledger.nominalCapital;
+  const totalNav = desk.ledger.nav;
+  const strategyCapital = account?.nominalCapital || 0;
+  const strategyNav = account?.nav || 0;
+  const strategyPnl = account?.pnl || 0;
+  const remainderCapital = totalCapital - strategyCapital;
+  const remainderNav = totalNav - strategyNav;
+
+  return {
+    strategy,
+    totalReturn: desk.ledger.returnRate,
+    strategyReturn: account?.returnRate ?? null,
+    contribution: totalCapital > 0 ? strategyPnl / totalCapital : null,
+    capitalWeight: totalCapital > 0 ? strategyCapital / totalCapital : null,
+    returnWithoutStrategy: remainderCapital > 0 ? remainderNav / remainderCapital - 1 : null,
+    remainderCapital,
+    remainderNav,
   };
 }

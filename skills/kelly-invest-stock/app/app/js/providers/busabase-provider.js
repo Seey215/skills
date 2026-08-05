@@ -1,9 +1,10 @@
 import { createRuntimeClient } from "../busabase-client.js";
-import { appConfig } from "../config.js?v=0.5.0";
-import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.5.0";
+import { appConfig } from "../config.js?v=0.6.0";
+import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.6.0";
 
 const allowedReads = new Set(appConfig.permissions.readProcedures);
 const allowedSetup = new Set(appConfig.permissions.setupProcedures);
+const allowedWrites = new Set(appConfig.permissions.writeProcedures);
 
 const normalizeFields = (fields) =>
   Object.fromEntries(Object.entries(fields || {}).map(([slug, value]) => [slug.replaceAll("-", "_"), value]));
@@ -98,7 +99,8 @@ export const busabaseProvider = {
         ok: true,
         name: "busabase",
         mode: "busabase_sdk_openapi",
-        readOnly: true,
+        readOnly: false,
+        stageWritable: true,
       },
       records: pages.flatMap(([, page]) => page.records),
       pageInfo: Object.fromEntries(
@@ -110,6 +112,22 @@ export const busabaseProvider = {
     const base = runtimeBases.get(baseKey);
     if (!runtimeClient || !base || !cursor) throw new Error(`SCHEMA_INCOMPLETE: ${baseKey}`);
     return readPage(runtimeClient, base, cursor);
+  },
+  async updateStrategyStage(recordId, stage) {
+    if (!allowedWrites.has("records.changeRequest")) {
+      throw new Error("PROCEDURE_DENIED: records.changeRequest");
+    }
+    if (!["L1", "L2", "L3"].includes(stage)) throw new Error("INVALID_STAGE");
+    const client = runtimeClient || createRuntimeClient();
+    const result = await client.records.changeRequest({
+      recordId,
+      operation: "update",
+      fields: { status: stage },
+      message: `Mark strategy ${stage} — manual virtual-ledger maturity label`,
+      author: "kelly-invest-stock-ui",
+      autoMerge: true,
+    });
+    return { persisted: result?.materialized === true, changeRequestId: result?.id || "" };
   },
   async provisionResources() {
     if (!allowedSetup.has("nodes.createChangeRequest")) {

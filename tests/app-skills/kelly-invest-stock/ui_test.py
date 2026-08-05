@@ -56,20 +56,30 @@ def test_demo_ui(browser, base_url: str) -> None:
     page.wait_for_load_state("networkidle")
     assert page.get_by_role("heading", name="策略", exact=True).is_visible()
     assert page.get_by_text("DEMO", exact=True).is_visible()
-    assert page.locator(".strategy-table-row").count() == 3
+    assert page.locator(".strategy-table-row").count() == 8
     assert page.get_by_role("columnheader", name="策略简述", exact=True).is_visible()
     assert page.get_by_role("columnheader", name="账本 NAV", exact=True).is_visible()
-    assert page.get_by_role("columnheader", name="实际虚拟持仓", exact=True).is_visible()
+    assert page.get_by_role("columnheader", name="晋级阶段", exact=True).is_visible()
+    assert page.get_by_role("columnheader", name="账本持仓", exact=True).is_visible()
     assert page.locator(".filters", has_text="虚拟账本").count() == 0
+    assert page.get_by_role("button", name="打开回归", exact=True).is_visible()
     assert page.locator(".content").count() == 0
     assert_no_horizontal_overflow(page)
 
-    first_row = page.locator('.strategy-table-row[data-select-id="strategy-quality"] .strategy-col')
+    first_row = page.locator('.strategy-table-row[data-select-id="strategy-munger"] .strategy-col')
     first_row.click()
     assert "/strategy-" in page.url
     assert page.locator(".strategy-detail-view").is_visible()
     assert page.get_by_role("heading", name="虚拟账户", exact=True).is_visible()
-    assert page.locator(".strategy-ledger-column .position-table-row").count() == 2
+    assert page.locator(".strategy-ledger-column .position-table-row").count() == 3
+    assert page.get_by_role("heading", name="策略阶段", exact=True).is_visible()
+    page.locator('.stage-control button[data-stage-value="L1"]').click()
+    assert page.locator(".detail-heading .stage-badge", has_text="L1").is_visible()
+
+    page.get_by_role("button", name="打开回归", exact=True).click()
+    assert page.get_by_role("heading", name="回归", exact=True).is_visible()
+    assert page.get_by_text("策略回归体检", exact=True).is_visible()
+    assert page.get_by_text("剔除后总盘", exact=True).is_visible()
 
     page.get_by_role("button", name="帮助与设置", exact=True).click()
     dialog = page.get_by_role("dialog")
@@ -96,7 +106,7 @@ def test_demo_ui(browser, base_url: str) -> None:
         page.locator("#sidebarScrim").click(position={"x": width - 5, "y": 5})
         assert page.locator("body.sidebar-open").count() == 0
 
-        page.locator('.strategy-table-row[data-select-id="strategy-quality"] .strategy-col').click()
+        page.locator('.strategy-table-row[data-select-id="strategy-munger"] .strategy-col').click()
         assert page.locator("body.mobile-detail-open").count() == 1
         assert page.locator(".strategy-detail-view").is_visible()
         assert page.get_by_role("heading", name="虚拟账户", exact=True).is_visible()
@@ -240,6 +250,9 @@ def test_busabase_provisioning(browser) -> None:
                     assert page.get_by_role("heading", name="策略", exact=True).is_visible()
                     assert page.get_by_role("button", name="初始化工作区").count() == 0
                     assert page.locator("[data-select-id]", has_text="测试策略").is_visible()
+                    page.locator("[data-select-id]", has_text="测试策略").click()
+                    page.locator('.stage-control button[data-stage-value="L2"]').click()
+                    page.locator(".detail-heading .stage-badge", has_text="L2").wait_for()
                     assert_no_horizontal_overflow(page)
                     assert not unexpected_errors(errors), errors
                     context.close()
@@ -247,7 +260,7 @@ def test_busabase_provisioning(browser) -> None:
             nodes = read_json(f"{busabase_url}/api/v1/nodes?depth=2")
             keys = resource_keys(nodes)
             assert sorted(keys) == sorted(
-                ["app-root", "strategies", "candidates", "ledger-accounts", "ledger-positions"]
+                ["app-root", "strategies", "ledger-accounts", "ledger-positions"]
             ), nodes
             change_requests = read_json(f"{busabase_url}/api/v1/change-requests")["changeRequests"]
             structure_requests = [
@@ -264,7 +277,7 @@ def test_busabase_provisioning(browser) -> None:
             timeout=90,
         ):
             nodes = read_json(f"{busabase_url}/api/v1/nodes?depth=2")
-            assert len(resource_keys(nodes)) == 5, nodes
+            assert len(resource_keys(nodes)) == 4, nodes
             strategy_base = find_resource(nodes, "strategies")
             records = read_json(f"{busabase_url}/api/v1/records?baseId={strategy_base['baseId']}")
             record_items = records if isinstance(records, list) else records.get("records", [])

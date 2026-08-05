@@ -5,7 +5,7 @@
   "provisioning": {
     "mode": "lazy",
     "trigger": "after-space-selection-or-explicit-setup-action",
-    "mutations": ["nodes.createChangeRequest", "nodes.updateMetadata"],
+    "mutations": ["nodes.createChangeRequest", "nodes.updateMetadata", "records.changeRequest"],
     "legacyRepair": "exact-resource-fingerprint-only",
     "autoMergeApprovedStructure": true,
     "schemaSource": "app/js/config.js"
@@ -20,21 +20,12 @@
       "key": "strategies",
       "kind": "base",
       "slug": "stock-strategies-v2",
-      "purpose": "Selection rules and strategy lifecycle",
+      "purpose": "Selection rules and manual virtual maturity labels",
       "nodeId": "nodms6x55zik8prn1g",
       "baseId": "bsems6x55ziqucmuwb",
       "schemaVersion": 2,
-      "readLimit": 20
-    },
-    {
-      "key": "candidates",
-      "kind": "base",
-      "slug": "stock-candidates-v2",
-      "purpose": "L1, L2, and L3 stock candidates",
-      "nodeId": "nodms6x560633vozfc",
-      "baseId": "bsems6x5606qe567ax",
-      "schemaVersion": 2,
-      "readLimit": 100
+      "readLimit": 20,
+      "mutationPath": "records.changeRequest(status)"
     },
     {
       "key": "ledger-accounts",

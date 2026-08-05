@@ -815,6 +815,258 @@ input:focus-visible {
   border-color: #bcdcc9;
 }
 
+.strategy-stage-cell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.strategy-stage-cell strong {
+  color: #4b5962;
+  font-size: 9px;
+}
+
+.stage-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.stage-control-row > span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.stage-control {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 42px);
+  padding: 2px;
+  background: #eef1f3;
+  border: 1px solid #dce2e5;
+  border-radius: 6px;
+}
+
+.stage-control button {
+  min-height: 28px;
+  padding: 0;
+  color: #69757e;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.stage-control button:hover,
+.stage-control button:focus-visible {
+  color: #26343d;
+  background: #f8fafb;
+}
+
+.stage-control button.active {
+  color: #244b38;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(18, 31, 39, 0.12);
+}
+
+.stage-control button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.regression-view {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  margin: 16px 18px 18px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.regression-head {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 16px;
+  background: #fafbfb;
+  border-bottom: 1px solid var(--line);
+}
+
+.regression-head > div:first-child,
+.regression-total {
+  display: grid;
+  gap: 3px;
+}
+
+.regression-head span,
+.regression-list-head {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.regression-head strong {
+  font-size: 12px;
+}
+
+.regression-total {
+  text-align: right;
+}
+
+.regression-total strong {
+  font-size: 16px;
+}
+
+.regression-layout {
+  display: grid;
+  grid-template-columns: minmax(230px, 30%) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.regression-strategies {
+  min-width: 0;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+}
+
+.regression-list-head {
+  padding: 10px 13px;
+  background: #f8f9fa;
+  border-bottom: 1px solid var(--line);
+  font-weight: 750;
+}
+
+.regression-strategies button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: 100%;
+  min-height: 50px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 13px;
+  color: #34414a;
+  text-align: left;
+  background: #fff;
+  border: 0;
+  border-bottom: 1px solid #edf0f2;
+  cursor: pointer;
+}
+
+.regression-strategies button:hover,
+.regression-strategies button.active {
+  background: #f5f9f6;
+}
+
+.regression-strategies button.active {
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.regression-strategies button > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.regression-strategies button strong {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.regression-strategies button b {
+  font-size: 10px;
+}
+
+.regression-result {
+  min-width: 0;
+  padding: 24px 26px 30px;
+  overflow: auto;
+}
+
+.regression-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.regression-title h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+.regression-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.regression-contribution {
+  display: grid;
+  gap: 7px;
+  margin-top: 22px;
+}
+
+.regression-contribution > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.regression-contribution > div:last-child {
+  height: 7px;
+  background: #e7ece9;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.regression-contribution i {
+  display: block;
+  height: 100%;
+  background: var(--green);
+}
+
+.regression-notes {
+  display: grid;
+  margin: 22px 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.regression-notes > div {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf0f2;
+}
+
+.regression-notes dt {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.regression-notes dd {
+  margin: 0;
+  color: #34414a;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .ledger-cell-missing {
   color: var(--amber);
   font-weight: 700;
@@ -1536,6 +1788,10 @@ input:focus-visible {
   border-bottom: 1px solid var(--line);
 }
 
+.stage-lane.current {
+  background: #f6faf7;
+}
+
 .stage-lane > span {
   display: flex;
   align-items: center;
@@ -2061,7 +2317,8 @@ code {
   }
 
   .strategy-overview,
-  .strategy-detail-view {
+  .strategy-detail-view,
+  .regression-view {
     margin: 12px;
   }
 
@@ -2302,6 +2559,59 @@ code {
     padding-bottom: 9px;
   }
 
+  .regression-view {
+    margin: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .regression-head {
+    min-height: 50px;
+    padding: 8px 13px;
+  }
+
+  .regression-layout {
+    display: block;
+    overflow: auto;
+  }
+
+  .regression-strategies {
+    display: flex;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .regression-list-head {
+    display: none;
+  }
+
+  .regression-strategies button {
+    flex: 0 0 178px;
+    min-height: 46px;
+    border-right: 1px solid #edf0f2;
+    border-bottom: 0;
+  }
+
+  .regression-strategies button.active {
+    box-shadow: inset 0 -3px 0 var(--green);
+  }
+
+  .regression-result {
+    padding: 20px 16px 28px;
+    overflow: visible;
+  }
+
+  .regression-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stage-control-row {
+    justify-content: space-between;
+  }
+
   .strategy-detail-view.detail-panel {
     position: relative;
     inset: auto;
@@ -2526,6 +2836,15 @@ code {
 
   .fact-grid {
     grid-template-columns: 1fr;
+  }
+
+  .regression-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .regression-notes > div {
+    grid-template-columns: 98px minmax(0, 1fr);
+    gap: 9px;
   }
 
   .strategy-performance {

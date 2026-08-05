@@ -15,9 +15,9 @@ const unmaterializedConfig = {
   bases: appConfig.bases.map((base) => ({ ...base, nodeId: "", baseId: "" })),
 };
 
-test("builds one Folder and four Bases in a single declared structure change", () => {
+test("builds one Folder and three Bases in a single declared structure change", () => {
   const operations = buildProvisionOperations(appConfig, null, appConfig.bases);
-  assert.equal(operations.length, 5);
+  assert.equal(operations.length, 4);
   assert.equal(operations[0].nodeType, "folder");
   assert.equal(operations[0].ref, "app-root");
   const firstBase = operations[1];
@@ -52,7 +52,7 @@ test("accepts only marked resources under the declared Folder", () => {
   };
   const resolved = resolveProvisionedFolder(folder, appConfig);
   assert.equal(resolved.missing.length, 0);
-  assert.equal(resolved.bases.length, 4);
+  assert.equal(resolved.bases.length, 3);
   assert.equal(resolved.repairs.length, 0);
   assert.equal(resolved.bases[0].baseId, "bse_strategies");
 });
@@ -114,9 +114,9 @@ test("submits the declared structure once and reads materialized ids back", asyn
 
   const result = await provisionDeclaredResources(client, unmaterializedConfig);
   assert.equal(submissions.length, 1);
-  assert.equal(submissions[0].operations.length, 5);
+  assert.equal(submissions[0].operations.length, 4);
   assert.equal(submissions[0].autoMerge, true);
-  assert.equal(result.bases.length, 4);
+  assert.equal(result.bases.length, 3);
   assert.equal(result.bases[0].baseId, "bse_strategies");
   assert.deepEqual(depths, [2, 2]);
 });
@@ -163,7 +163,7 @@ test("waits for merged resources to become visible", async () => {
   const result = await provisionDeclaredResources(client, unmaterializedConfig);
   assert.equal(submissions, 1);
   assert.equal(reads, 3);
-  assert.equal(result.bases.length, 4);
+  assert.equal(result.bases.length, 3);
 });
 
 test("falls back from a stale node id to the declared Folder in the selected Space", async () => {
@@ -259,13 +259,13 @@ test("lazily repairs an exact legacy resource set without creating another struc
 
   const result = await provisionDeclaredResources(client, appConfig);
   assert.equal(structureSubmissions, 0);
-  assert.equal(metadataUpdates.length, 5);
+  assert.equal(metadataUpdates.length, 4);
   assert.deepEqual(
     metadataUpdates.map((update) => update.metadata.resourceKey),
     ["app-root", ...appConfig.bases.map((base) => base.key)],
   );
   assert.equal(result.repairs.length, 0);
-  assert.equal(result.bases.length, 4);
+  assert.equal(result.bases.length, 3);
 });
 
 test("does not repair ownership when a legacy Base field fingerprint differs", async () => {
@@ -315,5 +315,5 @@ test("uses a verified legacy fingerprint when the old Busabase API has no metada
   assert.equal(metadataAttempts, 1);
   assert.equal(result.repairs.length, 0);
   assert.equal(result.compatibilityMode, "verified-legacy-fingerprint");
-  assert.equal(result.bases.length, 4);
+  assert.equal(result.bases.length, 3);
 });

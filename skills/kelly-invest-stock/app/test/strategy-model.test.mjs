@@ -1,26 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createStrategyDesk } from "../app/js/strategy-model.js";
+import { createRegressionSnapshot, createStrategyDesk } from "../app/js/strategy-model.js";
 
 const record = (id, baseKey, fields) => ({ id, baseKey, fields });
 
-test("groups candidates into L1, L2, and L3 and sorts by score", () => {
+test("groups strategies into L1, L2, and L3 and sorts each stage by confidence", () => {
   const desk = createStrategyDesk([
-    record("strategy", "strategies", { key: "quality", name: "质量" }),
-    record("low", "candidates", { strategy_key: "quality", stage: "L1", confidence: 45, code: "LOW" }),
-    record("high", "candidates", { strategy_key: "quality", stage: "L1", confidence: 76, code: "HIGH" }),
-    record("paper", "candidates", { strategy_key: "quality", stage: "L2", confidence: 62, code: "PAPER" }),
-    record("graduate", "candidates", { strategy_key: "quality", stage: "L3", confidence: 80, code: "GRAD" }),
+    record("low", "strategies", { key: "low", name: "低分", status: "L1", confidence: 45 }),
+    record("high", "strategies", { key: "high", name: "高分", status: "L1", confidence: 76 }),
+    record("paper", "strategies", { key: "paper", name: "镜像", status: "L2", confidence: 62 }),
+    record("graduate", "strategies", { key: "graduate", name: "实盘", status: "L3", confidence: 80 }),
   ]);
 
   assert.deepEqual(
-    desk.levels.L1.map((candidate) => candidate.code),
-    ["HIGH", "LOW"],
+    desk.levels.L1.map((strategy) => strategy.key),
+    ["high", "low"],
   );
   assert.equal(desk.levels.L2.length, 1);
   assert.equal(desk.levels.L3.length, 1);
-  assert.equal(desk.strategies[0].candidates.length, 4);
+  assert.equal(desk.attention.l1, 2);
 });
 
 test("summarizes virtual accounts without treating them as real holdings", () => {
@@ -56,17 +55,9 @@ test("summarizes virtual accounts without treating them as real holdings", () =>
   assert.ok(Math.abs(desk.ledger.benchmarkReturn - 0.02) < Number.EPSILON);
   assert.ok(Math.abs(desk.ledger.excessReturn - 0.02) < Number.EPSILON);
   assert.equal(desk.ledger.cash, 30000);
-  assert.equal(desk.strategies[0].stageCounts.L1, 0);
+  assert.equal(desk.strategies[0].stage, "L1");
   assert.equal(desk.strategies[0].key, "a");
   assert.equal(desk.strategies[0].positions[0].pnl, 200);
-});
-
-test("uses null for absent market observations", () => {
-  const desk = createStrategyDesk([
-    record("candidate", "candidates", { code: "NONE", stage: "L1", latest_price: null, daily_change: "" }),
-  ]);
-  assert.equal(desk.candidates[0].latestPrice, null);
-  assert.equal(desk.candidates[0].dailyChange, null);
 });
 
 test("surfaces missing, duplicate, and orphan virtual-ledger records", () => {
@@ -114,4 +105,21 @@ test("marks one virtual account per strategy as complete", () => {
   assert.equal(desk.integrity.isComplete, true);
   assert.equal(desk.integrity.issueCount, 0);
   assert.equal(desk.strategies[0].accountCount, 1);
+});
+
+test("calculates one strategy contribution and the total-book return without it", () => {
+  const desk = createStrategyDesk([
+    record("strategy-a", "strategies", { key: "a", name: "A" }),
+    record("strategy-b", "strategies", { key: "b", name: "B" }),
+    record("account-a", "ledger-accounts", { strategy_key: "a", nominal_capital: 100, nav: 120 }),
+    record("account-b", "ledger-accounts", { strategy_key: "b", nominal_capital: 300, nav: 270 }),
+  ]);
+  const strategy = desk.strategies.find((item) => item.key === "a");
+  const snapshot = createRegressionSnapshot(desk, strategy);
+
+  assert.ok(Math.abs(snapshot.totalReturn + 0.025) < Number.EPSILON);
+  assert.ok(Math.abs(snapshot.strategyReturn - 0.2) < Number.EPSILON);
+  assert.ok(Math.abs(snapshot.contribution - 0.05) < Number.EPSILON);
+  assert.ok(Math.abs(snapshot.capitalWeight - 0.25) < Number.EPSILON);
+  assert.ok(Math.abs(snapshot.returnWithoutStrategy + 0.1) < Number.EPSILON);
 });

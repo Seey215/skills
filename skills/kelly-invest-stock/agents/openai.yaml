@@ -1,4 +1,4 @@
 interface:
   display_name: "Kelly Invest Stock"
-  short_description: "Run a Busabase-backed strategy experiment desk"
-  default_prompt: "Use $kelly-invest-stock to build a stock strategy desk with L1/L2/L3 screening and virtual ledgers."
+  short_description: "用虚拟策略账本比较收益、人工标记成熟度并回归组合贡献"
+  default_prompt: "Use $kelly-invest-stock to compare virtual strategy ledgers, mark strategy maturity, and review contribution to the total book."

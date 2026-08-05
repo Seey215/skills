@@ -1,6 +1,6 @@
-import { appConfig } from "./config.js?v=0.5.0";
-import { getProvider } from "./providers/index.js?v=0.5.0";
-import { createStrategyDesk } from "./strategy-model.js?v=0.5.0";
+import { appConfig } from "./config.js?v=0.6.0";
+import { getProvider } from "./providers/index.js?v=0.6.0";
+import { createRegressionSnapshot, createStrategyDesk } from "./strategy-model.js?v=0.6.0";
 
 const root = document.querySelector("#app");
 const money = new Intl.NumberFormat("zh-CN", {
@@ -12,12 +12,14 @@ const price = new Intl.NumberFormat("zh-CN", { minimumFractionDigits: 2, maximum
 
 const viewMeta = {
   strategies: { label: "策略", noun: "个策略", eyebrow: "STRATEGY DESK" },
-  l1: { label: "L1 初筛", noun: "个候选", eyebrow: "DISCOVERY" },
-  l2: { label: "L2 纸面验证", noun: "个候选", eyebrow: "PAPER VALIDATION" },
-  l3: { label: "L3 毕业观察", noun: "个候选", eyebrow: "GRADUATION WATCH" },
+  l1: { label: "L1 基础观察", noun: "个策略", eyebrow: "VIRTUAL LEDGER" },
+  l2: { label: "L2 进阶观察", noun: "个策略", eyebrow: "MANUAL STAGE" },
+  l3: { label: "L3 高置信观察", noun: "个策略", eyebrow: "MANUAL STAGE" },
+  regression: { label: "回归", noun: "个策略", eyebrow: "BACKTEST SNAPSHOT" },
 };
 
 let currentState;
+let activeProvider;
 let desk;
 let contentRoute = { view: "strategies", id: null };
 let lastContentHash = "#/strategies";
@@ -84,10 +86,8 @@ const showToast = (message) => {
   }, 2400);
 };
 
-const strategyName = (key) => desk.strategies.find((strategy) => strategy.key === key)?.name || key;
-
 const itemsForView = (view) => {
-  if (view === "strategies") return desk.strategies;
+  if (["strategies", "regression"].includes(view)) return desk.strategies;
   if (view === "l1") return desk.levels.L1;
   if (view === "l2") return desk.levels.L2;
   if (view === "l3") return desk.levels.L3;
@@ -96,26 +96,8 @@ const itemsForView = (view) => {
 
 const stageBadge = (stage) => `<span class="stage-badge stage-${stage.toLowerCase()}">${stage}</span>`;
 
-const renderCandidateRow = (
-  candidate,
-  active,
-) => `<button class="work-row candidate-row ${active ? "active" : ""}" type="button" data-select-id="${escapeHtml(candidate.id)}">
-  <span class="row-marker" aria-hidden="true"></span>
-  <span class="row-main">
-    <span class="row-kicker">${escapeHtml(strategyName(candidate.strategyKey))}</span>
-    <span class="row-title"><strong>${escapeHtml(candidate.code)}</strong><span>${escapeHtml(candidate.name)}</span></span>
-    <span class="row-subtitle">${candidate.latestPrice === null ? "价格待补" : `$${price.format(candidate.latestPrice)}`} · <span class="${tone(candidate.dailyChange)}">${formatPercent(candidate.dailyChange)}</span> · 复核 ${escapeHtml(candidate.nextReview)}</span>
-  </span>
-  <span class="row-score score-${candidate.confidence >= 70 ? "high" : candidate.confidence >= 58 ? "mid" : "low"}"><strong>${candidate.confidence}</strong><span>综合分</span></span>
-</button>`;
-
 const strategyStageSummary = (strategy) =>
-  ["L1", "L2", "L3"]
-    .map(
-      (stage) =>
-        `<span class="table-stage table-stage-${stage.toLowerCase()}"><b>${stage}</b>${strategy.stageCounts[stage]}</span>`,
-    )
-    .join("");
+  `<div class="strategy-stage-cell">${stageBadge(strategy.stage)}<strong>${escapeHtml(strategy.stageLabel)}</strong></div>`;
 
 const strategyPositionSummary = (strategy) => {
   if (!strategy.account) return '<span class="ledger-cell-missing">账户待补齐</span>';
@@ -129,20 +111,20 @@ const strategyPositionSummary = (strategy) => {
     )}</strong><small>${strategy.positions.length} 个持仓 · 现金 ${formatPercent(strategy.account.cashRate, false)}</small>`;
 };
 
-const renderStrategyTable = () => `<section class="strategy-overview" aria-label="策略与虚拟账本总览">
-  <div class="strategy-overview-head"><div><strong>策略与虚拟账本</strong><span>${desk.strategies.length} 个策略 · 点击整行查看详情</span></div><span>按虚拟收益排序</span></div>
+const renderStrategyTable = (strategies, title = "策略与虚拟账本") => `<section class="strategy-overview" aria-label="策略与虚拟账本总览">
+  <div class="strategy-overview-head"><div><strong>${escapeHtml(title)}</strong><span>${strategies.length} 个策略 · 点击整行查看详情${currentState.provider.name === "demo" ? " · 大师风格复刻，不代表真实持仓" : ""}</span></div><span>按虚拟收益排序</span></div>
   <div class="strategy-table-wrap">
     <table class="strategy-table">
-      <thead><tr><th class="rank-col">#</th><th class="strategy-col">策略</th><th class="thesis-col">策略简述</th><th>候选分层</th><th class="number-col">账本 NAV</th><th class="number-col">收益 / 基准</th><th class="number-col">超额</th><th class="number-col">最大回撤</th><th class="positions-col">实际虚拟持仓</th><th class="open-col"><span class="sr-only">打开</span></th></tr></thead>
-      <tbody>${desk.strategies
+      <thead><tr><th class="rank-col">#</th><th class="strategy-col">策略</th><th class="thesis-col">策略简述</th><th>晋级阶段</th><th class="number-col">账本 NAV</th><th class="number-col">收益 / 基准</th><th class="number-col">超额</th><th class="number-col">最大回撤</th><th class="positions-col">账本持仓</th><th class="open-col"><span class="sr-only">打开</span></th></tr></thead>
+      <tbody>${strategies
         .map((strategy, index) => {
           const account = strategy.account;
           const accountIssue = strategy.accountCount !== 1;
           return `<tr class="strategy-table-row ${accountIssue ? "account-issue" : ""}" data-select-id="${escapeHtml(strategy.id)}" tabindex="0" role="link" aria-label="打开策略 ${escapeHtml(strategy.name)}">
             <td class="rank-col">${String(index + 1).padStart(2, "0")}</td>
-            <td class="strategy-col"><strong>${escapeHtml(strategy.name)}</strong><span>${escapeHtml(strategy.family)} · ${escapeHtml(strategy.status)}</span></td>
+            <td class="strategy-col"><strong>${escapeHtml(strategy.name)}</strong><span>${escapeHtml(strategy.family)}</span></td>
             <td class="thesis-col"><p>${escapeHtml(strategy.thesis)}</p><span>${escapeHtml(strategy.rebalance)} · ${escapeHtml(strategy.benchmark)}</span></td>
-            <td><div class="table-stages">${strategyStageSummary(strategy)}</div><small>${strategy.candidates.length} 个候选</small></td>
+            <td>${strategyStageSummary(strategy)}</td>
             <td class="number-col"><strong>${account ? money.format(account.nav) : "--"}</strong><span>本金 ${account ? money.format(account.nominalCapital) : "--"}</span></td>
             <td class="number-col"><strong class="${tone(account?.returnRate ?? null)}">${formatPercent(account?.returnRate ?? null)}</strong><span>基准 ${formatPercent(account?.benchmarkReturn ?? null)}</span></td>
             <td class="number-col"><strong class="${tone(account?.excessReturn ?? null)}">${formatPercent(account?.excessReturn ?? null)}</strong></td>
@@ -156,29 +138,23 @@ const renderStrategyTable = () => `<section class="strategy-overview" aria-label
   </div>
 </section>`;
 
-const renderRows = (items, selectedId) => {
-  if (!items.length) return '<div class="empty-state">当前分层没有候选。</div>';
-  return items.map((item) => renderCandidateRow(item, item.id === selectedId)).join("");
-};
-
 const fact = (label, value, extraClass = "") =>
   `<div class="detail-fact ${extraClass}"><span>${label}</span><strong>${value}</strong></div>`;
-
-const scoreBar = (label, value) =>
-  `<div class="score-line"><span>${label}</span><div><i style="width:${Math.max(0, Math.min(100, value))}%"></i></div><strong>${value}</strong></div>`;
 
 const renderStageLanes = (strategy) =>
   `<div class="stage-lanes">${["L1", "L2", "L3"]
     .map(
       (stage) =>
-        `<div class="stage-lane"><span>${stageBadge(stage)}<small>${{ L1: "研究池", L2: "纸面验证", L3: "毕业观察" }[stage]}</small></span><div>${
-          strategy.candidates
-            .filter((candidate) => candidate.stage === stage)
-            .map((candidate) => `<b>${escapeHtml(candidate.code)}</b>`)
-            .join("") || "<em>--</em>"
-        }</div></div>`,
+        `<div class="stage-lane ${strategy.stage === stage ? "current" : ""}"><span>${stageBadge(stage)}<small>${{ L1: "默认 · 基础观察", L2: "手工标记 · 进阶观察", L3: "手工标记 · 高置信观察" }[stage]}</small></span><div>${strategy.stage === stage ? "<b>当前标记</b>" : "<em>--</em>"}</div></div>`,
     )
     .join("")}</div>`;
+
+const renderStageControl = (strategy) => `<div class="stage-control-row"><span>手工标记</span><div class="stage-control" role="group" aria-label="手工标记策略阶段">${["L1", "L2", "L3"]
+  .map(
+    (stage) =>
+      `<button type="button" data-stage-value="${stage}" aria-pressed="${strategy.stage === stage}" class="${strategy.stage === stage ? "active" : ""}">${stage}</button>`,
+  )
+  .join("")}</div></div>`;
 
 const renderStrategyPositions = (strategy) =>
   `<div class="position-table"><div class="position-table-head"><span>标的</span><span>权重</span><span>盈亏</span></div>${
@@ -205,7 +181,8 @@ const renderStrategyDetail = (strategy) => {
     : '<section class="detail-section"><h3>账本边界</h3><p class="detail-copy">每个策略必须恰好对应一个虚拟账户，持仓使用相同 strategy_key；修复通过受信任的 Busabase 工作流完成。</p></section>';
   return `<div class="detail-scroll">
     <button class="strategy-detail-back back-to-list" type="button" data-back-to-list>&larr; 返回策略总览</button>
-    <div class="detail-heading"><div><p class="eyebrow">${escapeHtml(strategy.family)}</p><h2>${escapeHtml(strategy.name)}</h2></div><span class="status-pill">${escapeHtml(strategy.status)}</span></div>
+    <div class="detail-heading"><div><p class="eyebrow">${escapeHtml(strategy.family)}</p><h2>${escapeHtml(strategy.name)}</h2></div>${stageBadge(strategy.stage)}</div>
+    ${renderStageControl(strategy)}
     ${accountWarning}
     <div class="strategy-performance">
       <div class="confidence-dial" style="--score:${strategy.confidence}"><span><strong>${strategy.confidence}</strong><small>置信度</small></span></div>
@@ -217,47 +194,23 @@ const renderStrategyDetail = (strategy) => {
     <div class="strategy-detail-columns"><div>
       <section class="detail-section"><h3>核心假设</h3><p class="detail-copy">${escapeHtml(strategy.thesis)}</p></section>
       <section class="detail-section"><h3>选股与失效</h3><dl class="detail-list"><div><dt>入选规则</dt><dd>${escapeHtml(strategy.selectionRule)}</dd></div><div><dt>失效条件</dt><dd>${escapeHtml(strategy.invalidationRule)}</dd></div><div><dt>复核频率</dt><dd>${escapeHtml(strategy.rebalance)}</dd></div></dl></section>
-      <section class="detail-section"><h3>候选分层</h3>${renderStageLanes(strategy)}</section>
+      <section class="detail-section"><h3>策略阶段</h3>${renderStageLanes(strategy)}<p class="detail-note">标记对象是整套策略，不是持仓个股。三个阶段都只使用当前虚拟账本；L2/L3 不连接富途、不接券商 API，也不产生真实订单。</p></section>
     </div><div class="strategy-ledger-column">${ledgerSections}</div></div>
   </div>`;
 };
 
-const renderCandidateDetail = (candidate) => {
-  const checks = [
-    ["研究假设", !candidate.thesis.startsWith("尚未")],
-    ["关键证据", !candidate.evidence.startsWith("尚未")],
-    ["失效条件", !candidate.invalidation.startsWith("尚未")],
-    ["数据新鲜", candidate.freshness === "fresh"],
-  ];
-  const nextStage = { L1: "进入 L2 前", L2: "进入 L3 前", L3: "持续观察" }[candidate.stage];
-  return `<div class="detail-scroll">
-    <button class="back-to-list" type="button" data-back-to-list>&larr; 返回${viewMeta[contentRoute.view].label}</button>
-    <div class="detail-heading"><div><p class="eyebrow">${escapeHtml(candidate.exchange)} · ${escapeHtml(strategyName(candidate.strategyKey))}</p><h2>${escapeHtml(candidate.code)} <span>${escapeHtml(candidate.name)}</span></h2></div>${stageBadge(candidate.stage)}</div>
-    <div class="candidate-performance"><div><span>综合分</span><strong>${candidate.confidence}</strong><small>/ 100</small></div><div><span>参考价</span><strong>${candidate.latestPrice === null ? "--" : `$${price.format(candidate.latestPrice)}`}</strong><small class="${tone(candidate.dailyChange)}">${formatPercent(candidate.dailyChange)}</small></div><div><span>下次复核</span><strong>${escapeHtml(candidate.nextReview.slice(5))}</strong><small>${escapeHtml(nextStage)}</small></div></div>
-    <section class="detail-section"><h3>选股评分</h3><div class="score-stack">${scoreBar("质量", candidate.qualityScore)}${scoreBar("估值", candidate.valueScore)}${scoreBar("催化", candidate.catalystScore)}</div></section>
-    <section class="detail-section"><h3>判断依据</h3><dl class="detail-list"><div><dt>入选理由</dt><dd>${escapeHtml(candidate.thesis)}</dd></div><div><dt>关键证据</dt><dd>${escapeHtml(candidate.evidence)}</dd></div><div><dt>失效条件</dt><dd>${escapeHtml(candidate.invalidation)}</dd></div></dl></section>
-    <section class="detail-section"><div class="section-head-inline"><h3>晋级检查</h3><span>${checks.filter(([, done]) => done).length}/${checks.length} 就绪</span></div><div class="readiness-grid">${checks.map(([label, done]) => `<div class="readiness-item ${done ? "done" : "waiting"}"><i></i><span>${label}</span><strong>${done ? "已就绪" : "待补充"}</strong></div>`).join("")}</div></section>
-    <div class="detail-boundary">${candidate.stage === "L1" ? "当前边界：仅进入研究池" : candidate.stage === "L2" ? "当前边界：正在虚拟账本验证" : "当前边界：已毕业，仍只做虚拟观察"}</div>
-  </div>`;
-};
-
-const renderDetail = (view, item) => {
-  if (!item) return '<div class="empty-detail">从左侧选择一条记录</div>';
-  return renderCandidateDetail(item);
-};
-
-const renderFunnel = () => `<section class="workflow-band"><div class="funnel" aria-label="选股漏斗">
+const renderFunnel = () => `<section class="workflow-band"><div class="funnel" aria-label="策略晋级漏斗">
   ${[
-    ["l1", "L1", "初筛", desk.levels.L1.length],
-    ["l2", "L2", "纸面验证", desk.levels.L2.length],
-    ["l3", "L3", "毕业观察", desk.levels.L3.length],
+    ["l1", "L1", "基础观察", desk.levels.L1.length],
+    ["l2", "L2", "进阶观察", desk.levels.L2.length],
+    ["l3", "L3", "高置信观察", desk.levels.L3.length],
   ]
     .map(
       ([view, level, label, count], index) =>
-        `<button class="funnel-step ${contentRoute.view === view ? "active" : ""}" type="button" data-view="${view}">${stageBadge(level)}<span><strong>${label}</strong><small>${count} 个候选</small></span>${index < 2 ? '<i aria-hidden="true">›</i>' : ""}</button>`,
+        `<button class="funnel-step ${contentRoute.view === view ? "active" : ""}" type="button" data-view="${view}">${stageBadge(level)}<span><strong>${label}</strong><small>${count} 个策略</small></span>${index < 2 ? '<i aria-hidden="true">›</i>' : ""}</button>`,
     )
     .join("")}
-</div><div class="workflow-pulse"><span><strong>${desk.strategies.length}</strong> 策略</span><span><strong>${desk.candidates.length}</strong> 候选</span><span class="${tone(desk.ledger.excessReturn)}"><strong>${formatPercent(desk.ledger.excessReturn)}</strong> 组合超额</span></div></section>`;
+</div><div class="workflow-pulse"><span><strong>${desk.strategies.length}</strong> 策略在赛马</span><span class="${tone(desk.ledger.excessReturn)}"><strong>${formatPercent(desk.ledger.excessReturn)}</strong> 组合超额</span></div></section>`;
 
 const renderSidebar = () => {
   const hasLedgerIssues = desk.integrity.issueCount > 0;
@@ -266,18 +219,19 @@ const renderSidebar = () => {
     l1: desk.levels.L1.length,
     l2: desk.levels.L2.length,
     l3: desk.levels.L3.length,
+    regression: "分析",
   };
   return `<aside class="sidebar ${sidebarCollapsed ? "collapsed" : ""}" id="appSidebar">
     <div class="brand"><div class="brand-icon" aria-hidden="true">KS</div><div class="brand-copy"><div class="brand-title">Kelly Invest Stock</div><div class="brand-subtitle">策略实验台</div></div><button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="appSidebar" aria-expanded="${!sidebarCollapsed}" aria-label="切换侧栏" title="切换侧栏"><span class="sidebar-toggle-icon" aria-hidden="true"></span></button></div>
-    <section class="human-work" aria-labelledby="humanWorkTitle"><div class="human-work-eyebrow">需要你</div><div id="humanWorkTitle" class="human-work-title">${hasLedgerIssues ? "账本完整性" : "候选推进"}</div><button class="human-work-primary" type="button" data-view="${hasLedgerIssues ? "strategies" : "l1"}"><span><strong>${hasLedgerIssues ? desk.integrity.issueCount : desk.attention.l1}</strong><span>${hasLedgerIssues ? "项策略账本待处理" : "L1 证据待补"}</span></span></button><div class="human-work-secondary"><button type="button" data-view="l2"><strong>${desk.attention.l2}</strong><span>纸面验证</span></button><button type="button" data-view="l3"><strong>${desk.attention.l3}</strong><span>毕业观察</span></button></div></section>
+    <section class="human-work" aria-labelledby="humanWorkTitle"><div class="human-work-eyebrow">需要你</div><div id="humanWorkTitle" class="human-work-title">${hasLedgerIssues ? "账本完整性" : "策略标记"}</div><button class="human-work-primary" type="button" data-view="${hasLedgerIssues ? "strategies" : "l1"}"><span><strong>${hasLedgerIssues ? desk.integrity.issueCount : desk.attention.l1}</strong><span>${hasLedgerIssues ? "项策略账本待处理" : "L1 策略待观察"}</span></span></button><div class="human-work-secondary"><button type="button" data-view="l2"><strong>${desk.attention.l2}</strong><span>L2 标记</span></button><button type="button" data-view="l3"><strong>${desk.attention.l3}</strong><span>L3 标记</span></button></div></section>
     <div class="sidebar-separator"></div>
     <nav class="filters" aria-label="工作流导航">${Object.entries(viewMeta)
       .map(
         ([key, meta]) =>
-          `<button class="${contentRoute.view === key ? "active" : ""}" type="button" data-view="${key}" title="打开${meta.label}"><span>${meta.label}</span><span>${counts[key]}</span></button>`,
+          `<button class="${contentRoute.view === key ? "active" : ""}" type="button" data-view="${key}" aria-label="打开${meta.label}" title="打开${meta.label}"><span>${meta.label}</span><span>${counts[key]}</span></button>`,
       )
       .join("")}</nav>
-    <div class="help-box"><div class="virtual-only"><span></span>全部为虚拟账本</div><button class="help-button" type="button" data-open-help>帮助与设置</button></div>
+    <div class="help-box"><div class="virtual-only"><span></span>全程虚拟 · 阶段可手工标记</div><button class="help-button" type="button" data-open-help>帮助与设置</button></div>
   </aside>`;
 };
 
@@ -294,12 +248,43 @@ const renderSummaryStrip = () => `${
   <div><span>现金比例</span><strong>${formatPercent(desk.ledger.cashRate, false)}</strong></div>
 </section>`;
 
+const renderRegression = () => {
+  const selected =
+    desk.strategies.find((strategy) => strategy.id === contentRoute.id) ||
+    desk.strategies.find((strategy) => strategy.account) ||
+    null;
+  if (!selected) return '<section class="regression-view"><div class="empty-state">暂无可回归的策略账本。</div></section>';
+  const snapshot = createRegressionSnapshot(desk, selected);
+  return `<section class="regression-view" aria-label="策略回归体检">
+    <div class="regression-head"><div><strong>策略回归体检</strong><span>固定账本快照 · 不伪造时间序列指标</span></div><div class="regression-total"><span>总盘收益</span><strong class="${tone(snapshot.totalReturn)}">${formatPercent(snapshot.totalReturn)}</strong></div></div>
+    <div class="regression-layout">
+      <div class="regression-strategies"><div class="regression-list-head">选择策略</div>${desk.strategies
+        .map(
+          (strategy) =>
+            `<button type="button" data-regression-id="${escapeHtml(strategy.id)}" class="${strategy.id === selected.id ? "active" : ""}"><span>${stageBadge(strategy.stage)}<strong>${escapeHtml(strategy.name)}</strong></span><b class="${tone(strategy.account?.returnRate ?? null)}">${formatPercent(strategy.account?.returnRate ?? null)}</b></button>`,
+        )
+        .join("")}</div>
+      <div class="regression-result">
+        <div class="regression-title"><div><p class="eyebrow">${escapeHtml(selected.family)}</p><h2>${escapeHtml(selected.name)}</h2></div>${stageBadge(selected.stage)}</div>
+        <div class="regression-metrics">
+          ${fact("策略收益", formatPercent(snapshot.strategyReturn), tone(snapshot.strategyReturn))}
+          ${fact("总盘收益", formatPercent(snapshot.totalReturn), tone(snapshot.totalReturn))}
+          ${fact("收益贡献", formatPercent(snapshot.contribution), tone(snapshot.contribution))}
+          ${fact("剔除后总盘", formatPercent(snapshot.returnWithoutStrategy), tone(snapshot.returnWithoutStrategy))}
+        </div>
+        <div class="regression-contribution"><div><span>名义本金占比</span><strong>${formatPercent(snapshot.capitalWeight, false)}</strong></div><div><i style="width:${Math.max(0, Math.min(100, (snapshot.capitalWeight || 0) * 100))}%"></i></div></div>
+        <dl class="regression-notes"><div><dt>策略虚拟盈亏</dt><dd class="${tone(selected.account?.pnl ?? null)}">${selected.account ? money.format(selected.account.pnl) : "--"}</dd></div><div><dt>其余策略本金</dt><dd>${money.format(snapshot.remainderCapital)}</dd></div><div><dt>其余策略净值</dt><dd>${money.format(snapshot.remainderNav)}</dd></div><div><dt>口径</dt><dd>收益贡献 = 单策略虚拟盈亏 / 总名义本金；剔除后总盘按其余策略账本重算。</dd></div></dl>
+      </div>
+    </div>
+  </section>`;
+};
+
 const renderHelp =
   () => `<div class="modal-backdrop" id="helpModal" aria-hidden="false"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
   <div class="modal-head"><div><div id="helpTitle" class="modal-title">帮助与设置</div><div class="modal-subtitle">Kelly Invest Stock · 策略实验台</div></div><button class="icon-button" type="button" data-close-help aria-label="关闭帮助">关闭</button></div>
   <nav class="modal-tabs" aria-label="帮助与设置标签"><button class="${helpTab === "guide" ? "active" : ""}" type="button" data-help-tab="guide">规则</button><button class="${helpTab === "resources" ? "active" : ""}" type="button" data-help-tab="resources">资源</button><button class="${helpTab === "connection" ? "active" : ""}" type="button" data-help-tab="connection">连接</button></nav>
   <div class="modal-body">
-    <section class="help-tab-panel ${helpTab === "guide" ? "active" : ""}"><h2>分层规则</h2><dl class="settings-list"><div><dt>L1 初筛</dt><dd>形成假设，补齐关键证据与失效条件。</dd></div><div><dt>L2 纸面验证</dt><dd>进入虚拟账本，观察收益、回撤与策略一致性。</dd></div><div><dt>L3 毕业观察</dt><dd>通过验证后持续跟踪，仍不连接真实交易。</dd></div></dl></section>
+    <section class="help-tab-panel ${helpTab === "guide" ? "active" : ""}"><h2>策略阶段规则</h2><dl class="settings-list"><div><dt>L1 基础观察</dt><dd>每个新策略默认进入 L1，并拥有独立虚拟账本。</dd></div><div><dt>L2 进阶观察</dt><dd>由人手工标记整套策略，继续使用同一个虚拟账本。</dd></div><div><dt>L3 高置信观察</dt><dd>由人手工标记高成熟度策略；仍是虚拟研究标签，不接富途或真实交易 API。</dd></div><div><dt>回归</dt><dd>用当前账本快照查看单策略收益贡献与剔除后的总盘收益；没有历史净值序列时不计算 Sharpe、Alpha 或 R²。</dd></div></dl></section>
     <section class="help-tab-panel ${helpTab === "resources" ? "active" : ""}"><h2>Busabase 资源</h2><dl class="settings-list"><div><dt>应用根节点</dt><dd><code>${escapeHtml(appConfig.folder.slug)}</code></dd></div><div><dt>结构化数据</dt><dd>${appConfig.bases.map((base) => escapeHtml(base.name)).join("、")}</dd></div><div><dt>秘密数据</dt><dd>无 Vault 要求；本地 OAuth 凭证不进入业务 Base。</dd></div></dl></section>
     <section class="help-tab-panel ${helpTab === "connection" ? "active" : ""}"><h2>连接状态</h2><dl class="settings-list"><div><dt>数据提供方</dt><dd>${currentState.provider.name === "demo" ? "固定只读演示" : "Busabase SDK"}</dd></div><div><dt>Space</dt><dd>${currentState.provider.name === "demo" ? "演示中未连接" : "由当前 AirApp 会话确定"}</dd></div><div><dt>资源版本</dt><dd>Schema v${appConfig.schemaVersion}</dd></div><div><dt>运行边界</dt><dd>本地与 AirApp 使用同一份 Hono 应用源码。</dd></div></dl></section>
   </div>
@@ -307,23 +292,23 @@ const renderHelp =
 
 const renderApp = () => {
   const items = itemsForView(contentRoute.view);
-  const strategyView = contentRoute.view === "strategies";
-  const selected = contentRoute.id
-    ? items.find((item) => item.id === contentRoute.id) || null
-    : strategyView
-      ? null
-      : items[0] || null;
-  const strategyDetail = strategyView && Boolean(selected);
+  const selected = contentRoute.id ? desk.strategies.find((item) => item.id === contentRoute.id) || null : null;
+  const regressionView = contentRoute.view === "regression";
+  const strategyDetail = Boolean(selected) && !regressionView;
   const meta = viewMeta[contentRoute.view];
   const workspaceTitle = strategyDetail ? "策略详情" : meta.label;
-  const mainContent = strategyView
-    ? strategyDetail
-      ? `<section class="strategy-detail-view detail-panel">${renderStrategyDetail(selected)}</section>`
-      : `${renderSummaryStrip()}${renderStrategyTable()}`
-    : `${renderFunnel()}<section class="content"><div class="list-panel"><div class="list-head"><div><strong>${meta.label}</strong><span>${items.length} ${meta.noun}</span></div><span>按综合分排序</span></div><div class="work-list">${renderRows(items, selected?.id)}</div></div><aside class="detail-panel">${renderDetail(contentRoute.view, selected)}</aside></section>`;
-  root.innerHTML = `<div class="app-shell ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}">${renderSidebar()}<main class="main ${strategyView ? "strategy-main" : ""} ${strategyDetail ? "strategy-detail-mode" : ""}">
+  const mainContent = regressionView
+    ? `${renderSummaryStrip()}${renderRegression()}`
+    : strategyDetail
+    ? `<section class="strategy-detail-view detail-panel">${renderStrategyDetail(selected)}</section>`
+    : `${contentRoute.view === "strategies" ? "" : renderFunnel()}${renderSummaryStrip()}${
+        items.length
+          ? renderStrategyTable(items, contentRoute.view === "strategies" ? "策略与虚拟账本" : meta.label)
+          : '<section class="strategy-overview"><div class="empty-state">当前阶段没有策略。</div></section>'
+      }`;
+  root.innerHTML = `<div class="app-shell ${sidebarCollapsed ? "sidebar-is-collapsed" : ""}">${renderSidebar()}<main class="main strategy-main ${strategyDetail ? "strategy-detail-mode" : ""}">
     <div class="mobile-topbar"><button class="mobile-sidebar-toggle" type="button" data-mobile-sidebar aria-controls="appSidebar" aria-label="打开侧栏"><span class="sidebar-toggle-icon" aria-hidden="true"></span></button><div class="mobile-topbar-copy"><div class="mobile-view-title">${workspaceTitle}</div><div class="mobile-view-meta">${strategyDetail ? escapeHtml(selected.name) : `${items.length} ${meta.noun}`}</div></div><button class="mobile-help-button" type="button" data-open-help aria-label="帮助与设置">帮助</button></div>
-    <header class="workspace-head"><div><p class="eyebrow">${meta.eyebrow}</p><h1>${workspaceTitle}</h1></div><div class="workspace-status">${currentState.provider.name === "demo" ? '<span class="snapshot-badge">DEMO</span>' : '<span class="status-dot"></span>'}<span>${escapeHtml(currentState.provider.asOf || "Busabase 当前数据")}</span><span class="read-only">只读</span><button type="button" data-refresh>刷新</button></div></header>
+    <header class="workspace-head"><div><p class="eyebrow">${meta.eyebrow}</p><h1>${workspaceTitle}</h1></div><div class="workspace-status">${currentState.provider.name === "demo" ? '<span class="snapshot-badge">DEMO</span>' : '<span class="status-dot"></span>'}<span>${escapeHtml(currentState.provider.asOf || "Busabase 当前数据")}</span><span class="read-only">虚拟模式</span><button type="button" data-refresh>刷新</button></div></header>
     ${mainContent}
   </main></div><div id="sidebarScrim" class="sidebar-scrim" hidden></div>${parseHash().view === "settings" ? renderHelp() : ""}<div class="toast" role="status" aria-live="polite" hidden></div>`;
   bindEvents();
@@ -339,7 +324,7 @@ const renderSetup = (error) => {
   const title = pending ? "等待工作区审批" : canProvision ? "初始化 Busabase 工作区" : "工作区暂未就绪";
   const resources = appConfig.bases.map((base) => base.name).join("、");
   const body = canProvision
-    ? `<p>将在当前 Space 的应用 Folder 下创建 ${escapeHtml(resources)} 四个 Base。</p><p class="detail-note">结构通过一个 Busabase ChangeRequest 幂等提交；旧版资源不会被删除或继续读取。</p>`
+    ? `<p>将在当前 Space 的应用 Folder 下创建 ${escapeHtml(resources)} 三个 Base。</p><p class="detail-note">结构通过一个 Busabase ChangeRequest 幂等提交；旧版资源不会被删除或继续读取。</p>`
     : `<p>${escapeHtml(reason)}</p><p class="detail-note">应用不会要求你手工创建 Node/Base 或复制 ID，也不会切换到本地数据。</p>`;
   const selectedSpace = authStatus?.space ? `${authStatus.space.name} (${authStatus.space.id})` : "当前 AirApp Space";
   root.innerHTML = `<div class="setup-shell"><section class="setup-modal" role="dialog" aria-labelledby="setupTitle"><div class="setup-head"><div class="brand-icon" aria-hidden="true">KS</div><div><p class="eyebrow">WORKSPACE SETUP</p><h1 id="setupTitle">${title}</h1></div></div><div class="setup-body"><p><strong>${escapeHtml(authStatus?.baseUrl || "Busabase")}</strong> 鉴权已就绪。</p><p>目标 Space：<strong>${escapeHtml(selectedSpace)}</strong></p>${body}<div class="setup-notice" data-setup-status hidden></div></div><div class="setup-footer setup-footer-split">${canProvision ? '<button class="connect-button" type="button" data-provision>初始化工作区</button>' : retryOnly ? '<button class="connect-button" type="button" data-retry-setup>重新检查</button>' : ""}<a class="text-link" href="?demo=1#/strategies">进入只读 Demo</a></div></section></div>`;
@@ -436,6 +421,35 @@ const bindEvents = () => {
       row.click();
     }),
   );
+  root.querySelectorAll("[data-regression-id]").forEach((button) =>
+    button.addEventListener("click", () => {
+      navigate({ view: "regression", id: button.dataset.regressionId });
+    }),
+  );
+  root.querySelectorAll("[data-stage-value]").forEach((button) =>
+    button.addEventListener("click", async () => {
+      const strategy = desk.strategies.find((item) => item.id === contentRoute.id);
+      const stage = button.dataset.stageValue;
+      if (!strategy || strategy.stage === stage) return;
+      root.querySelectorAll("[data-stage-value]").forEach((control) => {
+        control.disabled = true;
+      });
+      try {
+        const result = await activeProvider.updateStrategyStage(strategy.id, stage);
+        if (!result.persisted) {
+          showToast(`已提交 ${stage} 标记，等待 Busabase 审批。`);
+          return;
+        }
+        await load();
+        showToast(result.transient ? `已标记为 ${stage}，仅当前 Demo 会话有效。` : `已标记为 ${stage}。`);
+      } catch (error) {
+        showToast(`标记失败：${String(error?.message || error)}`);
+        root.querySelectorAll("[data-stage-value]").forEach((control) => {
+          control.disabled = false;
+        });
+      }
+    }),
+  );
   root.querySelector("[data-sidebar-toggle]")?.addEventListener("click", () => {
     if (isMobileLayout()) setMobileSidebarOpen(false);
     else {
@@ -478,7 +492,7 @@ const applyRoute = () => {
   else {
     contentRoute = route;
     lastContentHash = routeHash(route);
-    if (isMobileLayout()) setMobileDetailOpen(Boolean(route.id));
+    if (isMobileLayout()) setMobileDetailOpen(Boolean(route.id) && route.view !== "regression");
   }
   if (currentState) renderApp();
 };
@@ -505,8 +519,8 @@ const load = async () => {
         return;
       }
     }
-    const provider = await getProvider();
-    currentState = await provider.getState();
+    activeProvider = await getProvider();
+    currentState = await activeProvider.getState();
     desk = createStrategyDesk(currentState.records);
     if (!window.location.hash) window.history.replaceState(null, "", "#/strategies");
     applyRoute();

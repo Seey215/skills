@@ -1,172 +1,151 @@
 ---
 name: kelly-invest-stock
-description: Build and operate a Busabase-backed stock strategy experiment desk with a bundled local Hono App-in-Skill, the same source deployable to AirApp, L1/L2/L3 candidate screening, and strategy-level virtual ledgers. Use when the user invokes $kelly-invest-stock or /kelly-invest-stock, wants to define and compare stock-selection strategies, move candidates through research and paper-validation stages, inspect evidence and invalidation rules, or review virtual performance and drawdown. It never connects to a brokerage, places orders, moves money, or presents generated analysis as personalized investment advice.
+description: Build and operate a Busabase-backed stock-strategy experiment desk with a bundled local Hono App-in-Skill, strategy-level L1/L2/L3 manual maturity labels, one virtual ledger per strategy, and portfolio regression/backtest snapshots. Use when the user invokes $kelly-invest-stock or /kelly-invest-stock, wants to define or compare stock strategies, inspect a strategy and its virtual book, manually label strategy maturity, or review virtual performance, drawdown, and contribution to the total book. It never connects to a brokerage, places orders, moves money, or presents generated analysis as personalized investment advice.
 ---
 
 # Kelly Invest Stock
 
-Build a compact strategy experiment desk. Keep the workflow centered on three
-questions: which strategy is being tested, why a stock belongs at its current
-level, and what the virtual ledger says about the strategy's behavior.
+Operate a compact strategy experiment desk. Keep the first screen centered on a
+large strategy table: concise thesis, maturity label, account NAV, return,
+benchmark, drawdown, cash, and virtual positions. Open a row for the complete
+strategy and ledger detail.
 
 ## Mandatory Dependencies
 
-Before designing, creating, or changing the app:
+Before changing the app:
 
-1. Read and follow `$kelly-app-skill-creator` for product behavior, visual quality, responsive layout, and the complete local `app/` artifact.
-2. Read and follow `$busabase` for connection, target Space, API, ChangeRequest, review, and merge behavior.
-3. Read and follow `$busabase-app-creator` for resource modeling, AirApp runtime limits, security, validation, and deployment.
-4. Read `references/stock-sdk.md` before implementing or changing market-data ingestion.
+1. Read and follow `$kelly-app-skill-creator` for product behavior, responsive UI,
+   and the canonical local `app/` artifact.
+2. Read and follow `$busabase` for connection, target Space, ChangeRequests,
+   review, and merge behavior.
+3. Read and follow `$busabase-app-creator` for resource modeling, AirApp runtime,
+   security, validation, and deployment.
+4. Read `references/stock-sdk.md` before changing market-data ingestion.
 
-If a required skill is unavailable, continue safe local app work but stop before
-the unavailable Busabase or deployment operation and report the missing dependency.
-Never replace Busabase persistence with local JSON, browser storage, SQLite, or a
-file-backed provider.
+If a dependency is unavailable, continue safe local artifact work but stop before
+the unavailable deployment or Busabase operation. Never create a second
+persistent backend.
 
 ## Product Boundary
 
-- Treat every account, position, return, and promotion as research simulation.
-  Never connect to a brokerage, create an order ticket, or label L3 as live money.
-- Support a small set of explicit strategies. Each strategy must define a thesis,
-  selection rule, invalidation rule, benchmark, review cadence, and virtual account.
-- Use the three stages consistently:
-  - `L1`: research pool; hypothesis exists but evidence may still be incomplete.
-  - `L2`: paper validation; candidate is tracked in a virtual ledger and evaluated
-    for return, drawdown, and consistency with the strategy.
-  - `L3`: graduation watch; validation passed, but the candidate remains virtual
-    and read-only.
-- Keep facts, assumptions, scores, and judgment separate. A high score is not a
-  recommendation and does not bypass evidence or invalidation rules.
-- Use exact-pinned `stock-sdk@2.4.0` only in reviewed server, Agent, or Workflow
-  execution. Do not call public market sites from browser code or require a
-  market-data API key, token, Vault secret, Python runtime, native binary, or subprocess.
+- Keep every account, position, return, stage, and regression result virtual.
+  Never connect to Futu or another brokerage, create order UI, or call a trading
+  API.
+- Give every strategy exactly one virtual account and default every new strategy
+  to `L1`.
+- Treat `L1`, `L2`, and `L3` as manual labels on the whole strategy, never on an
+  individual stock:
+  - `L1`: default basic observation;
+  - `L2`: manually marked advanced observation;
+  - `L3`: manually marked high-confidence observation.
+- Do not copy the live-trading meaning of L2/L3 from `invest-ui`. In this skill,
+  changing a label never changes execution mode, account type, or capital.
+- Keep thesis, evidence, assumptions, confidence, and invalidation separate. A
+  label or score is not a recommendation.
+- Use exact-pinned `stock-sdk@2.4.0` only in reviewed trusted execution. Browser
+  code performs no public market fetch.
 
-## App Artifact
+## Data And Modes
 
-- Keep the complete canonical project under `<skill-root>/app/` and provide a
-  working `pnpm --dir <skill-root>/app dev` command.
-- Follow the UI and product contract from `$kelly-app-skill-creator`; delegate the
-  runtime, SDK, security, validation, and deployment contract to
-  `$busabase-app-creator` rather than defining another runtime here.
-- Read all persistent config, state, decisions, strategies, candidates, and ledger
-  records through `busabase-sdk` from Busabase.
-- Keep deterministic Demo data explicit and read-only. Demo mode may mirror the
-  same four-resource shape but must never become the persistent backend.
-- Build and sync AirApp from the committed local source. Do not maintain a second
-  remote implementation.
+- Use Busabase as the persistent source by default. A normal invocation or URL
+  must never silently switch to Demo.
+- Enter Demo only when the user explicitly asks to open or update Demo. Demo data
+  is deterministic, clearly labeled, and not persistent.
+- Use recognizable investor-style Demo strategies such as Buffett, Munger, Duan
+  Yongping, Peter Lynch, Howard Marks, Fisher, Graham, or Li Lu style examples.
+  Label them as style reproductions; never imply actual holdings, endorsement, or
+  current advice.
+- Read and write persistent state through `busabase-sdk`. Stage changes use a
+  reviewed `records.changeRequest` update to the strategy record's `status`
+  field. Never persist stage changes in browser storage or local files.
 
 ## Core Resources
 
-Model the simplified product with four application-owned Bases under one
-application Folder:
+Keep three application-owned Bases under one application Folder:
 
-- `strategies`: name, key, family, status, thesis, selection rule, invalidation
-  rule, review cadence, benchmark, and confidence.
-- `candidates`: security identity, strategy key, L1/L2/L3 stage, component scores,
-  reference price, thesis, evidence, invalidation, next review, and freshness.
+- `strategies`: name, key, family, `status`, thesis, selection rule,
+  invalidation rule, review cadence, benchmark, and confidence.
 - `ledger-accounts`: one virtual account per strategy with nominal capital, NAV,
   cash, benchmark return, maximum drawdown, and update time.
-- `ledger-positions`: virtual quantity, entry price, reference price, market value,
-  weight, and strategy key.
+- `ledger-positions`: virtual quantity, entry price, reference price, market
+  value, weight, and strategy key.
 
-Provision missing application-owned resources lazily through a Busabase
-ChangeRequest, then re-read the Folder and use only materialized IDs. Do not ask the
-user to create Nodes or copy Base IDs. Ignore legacy app-owned resources that are
-outside the current declared resource set; never delete them implicitly. When an
-older Busabase runtime dropped ownership metadata, lazily repair it only after the
-Folder and every declared Base match the exact name, description, type, and field
-fingerprint. Persist the ownership marker when the runtime supports node metadata;
-otherwise use the verified materialized IDs in legacy compatibility mode. Never
-adopt a same-slug resource from its slug alone.
+Provision missing resources lazily through one Busabase ChangeRequest, re-read
+the Folder, and use only validated materialized IDs. Ignore legacy app-owned
+resources outside this declaration; never delete or adopt them implicitly.
 
 ## Operating Loop
 
 ### Research
 
-Define the strategy before adding candidates. For each candidate, gather cited
-evidence, record freshness and source time, score only declared dimensions, and
-write a falsifiable invalidation condition. Missing evidence keeps the candidate
-in L1.
+Define a strategy's thesis, selection rule, invalidation rule, benchmark, review
+cadence, and virtual account before evaluating it. Preserve source and freshness
+for market observations.
 
 ### Plan
 
-Create a review plan that states the next evidence needed, the review date, and the
-graduation or demotion condition. Promote to L2 only when the thesis and
-invalidation rule are reviewable. Promote to L3 only after enough paper history
-exists to evaluate return, drawdown, and benchmark behavior.
+State the evidence needed for the next review. New strategies remain L1. Treat an
+L2/L3 change as a human maturity judgment, not an automated promotion or trading
+authorization.
 
 ### Action
 
-Allow only reviewable research actions: refresh market observations through
-trusted execution, update evidence, change a stage through Busabase's reviewed
-mutation flow, and record virtual ledger events. Never make a stage change from a
-browser-only local state mutation.
+Allow reviewed research updates, virtual-ledger records, and mouse-driven manual
+stage marking. Send persistent stage changes through Busabase ChangeRequest and
+reload the canonical record after materialization.
 
 ### Retrospective
 
-Compare each strategy's virtual return, benchmark return, maximum drawdown, and
-candidate outcomes. Record whether the thesis or process was wrong before changing
-rules. Route proposed rule changes back through Plan rather than silently rewriting
-the strategy.
+Compare virtual return, benchmark, maximum drawdown, and contribution to the
+whole book. Record whether thesis or process failed before changing a strategy's
+rules.
 
 ## UI Contract
 
-Keep the first screen as the operating desk, not a landing page:
-
-- Fixed desktop sidebar with a human-attention summary and navigation for Strategy,
-  L1, L2, L3, and Help & Settings. Do not create a separate Virtual Ledger tab;
-  the ledger belongs to its strategy.
-- A visible L1 -> L2 -> L3 funnel with counts and distinct but restrained stage colors.
-- Open Strategy as a full-width comparison table that combines the strategy name,
-  concise thesis, L1/L2/L3 counts, virtual NAV and capital, return, benchmark,
-  excess return, drawdown, cash, and current virtual positions.
-- Make the entire strategy row open a dedicated strategy detail route. Put the
-  complete strategy rules, candidate stages, virtual account summary, and virtual
-  positions together on that detail screen.
-- Use the desktop list/detail split for candidate views only.
-- On mobile, use the shared off-canvas sidebar and separate list/detail route; keep
-  a sticky back action and prevent horizontal overflow at 390px and 360px widths.
-- Show strategy rules, candidate score components, evidence, invalidation, next
-  review, account NAV, benchmark, drawdown, and virtual positions without nested cards.
-- Keep “all accounts are virtual” visible and describe L3 as graduation watch,
-  never as real trading.
+- Use a fixed desktop sidebar with Strategy, L1, L2, L3, Regression, and Help &
+  Settings. Do not add a separate Virtual Ledger tab.
+- Make the Strategy route a large full-width table that combines strategy summary
+  and ledger reality. Clicking the entire row opens Strategy Detail.
+- Put strategy rules, the manual L1/L2/L3 segmented control, account summary, and
+  positions together in Strategy Detail.
+- Make L1/L2/L3 routes filter strategies, not stocks.
+- Make Regression a strategy-focused virtual-book retrospective. With only a
+  current ledger snapshot, show strategy return, total-book return, contribution
+  (`strategy P/L / total nominal capital`), and total-book return with the
+  strategy removed. Do not invent Sharpe, Alpha, Beta, R², or a backtest without
+  historical NAV observations.
+- On mobile, use the shared off-canvas sidebar, a separate detail route, sticky
+  back action, and no horizontal page overflow at 390px or 360px.
+- Keep the virtual-only boundary visible. Do not describe L2 as Futu paper trading
+  or L3 as real trading anywhere in this app.
 
 ## Metric Rules
 
-- Preserve the security code, exchange, currency, upstream source, source time,
-  fetch time, and freshness. Do not infer a missing reference price.
-- Calculate virtual position P/L as `quantity * (latest reference price - virtual
-  entry price)` and account return as `NAV / nominal capital - 1`.
-- Calculate weights only from usable virtual market values. Mark account summaries
-  partial when any included position lacks a usable price.
-- Compare strategies on the same time window and benchmark before ranking them.
-  Do not compare raw returns from different inception dates as if equivalent.
-- Keep Demo observations fixed and dated. Never present them as live market data.
+- Calculate position P/L as `quantity * (latest reference price - virtual entry
+  price)` and account return as `NAV / nominal capital - 1`.
+- Calculate total-book return from summed account NAV and summed nominal capital.
+- Calculate regression snapshot contribution as `strategy account P/L / total
+  nominal capital`; calculate the removal case from the remaining accounts.
+- Compare strategies on the same window and benchmark before ranking them.
+- Keep Demo observations fixed and dated. Never present them as live data.
 
 ## Completion Criteria
 
 Finish only when:
 
-- `pnpm --dir app dev` starts the complete local Hono application;
-- Strategy overview/detail and L1/L2/L3 routes work on desktop and mobile, with
-  virtual-ledger information integrated into strategy overview and detail;
-- each strategy has explicit selection and invalidation rules plus a virtual account;
-- candidate detail shows scores, evidence, invalidation, stage, and next review;
-- the four-resource declaration and lazy provisioning pass fixture tests, including
-  compatibility with a legacy app-owned root Folder;
-- all persistent state uses Busabase and Demo remains explicitly deterministic;
-- `stock-sdk` is pinned exactly and browser code performs no public market fetch;
-- local OAuth credentials remain local and business data requires no Vault secret;
-- local OAuth verifies Spaces before resource access, auto-selects a single or
-  open-source `local` Space, and requires an explicit native selector when the
-  account can access several Spaces;
+- `pnpm --dir app dev` remains supported and deterministic checks pass;
+- Strategy overview/detail, L1/L2/L3 strategy filters, manual stage marking, and
+  Regression work on desktop and mobile;
+- every strategy has one virtual account plus explicit selection and invalidation
+  rules;
+- the three-resource declaration and lazy provisioning pass fixture tests;
+- normal mode uses Busabase, while Demo is explicit, deterministic, and labeled;
 - no brokerage path, real-money stage, trading action, or personalized investment
   claim exists; and
-- deployment and real-data checks required by the dependency skills pass.
+- available dependency-skill deployment and real-data checks pass.
 
 ## Stop Conditions
 
 Stop before consequential Busabase mutation when the target Space is ambiguous,
-the current user lacks permission, a same-slug resource is not application-owned,
-security identity cannot be resolved, freshness is unknown for a consequential
-calculation, or the requested workflow crosses into brokerage execution or money movement.
+the viewer lacks permission, ownership cannot be proven, a stale record would be
+overwritten, or the request crosses into brokerage execution or money movement.

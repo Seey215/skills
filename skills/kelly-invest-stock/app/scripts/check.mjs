@@ -42,8 +42,8 @@ if (packageJson.dependencies["stock-sdk"] !== "2.4.0") {
 if (packageJson.scripts?.start !== "node server.js") {
   throw new Error("AirApp start must only run server.js");
 }
-if (resourceMap.resources?.length !== 4 || resourceMap.vaultRequirements?.length !== 0) {
-  throw new Error("Resource map must declare four non-secret Busabase resources");
+if (resourceMap.resources?.length !== 3 || resourceMap.vaultRequirements?.length !== 0) {
+  throw new Error("Resource map must declare three non-secret Busabase resources");
 }
 if (
   resourceMap.provisioning?.mode !== "lazy" ||

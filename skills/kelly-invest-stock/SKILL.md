@@ -70,6 +70,9 @@ persistent backend.
   `records.changeRequest` update to the strategy record's `status` field and a
   dated approval record containing the human reason and account snapshot. Never
   persist stage changes in browser storage or local files.
+- Keep Busabase record page size inside the provider, at no more than the API's
+  supported maximum. Follow `nextCursor` until exhaustion and never put transport
+  pagination in a Base declaration or treat one page as the complete dataset.
 - Offer the deterministic classroom seed only in a completely empty Busabase
   workspace. Submit one reviewable bulk ChangeRequest per Base without automatic
   merge; the user or Space reviewer decides whether to merge it.

@@ -1,12 +1,13 @@
 // @ts-nocheck -- uses browser cache-busting import specifiers (?v=<version>) TypeScript cannot resolve; this file is un-annotated browser JS linted by Biome only
 import { createRuntimeClient } from "../busabase-client.js";
-import { appConfig } from "../config.js?v=0.9.0";
-import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.9.0";
-import { classroomSeedBatches } from "./demo-provider.js?v=0.9.0";
+import { appConfig } from "../config.js?v=0.9.2";
+import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.9.2";
+import { classroomSeedBatches } from "./demo-provider.js?v=0.9.2";
 
 const allowedReads = new Set(appConfig.permissions.readProcedures);
 const allowedSetup = new Set(appConfig.permissions.setupProcedures);
 const allowedWrites = new Set(appConfig.permissions.writeProcedures);
+const BUSABASE_RECORD_PAGE_SIZE = 100;
 
 const merged = (result) => result?.materialized === true || result?.status === "merged";
 
@@ -23,7 +24,7 @@ const normalizeRecords = (records, baseKey) =>
 const readLegacyPage = async (base, cursor) => {
   const url = new URL("/api/v1/records/paged", window.location.origin);
   url.searchParams.set("baseId", base.baseId);
-  url.searchParams.set("limit", String(base.readLimit));
+  url.searchParams.set("limit", String(BUSABASE_RECORD_PAGE_SIZE));
   if (cursor) url.searchParams.set("cursor", cursor);
   const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP_${response.status}: 无法读取旧版 Busabase 分页记录`);
@@ -38,27 +39,29 @@ const readPage = async (client, base, cursor) => {
   }
   let page = await client.records.list({
     baseId: base.baseId,
-    limit: base.readLimit,
+    limit: BUSABASE_RECORD_PAGE_SIZE,
     ...(cursor ? { cursor } : {}),
   });
   if (Array.isArray(page)) page = await readLegacyPage(base, cursor);
   return {
     records: normalizeRecords(page.records, base.key),
     nextCursor: page.nextCursor || null,
-    limit: base.readLimit,
+    limit: BUSABASE_RECORD_PAGE_SIZE,
   };
 };
 
-export const readAllPages = async (client, base, maxPages = 100) => {
+export const readAllPages = async (client, base) => {
   const records = [];
   const seenCursors = new Set();
   let cursor;
+  let pageCount = 0;
 
-  for (let pageCount = 1; pageCount <= maxPages; pageCount += 1) {
+  while (true) {
+    pageCount += 1;
     const page = await readPage(client, base, cursor);
     records.push(...page.records);
     if (!page.nextCursor) {
-      return { records, nextCursor: null, limit: base.readLimit, pageCount };
+      return { records, nextCursor: null, limit: BUSABASE_RECORD_PAGE_SIZE, pageCount };
     }
     if (seenCursors.has(page.nextCursor)) {
       throw new Error(`PAGINATION_LOOP: ${base.key}`);
@@ -66,8 +69,6 @@ export const readAllPages = async (client, base, maxPages = 100) => {
     seenCursors.add(page.nextCursor);
     cursor = page.nextCursor;
   }
-
-  throw new Error(`PAGINATION_LIMIT: ${base.key}`);
 };
 
 let runtimeClient;

@@ -25,7 +25,6 @@ export const appConfig = {
       description: "Selection rules, thesis, invalidation, and benchmark for each strategy",
       nodeId: "nodms6x55zik8prn1g",
       baseId: "bsems6x55ziqucmuwb",
-      readLimit: 20,
       fields: [
         { slug: "name", name: "策略名称", type: "text", required: true },
         { slug: "key", name: "策略标识", type: "text", required: true },
@@ -47,7 +46,6 @@ export const appConfig = {
       description: "One virtual capital account per strategy",
       nodeId: "nodms6x560pw3mhtdk",
       baseId: "bsems6x560pxd42tx6",
-      readLimit: 20,
       fields: [
         { slug: "name", name: "账户名称", type: "text", required: true },
         { slug: "strategy-key", name: "策略标识", type: "text", required: true },
@@ -67,7 +65,6 @@ export const appConfig = {
       description: "Virtual positions used to validate strategy behavior",
       nodeId: "nodms6x5619db2pux3",
       baseId: "bsems6x5619srj0ffu",
-      readLimit: 100,
       fields: [
         { slug: "name", name: "证券名称", type: "text", required: true },
         { slug: "strategy-key", name: "策略标识", type: "text", required: true },
@@ -88,7 +85,6 @@ export const appConfig = {
       description: "Dated backtest results and methodology by strategy",
       nodeId: "nodmsfua9rz99mk2pt",
       baseId: "bsemsfua9rzgkknt11",
-      readLimit: 100,
       fields: [
         { slug: "name", name: "报告名称", type: "text", required: true },
         { slug: "strategy-key", name: "策略标识", type: "text", required: true },
@@ -116,7 +112,6 @@ export const appConfig = {
       description: "Dated research evidence, account snapshots, and manual maturity decisions",
       nodeId: "",
       baseId: "",
-      readLimit: 100,
       fields: [
         { slug: "name", name: "记录名称", type: "text", required: true },
         { slug: "strategy-key", name: "策略标识", type: "text", required: true },

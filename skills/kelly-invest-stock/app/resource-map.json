@@ -30,7 +30,6 @@
       "nodeId": "nodms6x55zik8prn1g",
       "baseId": "bsems6x55ziqucmuwb",
       "schemaVersion": 4,
-      "readLimit": 20,
       "mutationPath": "records.changeRequest(status)"
     },
     {
@@ -40,8 +39,7 @@
       "purpose": "Virtual capital accounts by strategy",
       "nodeId": "nodms6x560pw3mhtdk",
       "baseId": "bsems6x560pxd42tx6",
-      "schemaVersion": 4,
-      "readLimit": 20
+      "schemaVersion": 4
     },
     {
       "key": "ledger-positions",
@@ -50,8 +48,7 @@
       "purpose": "Virtual positions for strategy validation",
       "nodeId": "nodms6x5619db2pux3",
       "baseId": "bsems6x5619srj0ffu",
-      "schemaVersion": 4,
-      "readLimit": 100
+      "schemaVersion": 4
     },
     {
       "key": "strategy-backtests",
@@ -60,8 +57,7 @@
       "purpose": "Dated strategy backtest reports, windows, methods, and risk metrics",
       "nodeId": "nodmsfua9rz99mk2pt",
       "baseId": "bsemsfua9rzgkknt11",
-      "schemaVersion": 4,
-      "readLimit": 100
+      "schemaVersion": 4
     },
     {
       "key": "strategy-reviews",
@@ -71,7 +67,6 @@
       "nodeId": "",
       "baseId": "",
       "schemaVersion": 4,
-      "readLimit": 200,
       "mutationPath": "bases.createChangeRequest"
     }
   ],

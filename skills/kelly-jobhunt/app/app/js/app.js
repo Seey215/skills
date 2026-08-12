@@ -328,6 +328,7 @@ const renderHelp =
     </dl></section>
     <section class="help-tab-panel ${helpTab === "connection" ? "active" : ""}"><h2>连接状态</h2><dl class="settings-list">
       <div><dt>数据提供方</dt><dd>${currentState.provider.name === "demo" ? "固定演示数据（不写入）" : "Busabase SDK"}</dd></div>
+      <div><dt>Space</dt><dd>${authStatus?.space ? `${escapeHtml(authStatus.space.name || "Space")} · <code>${escapeHtml(authStatus.space.id)}</code>` : currentState.provider.name === "demo" ? "演示模式" : "由 Busabase 当前环境提供"}</dd></div>
       <div><dt>写入方式</dt><dd>${currentState.provider.pendingReview ? "AirApp 内提交待审 ChangeRequest" : "本地预览直接合并"}</dd></div>
       <div><dt>资源版本</dt><dd>Schema v${appConfig.schemaVersion}</dd></div>
       <div><dt>运行边界</dt><dd>本地与 AirApp 使用同一份 Hono 应用源码。</dd></div>
@@ -368,7 +369,10 @@ const renderSetup = (error) => {
   const body = canProvision
     ? `<p>将在当前 Space 的应用 Folder 下创建 ${escapeHtml(resources)} 三个 Base。</p><p class="detail-note">结构通过一个 Busabase ChangeRequest 幂等提交；旧版资源不会被删除或继续读取。</p>`
     : `<p>${escapeHtml(reason)}</p><p class="detail-note">应用不会要求你手工创建 Node/Base 或复制 ID，也不会切换到本地数据。</p>`;
-  root.innerHTML = `<div class="setup-shell"><section class="setup-modal" role="dialog" aria-labelledby="setupTitle"><div class="setup-head"><div class="brand-icon" aria-hidden="true">KJ</div><div><p class="eyebrow">WORKSPACE SETUP</p><h1 id="setupTitle">${title}</h1></div></div><div class="setup-body"><p><strong>${escapeHtml(authStatus?.baseUrl || "Busabase")}</strong> 鉴权已就绪。</p>${body}<div class="setup-notice" data-setup-status hidden></div></div>${canProvision ? `<div class="setup-next">初始化完成后，回到对话框运行 ${commandChip("/kelly-jobhunt profile", "把你的简历交给它")} 开始。</div>` : ""}<div class="setup-footer setup-footer-split">${canProvision ? '<button class="connect-button" type="button" data-provision>初始化工作区</button>' : retryOnly ? '<button class="connect-button" type="button" data-retry-setup>重新检查</button>' : ""}<a class="text-link" href="?demo=1#/to-send">进入演示数据</a></div></section></div>`;
+  const selectedSpace = authStatus?.space
+    ? `${authStatus.space.name || "Space"} · ${authStatus.space.id}`
+    : "当前 Space";
+  root.innerHTML = `<div class="setup-shell"><section class="setup-modal" role="dialog" aria-labelledby="setupTitle"><div class="setup-head"><div class="brand-icon" aria-hidden="true">KJ</div><div><p class="eyebrow">WORKSPACE SETUP</p><h1 id="setupTitle">${title}</h1></div></div><div class="setup-body"><p><strong>${escapeHtml(authStatus?.baseUrl || "Busabase")}</strong> 鉴权已就绪。</p><p class="setup-context">Space：${escapeHtml(selectedSpace)}</p>${body}<div class="setup-notice" data-setup-status hidden></div></div>${canProvision ? `<div class="setup-next">初始化完成后，回到对话框运行 ${commandChip("/kelly-jobhunt profile", "把你的简历交给它")} 开始。</div>` : ""}<div class="setup-footer setup-footer-split">${canProvision ? '<button class="connect-button" type="button" data-provision>初始化工作区</button>' : retryOnly ? '<button class="connect-button" type="button" data-retry-setup>重新检查</button>' : ""}<a class="text-link" href="?demo=1#/to-send">进入演示数据</a></div></section></div>`;
   root.querySelector("[data-retry-setup]")?.addEventListener("click", load);
   root.querySelector("[data-provision]")?.addEventListener("click", async (event) => {
     const button = event.currentTarget;
@@ -382,6 +386,39 @@ const renderSetup = (error) => {
       await load();
     } catch (provisionError) {
       renderSetup(provisionError);
+    }
+  });
+};
+
+const renderSpaceSetup = (status = {}) => {
+  const options = (status.spaces || [])
+    .map(
+      (space) =>
+        `<option value="${escapeHtml(space.id)}">${escapeHtml(space.name || "未命名 Space")} · ${escapeHtml(space.id)}</option>`,
+    )
+    .join("");
+  const unavailable = !options;
+  root.innerHTML = `<div class="setup-shell"><section class="setup-modal setup-connect" role="dialog" aria-labelledby="setupTitle"><div class="setup-head"><div class="brand-icon" aria-hidden="true">KJ</div><div><p class="eyebrow">KELLY 求职直投</p><h1 id="setupTitle">选择 Busabase Space</h1></div></div><form id="spaceSelectionForm" class="setup-body space-form" data-space-form><p>已登录 <strong>${escapeHtml(status.baseUrl || "Busabase")}</strong>。请选择求职档案和投递队列所在的 Space。</p>${unavailable ? `<div class="setup-error" role="alert">${escapeHtml(status.spaceError || "当前账号没有可访问的 Space。")}</div>` : `<label class="space-select"><span>Space</span><select name="space_id" required>${options}</select></label>`}<div class="setup-error" data-space-error hidden></div><p class="setup-security">确认前不会检查、创建或修复任何应用资源。</p></form><div class="setup-footer setup-footer-split"><a class="text-link" href="?demo=1#/to-send">进入演示数据</a><button class="connect-button" type="submit" form="spaceSelectionForm" data-space-submit ${unavailable ? "disabled" : ""}>使用这个 Space</button></div></section></div>`;
+  const form = root.querySelector("[data-space-form]");
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = root.querySelector("[data-space-submit]");
+    const error = form.querySelector("[data-space-error]");
+    button.disabled = true;
+    error.hidden = true;
+    try {
+      const response = await fetch("/auth/space", {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(new FormData(form)),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "无法选择 Space。");
+      await load();
+    } catch (spaceError) {
+      error.textContent = spaceError instanceof Error ? spaceError.message : String(spaceError);
+      error.hidden = false;
+      button.disabled = false;
     }
   });
 };
@@ -610,6 +647,10 @@ const load = async ({ keepRoute = false } = {}) => {
       );
       if (!authStatus.connected) {
         renderConnectSetup(authStatus);
+        return;
+      }
+      if (authStatus.requiresSpace) {
+        renderSpaceSetup(authStatus);
         return;
       }
     }

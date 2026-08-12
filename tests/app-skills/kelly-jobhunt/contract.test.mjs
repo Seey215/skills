@@ -106,6 +106,21 @@ test("does not persist secrets or domain state in browser storage", async () => 
   assert.match(source, /createBusabaseClient/);
 });
 
+test("local OAuth selects and validates a Space before proxying SDK requests", async () => {
+  const server = await readFile(join(appRoot, "server.js"), "utf8");
+  const app = await readFile(join(browserRoot, "js", "app.js"), "utf8");
+  assert.match(server, /new URL\("\/api\/v1\/auth"/);
+  assert.match(server, /requiresSpace/);
+  assert.match(server, /spaceError/);
+  assert.match(server, /app\.post\("\/auth\/space"/);
+  assert.match(server, /HttpOnly; SameSite=Lax/);
+  assert.match(server, /cookieValue\(context, SPACE_COOKIE\)/);
+  assert.doesNotMatch(server, /cookieValue\(context, SPACE_COOKIE\) \|\| context\.req\.header\("x-busabase-space"\)/);
+  assert.match(app, /选择 Busabase Space/);
+  assert.match(app, /authStatus\.requiresSpace/);
+  assert.match(app, /fetch\("\/auth\/space"/);
+});
+
 test("no mail transport can ever run in browser code", async () => {
   // The Vault key names legitimately appear in the profile screen, which shows
   // whether credentials are configured. A transport or a value does not.

@@ -197,6 +197,10 @@ Goal: the user's own mailbox sends the letters they approved.
   of contact addresses, and a desk that stops at one page silently hides them.
 - Writes auto-merge only on a standalone loopback preview. A deployed AirApp
   submits each write as a ChangeRequest for review.
+- A standalone OAuth connection verifies accessible Spaces before reading app
+  resources. One Space is selected automatically; multiple Spaces require an
+  explicit in-app choice that is validated and attached to every proxied SDK
+  request.
 - Keep deterministic Demo data explicit and non-persistent. Demo may mirror the
   same three-resource shape but must never become the backend, send mail, read
   the Vault, or claim a successful Busabase connection.

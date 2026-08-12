@@ -782,6 +782,9 @@ code {
 }
 .setup-modal {
   width: min(580px, 100%);
+  max-height: min(700px, calc(100dvh - 48px));
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   background: #fff;
   border: 1px solid #d3d9de;
   border-radius: 7px;
@@ -805,9 +808,14 @@ code {
   color: #46535d;
   font-size: 12px;
   line-height: 1.7;
+  overflow: auto;
 }
 .setup-body p {
   margin: 0;
+}
+.setup-context {
+  color: #68757f;
+  overflow-wrap: anywhere;
 }
 .setup-footer {
   padding: 15px 24px;
@@ -922,6 +930,28 @@ code {
   border: 1px solid var(--line-strong);
   border-radius: 5px;
   font-size: 11px;
+}
+.space-form {
+  min-width: 0;
+}
+.space-select {
+  display: grid;
+  gap: 6px;
+  color: #68757f;
+  font-size: 10px;
+  font-weight: 700;
+}
+.space-select select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 11px;
+  color: #2f3d46;
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  font: inherit;
+  font-weight: 500;
 }
 .sidebar-scrim {
   display: none;
@@ -1144,7 +1174,15 @@ code {
     padding-right: 16px;
   }
   .setup-shell {
-    padding: 12px;
+    padding: 0;
+    place-items: stretch;
+  }
+  .setup-modal {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
   }
   .setup-head,
   .setup-body,

@@ -57,6 +57,16 @@ def read_json(url: str):
         return json.load(response)
 
 
+def read_browser_json(page, path: str):
+    return page.evaluate(
+        """async (path) => {
+          const response = await fetch(path, { headers: { accept: 'application/json' } });
+          return response.json();
+        }""",
+        path,
+    )
+
+
 def complete_cloud_login(page, app_url: str, config: dict) -> None:
     page.goto(f"{app_url}/")
     page.wait_for_load_state("networkidle")
@@ -128,12 +138,22 @@ def run_cloud_oauth(config: dict) -> None:
                 connected = False
                 try:
                     complete_cloud_login(page, app_url, config)
-                    status = read_json(f"{app_url}/auth/status")
-                    assert status == {
-                        "connected": True,
-                        "baseUrl": config["base_url"],
-                        "source": "airapp-oauth-local",
-                    }, status
+                    status = read_browser_json(page, "/auth/status")
+                    assert status.get("connected") is True, status
+                    assert status.get("baseUrl") == config["base_url"], status
+                    assert status.get("source") == "airapp-oauth-local", status
+                    if status.get("requiresSpace"):
+                        select = page.locator('select[name="space_id"]')
+                        select.wait_for(state="visible")
+                        if config["space_id"]:
+                            select.select_option(config["space_id"])
+                        page.get_by_role("button", name="使用这个 Space").click()
+                        page.get_by_role("heading", name=re.compile("初始化|待发送")).wait_for(timeout=20_000)
+                        status = read_browser_json(page, "/auth/status")
+                    assert status.get("requiresSpace") is False, status
+                    assert status.get("space", {}).get("id"), status
+                    if config["space_id"]:
+                        assert status["space"]["id"] == config["space_id"], status
                     connected = True
                     assert_browser_has_no_token(page)
 
@@ -154,7 +174,7 @@ def run_cloud_oauth(config: dict) -> None:
                             }"""
                         )
                         assert result["ok"] and result["body"].get("ok") is True, result
-                        status = read_json(f"{app_url}/auth/status")
+                        status = read_browser_json(page, "/auth/status")
                         assert status.get("connected") is False, status
                     context.close()
                     browser.close()

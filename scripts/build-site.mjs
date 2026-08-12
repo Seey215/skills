@@ -13,7 +13,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DOCS = path.join(ROOT, "docs");
 const PAGES_DIR = path.join(DOCS, "s");
 const REPO_URL = "https://github.com/mr-kelly/skills";
-const RAW_REPO_URL = "https://raw.githubusercontent.com/mr-kelly/skills/main";
+// skills/**/assets/screenshots/** is Git LFS-tracked (see .gitattributes); raw.githubusercontent.com
+// serves the LFS pointer text instead of the image, so screenshots must go through the LFS media host.
+const RAW_REPO_URL = "https://media.githubusercontent.com/media/mr-kelly/skills/main";
 const INSTALL_COMMAND = "npx skills add mr-kelly/skills";
 const CLAUDE_INSTALL_COMMAND = "/plugin marketplace add mr-kelly/skills\n/plugin install mr-kelly-skills";
 const SITE_URL = "https://mr-kelly.github.io/skills/";

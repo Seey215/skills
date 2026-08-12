@@ -5,7 +5,14 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { GROUPS, INDUSTRY_LABELS, LEGACY_ALIASES, RISK_LABELS, readSkillMeta } from "./lib/skill-taxonomy.mjs";
+import {
+  GROUPS,
+  INDUSTRY_LABELS,
+  LEGACY_ALIASES,
+  RISK_LABELS,
+  listSkillDirs,
+  readSkillMeta,
+} from "./lib/skill-taxonomy.mjs";
 import { MANIFEST, expectedTags } from "./sync-marketplace.mjs";
 import { README_TARGETS, expectedBlock } from "./sync-readme-skills.mjs";
 
@@ -731,9 +738,7 @@ async function main() {
   const shotsEn = parseShotSections(readmeEn, "docs/");
   const shotsZh = parseShotSections(readmeZh, "");
 
-  const dirs = (await fs.readdir(path.join(ROOT, "skills"), { withFileTypes: true }))
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name);
+  const dirs = await listSkillDirs(ROOT);
 
   // Legacy alias dirs are hardlinks to their replacement's SKILL.md — they get a redirect
   // page, not a card, otherwise the same skill shows up several times on the index.

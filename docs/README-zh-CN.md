@@ -208,6 +208,7 @@
 | `kelly-digital-human` | 数字人方案台和多模态 demo：在低成本 2D 写实数字人服务与高自由度 UE/Unity 3D 定制数字人之间做选择，并用本地 Studio 展示语音/文本输入、唇形视频流、服务路由延迟和上线 QA。 | 规划 AI 主持人、客服数字人、产品讲解员、直播助理或数字人 demo；对比硅基智能、腾讯智影、即构/ZEGO 式实时服务；或设计 3D UE/Unity 数字人管线时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-digital-human.html?lang=zh) |
 | `kelly-drama` | 短剧生产工作台：剧集概览、角色库、关系图、分集表、shot sheet，并协调角色参考图和 AI/人工任务。 | 从策划到分镜管理短剧系列，写分集、建角色、管理 storyboard、review AI 生成图时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-drama.html?lang=zh) |
 | `kelly-mv` | 纯视觉 MV 工作台：上传 MP3、写 MV concept、建立角色和参考卡、生成/上传镜头图和视频，并围绕音乐做 storyboard。 | 做没有旁白/字幕的纯视觉 MV，用歌曲驱动镜头和画面规划时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-mv.html?lang=zh) |
+| `kelly-portrait-retouch` | 自然人像美颜：本地 CLI 自动找脸、轻度磨皮提亮、清理照片元数据、生成前后对比，并在 Busabase 审阅台确认候选图。 | 需要美颜、修人像、头像精修、证件外的自然磨皮，或批量审阅多个版本，同时保留身份特征和原图时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-portrait-retouch.html?lang=zh) |
 | `kelly-ppt-factory` | 项目制 PPTX 工厂：把 brief、源材料和风格样张变成可审核的页面卡，批量生成风格一致的 PowerPoint，并跟踪渲染 QA 和导出记录。 | 制作融资 PPT、销售 PPT、培训材料、报告、方案书、课件，或批量生成客户可交付 PPTX 时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-ppt-factory.html?lang=zh) |
 
 ### 教育与教学

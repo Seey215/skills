@@ -95,10 +95,18 @@ export async function readSkillMeta(root, dir) {
 /** Every non-alias skill directory, in directory order. */
 export async function listSkillDirs(root) {
   const entries = await fs.readdir(path.join(root, "skills"), { withFileTypes: true });
-  return entries
-    .filter((d) => d.isDirectory() && !LEGACY_ALIASES.has(d.name))
-    .map((d) => d.name)
-    .sort();
+  const candidates = entries.filter((d) => d.isDirectory() && !LEGACY_ALIASES.has(d.name)).map((d) => d.name);
+  const skills = await Promise.all(
+    candidates.map(async (name) => {
+      try {
+        await fs.access(path.join(root, "skills", name, "SKILL.md"));
+        return name;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return skills.filter((name) => name !== null).sort();
 }
 
 /**

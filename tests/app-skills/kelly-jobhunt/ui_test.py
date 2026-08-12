@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -94,6 +96,7 @@ def test_demo_ui(browser, base_url: str) -> None:
     assert detail.locator("[data-approve]").is_disabled()
     assert detail.locator("[data-lead]").is_disabled()
     assert page.locator(".detail-note.warn").is_visible()
+    assert detail.locator('.command-chip[data-copy-command="/kelly-jobhunt research"]').is_visible()
 
     # An already-approved company is read-only, not editable.
     nav(page, "sent").click()
@@ -103,15 +106,23 @@ def test_demo_ui(browser, base_url: str) -> None:
     assert detail.locator("[data-subject]").count() == 0
     assert detail.locator("[data-approve]").count() == 0
     assert detail.locator(".status-pill", has_text="排队中").is_visible()
+    # Approved is not sent: the row says what actually sends it.
+    assert detail.locator('.command-chip[data-copy-command="node scripts/send_emails.mjs"]').is_visible()
 
     nav(page, "profile").click()
     page_title(page, "我的资料").wait_for()
     assert page.locator('[data-profile="targetRole"]').input_value() == "B 端产品经理"
     assert page.locator(".status-pill", has_text="已就绪").is_visible()
+    # Every screen names the command that maintains it.
+    assert page.locator('.command-chip[data-copy-command="/kelly-jobhunt profile"]').is_visible()
 
     page.locator("[data-open-help]").first.click()
     dialog = page.get_by_role("dialog")
     dialog.wait_for(state="visible")
+    # Help opens on the command list: the desk's whole job is telling you what to
+    # run next, so that is what a confused operator should land on.
+    assert dialog.get_by_role("heading", name="回到对话框能做什么").is_visible()
+    assert dialog.locator(".command-list .command-chip").count() == 5
     dialog.get_by_role("button", name="资源", exact=True).click()
     page.get_by_role("heading", name="Busabase 资源").wait_for(state="visible")
     page.keyboard.press("Escape")
@@ -136,6 +147,10 @@ def test_demo_ui(browser, base_url: str) -> None:
         page.goto(f"{base_url}/?demo=1#/to-send")
         page.wait_for_load_state("networkidle")
         assert_no_horizontal_overflow(page)
+
+        # The sidebar is a drawer here, so the next command is repeated in the
+        # shell itself — otherwise a phone operator never sees it.
+        assert page.locator(".mobile-next-step .command-chip").is_visible()
 
         page.locator("[data-mobile-sidebar]").click()
         assert page.locator("body.sidebar-open").count() == 1
@@ -191,11 +206,14 @@ def records_of(busabase_url: str, base_id: str) -> list[dict]:
 
 
 def run_script(args: list[str], busabase_url: str) -> subprocess.CompletedProcess:
+    # Resolve node from the caller's PATH: a bare "node" on a hand-written PATH
+    # can land on a much older system build than the one the repo runs on.
+    node = shutil.which("node") or "node"
     return subprocess.run(
-        ["node", *args],
+        [node, *args],
         cwd=SKILL_ROOT,
         env={
-            "PATH": "/usr/bin:/bin:/usr/local/bin",
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
             "HOME": str(Path.home()),
             "BUSABASE_BASE_URL": busabase_url,
             "BUSABASE_API_KEY": "local",
@@ -252,6 +270,9 @@ FINDINGS = {
 
 
 def test_busabase_round_trip(browser) -> None:
+    for stale in (SKILL_ROOT / "resume").glob("*"):
+        if stale.name != ".gitkeep":
+            stale.unlink()
     busabase_port = free_port()
     app_port = free_port()
     busabase_url = f"http://127.0.0.1:{busabase_port}"
@@ -321,6 +342,7 @@ def test_busabase_round_trip(browser) -> None:
                         ("targetRole", "B 端产品经理"),
                         ("locations", "杭州"),
                         ("highlights", "五年 B 端产品经验。"),
+                        ("jobBoards", "BOSS 直聘、公司官网招聘页"),
                         ("resumeFile", "chenmo.pdf"),
                         ("fromEmail", "chenmo@example.com"),
                     ):
@@ -332,6 +354,7 @@ def test_busabase_round_trip(browser) -> None:
                     assert len(profile_rows) == 1, profile_rows
                     assert profile_rows[0]["target-role"] == "B 端产品经理", profile_rows
                     assert profile_rows[0]["from-email"] == "chenmo@example.com", profile_rows
+                    assert profile_rows[0]["job-boards"] == "BOSS 直聘、公司官网招聘页", profile_rows
 
                     # Editing again must update the same row (records.changeRequest).
                     page.reload()
@@ -406,11 +429,76 @@ def test_busabase_round_trip(browser) -> None:
                 assert "chenmo@example.com" in send_dry.stdout, send_dry.stdout
                 assert "chenmo.pdf" in send_dry.stdout, send_dry.stdout
 
-                # Applying without the attachment stops cleanly instead of crashing.
+                # `/kelly-jobhunt profile` ends by typesetting a PDF resume.
+                resume_dry = run_script(["scripts/build_resume.mjs"], busabase_url)
+                assert resume_dry.returncode == 0, resume_dry.stderr
+                assert "HTML 预览已写入" in resume_dry.stdout, resume_dry.stdout
+                assert not list((SKILL_ROOT / "resume").glob("*.pdf")), "a dry run must not write a PDF"
+
+                resume_apply = run_script(["scripts/build_resume.mjs", "--apply"], busabase_url)
+                assert resume_apply.returncode == 0, resume_apply.stderr
+                pdfs = list((SKILL_ROOT / "resume").glob("*.pdf"))
+                assert len(pdfs) == 1, [p.name for p in pdfs]
+                assert pdfs[0].read_bytes().startswith(b"%PDF-"), "output must be a real PDF"
+                assert pdfs[0].stat().st_size > 5_000, pdfs[0].stat().st_size
+                # The generated file name is recorded back on the profile.
+                assert records_of(busabase_url, profile_base)[0]["resume-file"] == pdfs[0].name
+
+                # No SMTP in the Vault yet: the dry run says so instead of pretending.
+                assert "SMTP 未配置" in send_dry.stdout, send_dry.stdout
+
+                # Applying without credentials stops cleanly instead of crashing.
                 send_apply = run_script(["scripts/send_emails.mjs", "--apply"], busabase_url)
                 assert send_apply.returncode == 1, send_apply.stdout
-                assert "找不到简历附件" in send_apply.stderr, send_apply.stderr
+                assert "SMTP" in send_apply.stderr, send_apply.stderr
                 assert "Error:" not in send_apply.stderr, send_apply.stderr
+
+                # Configure SMTP through the trusted script; values land in the
+                # Vault and only the reference names land on the profile.
+                smtp_dry = run_script(
+                    ["scripts/configure_smtp.mjs", "--host", "smtp.example.com", "--user", "chenmo@example.com", "--pass", "app-password"],
+                    busabase_url,
+                )
+                assert smtp_dry.returncode == 0, smtp_dry.stderr
+                assert "app-password" not in smtp_dry.stdout, "the password must never be printed"
+                assert read_json(f"{busabase_url}/api/v1/vault")["items"] == [], "a dry run must not write"
+
+                smtp_apply = run_script(
+                    ["scripts/configure_smtp.mjs", "--host", "smtp.example.com", "--user", "chenmo@example.com", "--pass", "app-password", "--apply"],
+                    busabase_url,
+                )
+                assert smtp_apply.returncode == 0, smtp_apply.stderr
+                vault_items = {item["key"]: item for item in read_json(f"{busabase_url}/api/v1/vault")["items"]}
+                assert sorted(vault_items) == ["SMTP_HOST", "SMTP_PASS", "SMTP_PORT", "SMTP_USER"], vault_items
+                assert vault_items["SMTP_PASS"]["kind"] == "secret", vault_items["SMTP_PASS"]
+                assert vault_items["SMTP_PASS"]["access"]["reveal"] is False, vault_items["SMTP_PASS"]
+
+                profile_rows = records_of(busabase_url, profile_base)
+                assert profile_rows[0]["smtp-vault-key"] == "SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS", profile_rows
+                assert "app-password" not in json.dumps(profile_rows, ensure_ascii=False), "no Base may hold the value"
+
+                # A second write must merge, not replace the whole Vault.
+                again = run_script(
+                    ["scripts/configure_smtp.mjs", "--host", "smtp2.example.com", "--user", "chenmo@example.com", "--pass", "app-password", "--apply"],
+                    busabase_url,
+                )
+                assert again.returncode == 0, again.stderr
+                vault_items = {item["key"]: item["value"] for item in read_json(f"{busabase_url}/api/v1/vault")["items"]}
+                assert len(vault_items) == 4, vault_items
+                assert vault_items["SMTP_HOST"] == "smtp2.example.com", vault_items
+
+                # With credentials and attachment in place it really tries to send.
+                # The fixture host does not resolve, which is the interesting
+                # case: the failure is reported per company, and the row must
+                # stay queued so another address can be tried.
+                send_apply = run_script(["scripts/send_emails.mjs", "--apply"], busabase_url)
+                assert send_apply.returncode == 1, send_apply.stdout
+                assert "✗ 蓝汐科技" in send_apply.stderr, send_apply.stderr
+                assert "已发出 0 封，失败 1 封" in send_apply.stdout, send_apply.stdout
+                assert "Error:" not in send_apply.stderr, send_apply.stderr
+                still_queued = [row for row in records_of(busabase_url, companies_base) if row["key"] == "lanxi-tech"][0]
+                assert still_queued["status"] == "queued", still_queued
+                assert not still_queued.get("sent-at"), still_queued
 
             change_requests = read_json(f"{busabase_url}/api/v1/change-requests")["changeRequests"]
             structure_requests = [

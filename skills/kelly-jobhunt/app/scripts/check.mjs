@@ -11,12 +11,13 @@ const required = [
   "app/js/app.js",
   "app/js/config.js",
   "app/js/jobhunt-model.js",
-  "app/js/resource-provisioning.js",
   "app/js/busabase-client.js",
   "app/js/runtime.js",
   "app/js/providers/busabase-provider.js",
   "app/js/providers/demo-provider.js",
   "app/vendor/busabase-sdk.js",
+  "app/vendor/busabase-airapp-gate.js",
+  "app/vendor/busabase-airapp.js",
 ];
 
 for (const relative of required) {
@@ -27,7 +28,10 @@ const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "
 const resourceMap = JSON.parse(await readFile(path.join(root, "resource-map.json"), "utf8"));
 const serverSource = await readFile(path.join(root, "server.js"), "utf8");
 const configSource = await readFile(path.join(root, "app/js/config.js"), "utf8");
-const provisioningSource = await readFile(path.join(root, "app/js/resource-provisioning.js"), "utf8");
+// Provisioning is busabase-sdk/airapp now, vendored for the browser. The
+// assertion still matters: it proves the bundle in this app really is the
+// provisioning module and still goes through the approval-first procedures.
+const provisioningSource = await readFile(path.join(root, "app/vendor/busabase-airapp.js"), "utf8");
 const appSource = await readFile(path.join(root, "app/js/app.js"), "utf8");
 const providerSource = await readFile(path.join(root, "app/js/providers/busabase-provider.js"), "utf8");
 
@@ -76,7 +80,6 @@ const browserFiles = [
   "app/js/app.js",
   "app/js/config.js",
   "app/js/jobhunt-model.js",
-  "app/js/resource-provisioning.js",
   "app/js/busabase-client.js",
   "app/js/runtime.js",
   "app/js/providers/busabase-provider.js",

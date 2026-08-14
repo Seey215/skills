@@ -1,3 +1,7 @@
+import {
+  describeAirAppSetupError,
+  selectAirAppGateScreen,
+} from "../vendor/busabase-airapp-gate.js";
 import { appConfig } from "./config.js?v=0.3.0";
 import { getProvider } from "./providers/index.js?v=0.3.0";
 import { initRuntime, shouldUseLocalGateway } from "./runtime.js?v=0.3.0";
@@ -385,12 +389,11 @@ const renderApp = () => {
 };
 
 const renderSetup = (error) => {
-  const raw = String(error?.message || error || "SETUP_REQUIRED");
-  const [code] = raw.split(":", 1);
-  const reason = raw.replace(/^[A-Z_]+:\s*/, "");
+  // Which of the five setup states this is — and therefore which button the
+  // operator is owed — is busabase-sdk/airapp-gate's call, not ours. Only the
+  // copy below is this app's own.
+  const { code, detail: reason, canProvision, canRetry: retryOnly } = describeAirAppSetupError(error);
   const pending = code === "SETUP_PENDING";
-  const retryOnly = ["SETUP_PENDING", "SCHEMA_INCOMPLETE"].includes(code);
-  const canProvision = code === "SETUP_REQUIRED";
   const title = pending ? "等待工作区审批" : canProvision ? "初始化 Busabase 工作区" : "工作区暂未就绪";
   const resources = appConfig.bases.map((base) => base.name).join("、");
   const body = canProvision
@@ -726,11 +729,12 @@ const load = async ({ keepRoute = false } = {}) => {
       authStatus = await fetch("/auth/status", { headers: { accept: "application/json" } }).then((response) =>
         response.json(),
       );
-      if (!authStatus.connected) {
+      const screen = selectAirAppGateScreen(authStatus);
+      if (screen === "connect") {
         renderConnectSetup(authStatus);
         return;
       }
-      if (authStatus.requiresSpace) {
+      if (screen === "space") {
         renderSpaceSetup(authStatus);
         return;
       }

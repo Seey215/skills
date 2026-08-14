@@ -1,6 +1,9 @@
 import { createRuntimeClient, isStandaloneLocalRuntime } from "../busabase-client.js";
 import { appConfig } from "../config.js?v=0.3.0";
-import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.3.0";
+import {
+  inspectProvisionedResources,
+  provisionDeclaredResources,
+} from "../../vendor/busabase-airapp.js";
 
 const allowedReads = new Set(appConfig.permissions.readProcedures);
 const allowedSetup = new Set(appConfig.permissions.setupProcedures);

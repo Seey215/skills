@@ -1,11 +1,13 @@
 // @ts-nocheck
-// node_modules/busabase-sdk/dist/chunk-5NYQX65A.js
+
+// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/chunk-5NYQX65A.js
 function normalizeBaseUrl(raw) {
   return raw.replace(/\/+$/, "").replace(/\/api\/v1$/, "");
 }
 
-// node_modules/busabase-sdk/dist/chunk-J2DZKX7A.js
+// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/chunk-WSHJMHUS.js
 var BUSABASE_AIRAPP_CLIENT_ID = "busabase-airapp";
+var AIRAPP_OAUTH_SCOPE = "api";
 var BusabaseOAuthError = class extends Error {
   code;
   status;
@@ -48,6 +50,45 @@ var digestBase64Url = async (value) => {
   for (const byte of new Uint8Array(digest)) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 };
+async function registerBusabaseAirAppOAuthClient(input, fetchImpl = fetch) {
+  const baseUrl = oauthBaseUrl(input.baseUrl);
+  const redirectUri = new URL(input.redirectUri).toString();
+  const response = await fetchImpl(new URL("/api/oauth/register", baseUrl), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      client_name: input.appId,
+      client_kind: "airapp",
+      scope: AIRAPP_OAUTH_SCOPE,
+      redirect_uris: [redirectUri],
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
+      token_endpoint_auth_method: "none"
+    })
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new BusabaseOAuthError(
+      typeof body?.error === "string" ? body.error : "client_registration_failed",
+      typeof body?.error_description === "string" ? body.error_description : `Busabase OAuth client registration failed (${response.status})`,
+      response.status
+    );
+  }
+  if (typeof body?.client_id !== "string" || !Array.isArray(body.redirect_uris) || body.redirect_uris.length !== 1 || body.redirect_uris[0] !== redirectUri) {
+    throw new BusabaseOAuthError(
+      "invalid_client_registration",
+      "Busabase returned an invalid OAuth client registration"
+    );
+  }
+  const grantedScopes = typeof body.scope === "string" ? body.scope.split(/\s+/).filter(Boolean) : null;
+  if (!grantedScopes?.includes(AIRAPP_OAUTH_SCOPE)) {
+    throw new BusabaseOAuthError(
+      "unsupported_airapp_registration",
+      `This Busabase server did not grant the "${AIRAPP_OAUTH_SCOPE}" scope to a dynamically registered AirApp. Upgrade Busabase, or run the AirApp on a loopback address to use the shared AirApp client.`
+    );
+  }
+  return { clientId: body.client_id, redirectUri };
+}
 async function createBusabaseOAuthRequest(input) {
   const baseUrl = oauthBaseUrl(input.baseUrl);
   const redirectUri = new URL(input.redirectUri).toString();
@@ -60,7 +101,7 @@ async function createBusabaseOAuthRequest(input) {
     response_type: "code",
     client_id: clientId,
     resource,
-    scope: "api",
+    scope: AIRAPP_OAUTH_SCOPE,
     code_challenge: await digestBase64Url(codeVerifier),
     code_challenge_method: "S256",
     redirect_uri: redirectUri,
@@ -174,9 +215,9 @@ async function revokeBusabaseOAuthToken(input, fetchImpl = fetch) {
   }
 }
 
-// node_modules/busabase-sdk/dist/chunk-B2AWPFDI.js
+// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/chunk-C23JVY2Y.js
 import { randomUUID } from "crypto";
-import { readFileSync, mkdirSync, chmodSync, writeFileSync, renameSync, rmSync } from "fs";
+import { readFileSync, rmSync, mkdirSync, chmodSync, writeFileSync, renameSync } from "fs";
 import { homedir } from "os";
 import { join, dirname } from "path";
 var STORE_VERSION = 1;
@@ -195,12 +236,29 @@ var assertAppId = (appId) => {
 var storeRoot = (options = {}) => options.rootDir ?? join(homedir(), ".busabase");
 var busabaseAirAppCredentialsDir = (options = {}) => join(storeRoot(options), "airapps");
 var busabaseAirAppCredentialPath = (appId, options = {}) => join(busabaseAirAppCredentialsDir(options), `${assertAppId(appId)}.json`);
+var busabaseAirAppDynamicClientsPath = (appId, options = {}) => join(busabaseAirAppCredentialsDir(options), `${assertAppId(appId)}.clients.json`);
 var normalizeOrigin = (raw) => {
   const url = new URL(normalizeBaseUrl(raw));
   if (url.username || url.password || url.search || url.hash) {
     throw new BusabaseOAuthError("invalid_base_url", "Busabase base URL must be an origin");
   }
   return url.origin;
+};
+var writeOwnerOnlyJson = (path, value) => {
+  const directory = dirname(path);
+  mkdirSync(directory, { recursive: true, mode: 448 });
+  try {
+    chmodSync(directory, 448);
+  } catch {
+  }
+  const temporaryPath = `${path}.${randomUUID()}.tmp`;
+  writeFileSync(temporaryPath, `${JSON.stringify(value, null, 2)}
+`, { mode: 384 });
+  try {
+    chmodSync(temporaryPath, 384);
+  } catch {
+  }
+  renameSync(temporaryPath, path);
 };
 var parseCredential = (raw, expectedAppId) => {
   let value;
@@ -246,22 +304,49 @@ function storeBusabaseAirAppOAuthCredential(input, options = {}) {
     tokenType: input.tokenSet.tokenType,
     ...input.selectedSpace ? { selectedSpace: input.selectedSpace } : {}
   };
-  const path = busabaseAirAppCredentialPath(input.appId, options);
-  const directory = dirname(path);
-  mkdirSync(directory, { recursive: true, mode: 448 });
-  try {
-    chmodSync(directory, 448);
-  } catch {
-  }
-  const temporaryPath = `${path}.${randomUUID()}.tmp`;
-  writeFileSync(temporaryPath, `${JSON.stringify(credential, null, 2)}
-`, { mode: 384 });
-  try {
-    chmodSync(temporaryPath, 384);
-  } catch {
-  }
-  renameSync(temporaryPath, path);
+  writeOwnerOnlyJson(busabaseAirAppCredentialPath(input.appId, options), credential);
   return credential;
+}
+var dynamicClientKey = (baseUrl, redirectUri) => `${normalizeOrigin(baseUrl)}|${new URL(redirectUri).toString()}`;
+var loadDynamicClientRegistry = (appId, options) => {
+  const empty = {
+    version: STORE_VERSION,
+    appId: assertAppId(appId),
+    clients: {}
+  };
+  let raw;
+  try {
+    raw = readFileSync(busabaseAirAppDynamicClientsPath(appId, options), "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return empty;
+    throw error;
+  }
+  try {
+    const value = JSON.parse(raw);
+    if (value.version !== STORE_VERSION || value.appId !== appId || typeof value.clients !== "object" || value.clients === null) {
+      return empty;
+    }
+    const clients = Object.fromEntries(
+      Object.entries(value.clients).filter(([, clientId]) => typeof clientId === "string")
+    );
+    return { ...empty, clients };
+  } catch {
+    return empty;
+  }
+};
+function loadBusabaseAirAppDynamicClientId(input, options = {}) {
+  const registry = loadDynamicClientRegistry(input.appId, options);
+  return registry.clients[dynamicClientKey(input.baseUrl, input.redirectUri)] ?? null;
+}
+function storeBusabaseAirAppDynamicClientId(input, options = {}) {
+  const registry = loadDynamicClientRegistry(input.appId, options);
+  const key = dynamicClientKey(input.baseUrl, input.redirectUri);
+  delete registry.clients[key];
+  const entries = [...Object.entries(registry.clients), [key, input.clientId]];
+  writeOwnerOnlyJson(busabaseAirAppDynamicClientsPath(input.appId, options), {
+    ...registry,
+    clients: Object.fromEntries(entries.slice(-32))
+  });
 }
 async function getBusabaseAirAppAccessToken(appId, options = {}, fetchImpl = fetch) {
   const credential = loadBusabaseAirAppOAuthCredential(appId, options);
@@ -315,15 +400,7 @@ function storeBusabaseAirAppSelectedSpace(appId, selectedSpace, options = {}) {
     ...credential,
     ...selectedSpace ? { selectedSpace } : { selectedSpace: void 0 }
   };
-  const path = busabaseAirAppCredentialPath(appId, options);
-  const temporaryPath = `${path}.${randomUUID()}.tmp`;
-  writeFileSync(temporaryPath, `${JSON.stringify(next, null, 2)}
-`, { mode: 384 });
-  try {
-    chmodSync(temporaryPath, 384);
-  } catch {
-  }
-  renameSync(temporaryPath, path);
+  writeOwnerOnlyJson(busabaseAirAppCredentialPath(appId, options), next);
   return next;
 }
 function clearBusabaseAirAppOAuthCredential(appId, options = {}) {
@@ -346,7 +423,7 @@ async function revokeBusabaseAirAppOAuthCredential(appId, options = {}, fetchImp
   }
 }
 
-// node_modules/busabase-sdk/dist/airapp-node.js
+// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/airapp-node.js
 var DEFAULT_CLOUD_BASE_URL = "https://busabase.com";
 var DEFAULT_PENDING_TTL_MS = 5 * 6e4;
 var DEFAULT_TIMEOUT_MS = 8e3;
@@ -366,6 +443,7 @@ var jsonError = (status, reason, message, data) => Response.json(
   },
   { status }
 );
+var LOOPBACK_HOSTNAMES = ["localhost", "127.0.0.1", "::1", "[::1]"];
 var normalizeOrigin2 = (raw, fallback = DEFAULT_CLOUD_BASE_URL) => {
   const withoutApi = String(raw || fallback).trim().replace(/\/+$/, "").replace(/\/api\/v1$/, "");
   let url;
@@ -377,7 +455,7 @@ var normalizeOrigin2 = (raw, fallback = DEFAULT_CLOUD_BASE_URL) => {
   if (url.username || url.password || url.search || url.hash || url.pathname !== "/" && url.pathname !== "") {
     throw new BusabaseOAuthError("invalid_base_url", "Busabase base URL must be an origin");
   }
-  const loopback = ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+  const loopback = LOOPBACK_HOSTNAMES.includes(url.hostname);
   if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
     throw new BusabaseOAuthError(
       "invalid_base_url",
@@ -387,6 +465,10 @@ var normalizeOrigin2 = (raw, fallback = DEFAULT_CLOUD_BASE_URL) => {
   return url.origin;
 };
 var requestOrigin = (request) => new URL(request.url).origin;
+var isLoopbackOrigin = (origin) => {
+  const url = new URL(origin);
+  return url.protocol === "http:" && LOOPBACK_HOSTNAMES.includes(url.hostname);
+};
 var assertSameOrigin = (request) => {
   const origin = request.headers.get("origin");
   if (origin && origin !== requestOrigin(request)) {
@@ -405,8 +487,10 @@ var safeSpaces = (spaces) => spaces.map(({ id, name, slug, plan }) => ({ id, nam
 var BusabaseAirAppLocalGateway = class {
   #options;
   #pendingOAuth = /* @__PURE__ */ new Map();
+  #usesDefaultClient;
   #environmentSelectedSpace;
   constructor(options) {
+    this.#usesDefaultClient = !options.clientId;
     this.#options = {
       ...options,
       appId: options.appId,
@@ -555,22 +639,46 @@ var BusabaseAirAppLocalGateway = class {
     }
   }
   statusResponse = async () => Response.json(await this.status());
+  /** Resolve the client for this callback, then probe the authorize endpoint with it. */
+  async #startAuthorization(target, needsDynamicClient, forceRegistration) {
+    let clientId = this.#options.clientId;
+    let reusedStoredClient = false;
+    if (needsDynamicClient) {
+      const stored = forceRegistration ? null : loadBusabaseAirAppDynamicClientId(target, this.#options.credentialStore);
+      if (stored) {
+        clientId = stored;
+        reusedStoredClient = true;
+      } else {
+        const registration = await registerBusabaseAirAppOAuthClient(target, this.#fetch());
+        clientId = registration.clientId;
+        storeBusabaseAirAppDynamicClientId({ ...target, clientId }, this.#options.credentialStore);
+      }
+    }
+    const oauthRequest = await createBusabaseOAuthRequest({
+      baseUrl: target.baseUrl,
+      redirectUri: target.redirectUri,
+      clientId
+    });
+    const probe = await this.#fetch()(oauthRequest.authorizeUrl, {
+      headers: { accept: "text/html" },
+      redirect: "manual",
+      signal: AbortSignal.timeout(this.#options.requestTimeoutMs)
+    });
+    return { oauthRequest, probe, reusedStoredClient };
+  }
   start = async (request) => {
     try {
       assertSameOrigin(request);
       const body = await readInput(request);
       const baseUrl = normalizeOrigin2(String(body.base_url || ""), this.cloudBaseUrl);
       const redirectUri = new URL("/auth/callback", requestOrigin(request)).toString();
-      const oauthRequest = await createBusabaseOAuthRequest({
-        baseUrl,
-        redirectUri,
-        clientId: this.#options.clientId
-      });
-      const probe = await this.#fetch()(oauthRequest.authorizeUrl, {
-        headers: { accept: "text/html" },
-        redirect: "manual",
-        signal: AbortSignal.timeout(this.#options.requestTimeoutMs)
-      });
+      const needsDynamicClient = this.#usesDefaultClient && !isLoopbackOrigin(requestOrigin(request));
+      const target = { appId: this.#options.appId, baseUrl, redirectUri };
+      let attempt = await this.#startAuthorization(target, needsDynamicClient, false);
+      if (attempt.probe.status >= 400 && attempt.reusedStoredClient) {
+        attempt = await this.#startAuthorization(target, needsDynamicClient, true);
+      }
+      const { oauthRequest, probe } = attempt;
       if (probe.status >= 400) {
         throw new BusabaseOAuthError(
           "oauth_unavailable",
@@ -607,7 +715,7 @@ var BusabaseAirAppLocalGateway = class {
         {
           appId: this.#options.appId,
           baseUrl: pending.baseUrl,
-          clientId: this.#options.clientId,
+          clientId: pending.clientId,
           tokenSet
         },
         this.#options.credentialStore

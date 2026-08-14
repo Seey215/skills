@@ -5,7 +5,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// node_modules/.pnpm/busabase-sdk@0.15.0/node_modules/busabase-sdk/dist/chunk-5NYQX65A.js
+// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/chunk-5NYQX65A.js
 function normalizeBaseUrl(raw) {
   return raw.replace(/\/+$/, "").replace(/\/api\/v1$/, "");
 }
@@ -16430,7 +16430,7 @@ function date4(params) {
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// node_modules/.pnpm/busabase-sdk@0.15.0/node_modules/busabase-sdk/dist/index.js
+// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/index.js
 var toUnifiedFilesGrepInput = (input) => ({
   pattern: input.pattern,
   flags: input.flags,
@@ -16454,6 +16454,107 @@ var toFilesOnlyGrepResult = (result) => ({
   truncated: result.truncated
 });
 var grepAssets = async (client, input) => toFilesOnlyGrepResult(await client.grep(toUnifiedFilesGrepInput(input)));
+var AgentTransportSchema = external_exports.enum(["local-subprocess", "remote-websocket"]);
+var AgentCatalogEntryVOSchema = external_exports.object({
+  /** Stable slug. For registry agents this is the official ACP registry id. */
+  slug: external_exports.string(),
+  name: external_exports.string(),
+  description: external_exports.string().default(""),
+  transport: AgentTransportSchema,
+  /** Present for registry-sourced entries; absent for built-ins like Buda. */
+  version: external_exports.string().nullable().default(null),
+  /** Whether this entry can be launched right now (binary present / URL configured). */
+  available: external_exports.boolean().default(false),
+  /** Human-readable reason when `available` is false — never a bare "failed". */
+  unavailableReason: external_exports.string().nullable().default(null)
+});
+var AgentSessionStatusSchema = external_exports.enum([
+  "connecting",
+  "idle",
+  "busy",
+  "waiting_permission",
+  "ended",
+  "failed"
+]);
+var AgentPermissionOptionVOSchema = external_exports.object({
+  optionId: external_exports.string(),
+  name: external_exports.string(),
+  kind: external_exports.string().optional()
+});
+var AgentPermissionRequestVOSchema = external_exports.object({
+  requestId: external_exports.string(),
+  title: external_exports.string().optional(),
+  description: external_exports.string().optional(),
+  options: external_exports.array(AgentPermissionOptionVOSchema)
+});
+var AgentSessionVOSchema = external_exports.object({
+  /** Busabase's own id for the session; not the agent's ACP sessionId. */
+  id: external_exports.string(),
+  slug: external_exports.string(),
+  agentName: external_exports.string(),
+  transport: AgentTransportSchema,
+  status: AgentSessionStatusSchema,
+  /** ISO 8601 — never a Date at the transport boundary. */
+  createdAt: external_exports.string(),
+  lastActivityAt: external_exports.string(),
+  /** Set when status is "failed"; surfaced verbatim to the user. */
+  error: external_exports.string().nullable().default(null)
+});
+var AgentSessionEventVOSchema = external_exports.object({
+  sessionId: external_exports.string(),
+  /** Monotonic per session, so a reconnecting client can tell what it missed. */
+  seq: external_exports.number().int(),
+  kind: external_exports.enum(["acpUpdate", "status", "error", "permissionRequest", "permissionResolved"]),
+  acpUpdate: external_exports.unknown().optional(),
+  status: AgentSessionStatusSchema.optional(),
+  message: external_exports.string().optional(),
+  permissionRequest: AgentPermissionRequestVOSchema.optional(),
+  /** Present on a `permissionResolved` event — which request, and what the user picked. */
+  permissionRequestId: external_exports.string().optional(),
+  permissionOptionId: external_exports.string().optional(),
+  at: external_exports.string()
+});
+var CreateAgentSessionInputSchema = external_exports.object({
+  /** Must name a catalog entry. Deliberately NOT a command line — see below. */
+  slug: external_exports.string().min(1)
+});
+var PromptAgentSessionInputSchema = external_exports.object({
+  sessionId: external_exports.string().min(1),
+  text: external_exports.string().min(1)
+});
+var AgentSessionIdInputSchema = external_exports.object({ sessionId: external_exports.string().min(1) });
+var RespondToAgentPermissionInputSchema = external_exports.object({
+  sessionId: external_exports.string().min(1),
+  requestId: external_exports.string().min(1),
+  optionId: external_exports.string().min(1)
+});
+var agentsContract = {
+  /** Connectable backends. Availability is resolved per request, not cached in the client. */
+  catalog: oc.output(AgentCatalogEntryVOSchema.array()),
+  sessions: {
+    list: oc.output(AgentSessionVOSchema.array()),
+    create: oc.input(CreateAgentSessionInputSchema).output(AgentSessionVOSchema),
+    /**
+     * Send a message. Returns as soon as the turn is accepted — the reply arrives
+     * on `subscribe`, not here, so a slow agent never blocks the caller.
+     */
+    prompt: oc.input(PromptAgentSessionInputSchema).output(external_exports.object({ accepted: external_exports.boolean(), sessionId: external_exports.string() })),
+    cancel: oc.input(AgentSessionIdInputSchema).output(external_exports.object({ ok: external_exports.boolean() })),
+    close: oc.input(AgentSessionIdInputSchema).output(external_exports.object({ ok: external_exports.boolean() })),
+    /**
+     * Answer a pending `session/request_permission`. There is no auto-approve
+     * and no "remember this choice" in this pass (deliberate, see spec) — every
+     * request blocks the turn until a human calls this.
+     */
+    respondToPermission: oc.input(RespondToAgentPermissionInputSchema).output(external_exports.object({ ok: external_exports.boolean() })),
+    /**
+     * Live event stream for one session. Replays buffered events from `afterSeq`
+     * first so a client that reconnects mid-turn does not lose the tokens it
+     * missed, then follows live.
+     */
+    subscribe: oc.input(external_exports.object({ sessionId: external_exports.string().min(1), afterSeq: external_exports.number().int().default(-1) })).output(eventIterator(AgentSessionEventVOSchema))
+  }
+};
 var i18n = {
   locales: ["en", "zh-CN", "zh-TW", "ja", "ko", "de", "fr", "es", "pt"]
 };
@@ -19642,6 +19743,7 @@ var busabaseContractRoutes = {
   forms: formContract,
   assets: assetsContract,
   vault: vaultContract,
+  agents: agentsContract,
   webhooks: webhookContract,
   dump: dumpContract,
   install: installContract,

@@ -1,6 +1,9 @@
 import { createRuntimeClient } from "../busabase-client.js";
 import { appConfig } from "../config.js?v=0.1.0";
-import { inspectProvisionedResources, provisionDeclaredResources } from "../resource-provisioning.js?v=0.1.0";
+import {
+  inspectProvisionedResources,
+  provisionDeclaredResources,
+} from "../../vendor/busabase-airapp.js";
 import { REMINDER_ACTIONS, buildConfigSummary, buildSnapshot, statusForAction } from "../standup-model.js?v=0.1.0";
 
 const allowedReads = new Set(appConfig.permissions.readProcedures);

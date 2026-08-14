@@ -265,14 +265,31 @@ Use reviewed ChangeRequests to create or repair canonical resources. After each
 step, re-read through `busabase-sdk`; never mark setup complete based only on a
 submitted mutation.
 
-When the technical blueprint opts into lazy provisioning, keep the full approved
-Folder/Base/field declaration in code and offer one initialization action after
-authentication. The Busabase repository submits that declaration in one
-idempotent structure ChangeRequest, re-reads the dedicated app Folder, validates
-its ownership/schema markers, and uses the returned ids in memory. Never ask the
-operator to create Nodes/Bases or paste ids. Never reuse an unmarked same-slug
-resource; report a collision without modifying it. If auto-merge is unavailable,
-surface the single pending CR id and resume automatically after approval.
+When the technical blueprint opts into lazy provisioning, use `busabase-sdk/airapp`'s
+`inspectProvisionedResources()` / `provisionDeclaredResources()` for this — do not
+hand-roll the ownership/legacy-claim/idempotent-submission logic per app. It was
+duplicated across every App-in-Skill (280-354 lines each, byte-identical within two
+variants) before the SDK carried it. Keep the full approved Folder/Base/field
+declaration in code (`AirAppResourceConfig`) and offer one initialization action
+after authentication, wired to `provisionDeclaredResources()`. The SDK submits that
+declaration in one idempotent structure ChangeRequest, re-reads the dedicated app
+Folder, validates its ownership/schema markers, and returns the resolved ids. Never
+ask the operator to create Nodes/Bases or paste ids. Never reuse an unmarked
+same-slug resource; the SDK reports a collision (`SETUP_CONFLICT`) without
+modifying it. If auto-merge is unavailable, it surfaces the single pending CR id
+as `SETUP_PENDING`; resume automatically after approval. An app that ships its own
+AirApp node inside the Folder declares it via `config.airApp` so it is recognized
+and stamped rather than read as an unattributable stranger. An app that needs to
+add fields to a Base it already owns gets that for free too — a live Base whose
+fields are a prefix of the declaration is treated as an older schema and the
+missing suffix is appended, one approval-gated `bases.fieldChangeRequest` per
+field.
+
+Pair this with `busabase-sdk/airapp-gate`'s `createAirAppConnectGate()` for the
+connect/Space-selection/workspace-initialization screens — either its default
+renderer (themed via `--bb-gate-*` custom properties) or, for a branded UI, its
+headless `selectAirAppGateScreen()` / `describeAirAppSetupError()` underneath a
+custom renderer. Both paths share the same state machine; only the pixels differ.
 
 Help & Settings may show safe values such as server host, Space id/name, app Folder,
 Base/Doc/Drive ids and slugs, schema versions, sync version, and Vault readiness.

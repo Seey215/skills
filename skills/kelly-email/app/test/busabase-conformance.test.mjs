@@ -67,6 +67,7 @@ test(
           items: [
             {
               id: "conformance-item-1",
+              uid: "conformance-item-1",
               subject: "Conformance test subject",
               from: "Someone <someone@example.test>",
               category: "other",

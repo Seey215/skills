@@ -266,8 +266,8 @@ def test_busabase_provisioning(browser) -> None:
                     errors = attach_error_capture(page)
                     page.goto(f"{app_url}/#/strategies")
                     page.wait_for_load_state("networkidle")
-                    assert page.get_by_role("heading", name="初始化 Busabase 工作区").is_visible()
-                    page.get_by_role("button", name="初始化工作区").click()
+                    assert page.get_by_role("heading", name="Initialize the Busabase workspace").is_visible()
+                    page.locator("[data-provision]").click()
                     try:
                         page.get_by_role("heading", name="策略", exact=True).wait_for(timeout=10_000)
                     except Exception:
@@ -365,7 +365,7 @@ def test_busabase_provisioning(browser) -> None:
                     page.goto(f"{app_url}/#/strategies")
                     page.wait_for_load_state("networkidle")
                     assert page.get_by_role("heading", name="策略", exact=True).is_visible()
-                    assert page.get_by_role("button", name="初始化工作区").count() == 0
+                    assert page.locator("[data-provision]").count() == 0
                     assert page.locator("[data-select-id]", has_text="测试策略").is_visible()
                     page.locator("[data-select-id]", has_text="测试策略").click()
                     page.locator('.stage-control button[data-stage-value="L2"]').click()

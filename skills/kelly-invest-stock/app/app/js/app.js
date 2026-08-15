@@ -1,7 +1,6 @@
-import { describeAirAppSetupError, selectAirAppGateScreen } from "../vendor/busabase-airapp-gate.js";
 import { appConfig } from "./config.js?v=0.9.2";
+import { closeConnectGate, passConnectGate, renderSetupRequired } from "./connect-gate.js?v=0.9.2";
 import { getProvider } from "./providers/index.js?v=0.9.2";
-import { shouldUseLocalGateway } from "./runtime.js";
 import { createRegressionSnapshot, createStrategyDesk } from "./strategy-model.js?v=0.9.2";
 
 const root = document.querySelector("#app");
@@ -35,7 +34,6 @@ let contentRoute = { view: "strategies", id: null, tab: null };
 let lastContentHash = "#/strategies";
 let sidebarCollapsed = false;
 let helpTab = "guide";
-let authStatus = null;
 let pendingApproval = null;
 
 const escapeHtml = (value) =>
@@ -487,91 +485,6 @@ const patchStrategyListRoute = () => {
   return true;
 };
 
-const renderSetup = (error) => {
-  // Which of the five setup states this is — and therefore which button the
-  // operator is owed — is busabase-sdk/airapp-gate's call, not ours. Only the
-  // copy below is this app's own.
-  const { code, detail: reason, canProvision, canRetry: retryOnly } = describeAirAppSetupError(error);
-  const pending = code === "SETUP_PENDING";
-  const title = pending ? "等待工作区审批" : canProvision ? "初始化 Busabase 工作区" : "工作区暂未就绪";
-  const resources = appConfig.bases.map((base) => base.name).join("、");
-  const body = canProvision
-    ? `<p>将在当前 Space 的应用 Folder 下创建 ${escapeHtml(resources)}，共 ${appConfig.bases.length} 个 Base。</p><p class="detail-note">结构通过一个 Busabase ChangeRequest 幂等提交；旧版资源不会被删除或继续读取。</p>`
-    : `<p>${escapeHtml(reason)}</p><p class="detail-note">应用不会要求你手工创建 Node/Base 或复制 ID，也不会切换到本地数据。</p>`;
-  const selectedSpace = authStatus?.space ? `${authStatus.space.name} (${authStatus.space.id})` : "当前 AirApp Space";
-  root.innerHTML = `<div class="setup-shell"><section class="setup-modal" role="dialog" aria-labelledby="setupTitle"><div class="setup-head"><div class="brand-icon" aria-hidden="true">KS</div><div><p class="eyebrow">WORKSPACE SETUP</p><h1 id="setupTitle">${title}</h1></div></div><div class="setup-body"><p><strong>${escapeHtml(authStatus?.baseUrl || "Busabase")}</strong> 鉴权已就绪。</p><p>目标 Space：<strong>${escapeHtml(selectedSpace)}</strong></p>${body}<div class="setup-notice" data-setup-status hidden></div></div><div class="setup-footer setup-footer-split">${canProvision ? '<button class="connect-button" type="button" data-provision>初始化工作区</button>' : retryOnly ? '<button class="connect-button" type="button" data-retry-setup>重新检查</button>' : ""}<a class="text-link" href="?demo=1#/strategies">进入只读 Demo</a></div></section></div>`;
-  root.querySelector("[data-retry-setup]")?.addEventListener("click", load);
-  root.querySelector("[data-provision]")?.addEventListener("click", async (event) => {
-    const button = event.currentTarget;
-    const status = root.querySelector("[data-setup-status]");
-    button.disabled = true;
-    status.hidden = false;
-    status.textContent = "正在提交工作区结构...";
-    try {
-      const provider = await getProvider();
-      await provider.provisionResources();
-      await load();
-    } catch (provisionError) {
-      renderSetup(provisionError);
-    }
-  });
-};
-
-const renderSpaceSetup = (status) => {
-  const options = (status.spaces || [])
-    .map(
-      (space) => `<option value="${escapeHtml(space.id)}">${escapeHtml(space.name)} · ${escapeHtml(space.id)}</option>`,
-    )
-    .join("");
-  root.innerHTML = `<div class="setup-shell"><section class="setup-modal setup-connect" aria-labelledby="setupTitle"><div class="setup-head"><div class="brand-icon" aria-hidden="true">KS</div><div><p class="eyebrow">KELLY INVEST STOCK</p><h1 id="setupTitle">选择 Busabase Space</h1></div></div><form class="setup-body connection-form" data-space-form><p><strong>${escapeHtml(status.baseUrl)}</strong> 鉴权已完成。选择数据与工作区要初始化到哪里。</p><label class="space-select"><span>Space</span><select name="space_id" required>${options}</select></label><div class="setup-error" data-space-error hidden></div><button class="connect-button" type="submit">使用此 Space</button></form><div class="setup-footer setup-footer-split"><span class="setup-security">确认后才会检查或初始化应用资源</span><a class="text-link" href="?demo=1#/strategies">进入只读 Demo</a></div></section></div>`;
-  root.querySelector("[data-space-form]")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const button = form.querySelector("button[type=submit]");
-    const error = form.querySelector("[data-space-error]");
-    button.disabled = true;
-    error.hidden = true;
-    const response = await fetch("/auth/space", {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(new FormData(form)),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      error.textContent = result.error || "无法选择 Space。";
-      error.hidden = false;
-      button.disabled = false;
-      return;
-    }
-    authStatus = { ...status, requiresSpace: false, space: result.space };
-    await load();
-  });
-};
-
-const renderConnectSetup = (status = {}) => {
-  const oauthError = new URLSearchParams(window.location.search).get("oauth_error");
-  root.innerHTML = `<div class="setup-shell"><section class="setup-modal setup-connect" aria-labelledby="setupTitle"><div class="setup-head"><div class="brand-icon" aria-hidden="true">KS</div><div><p class="eyebrow">KELLY INVEST STOCK</p><h1 id="setupTitle">连接 Busabase</h1></div></div><form class="setup-body connection-form" method="post" action="/auth/start">${oauthError ? `<div class="setup-error" role="alert">${escapeHtml(oauthError)}</div>` : ""}${status.readiness === "needs_auth" ? '<div class="setup-notice">登录已过期，请重新连接。</div>' : ""}<fieldset class="connection-options"><legend>服务器</legend><label class="connection-option active"><input type="radio" name="server_mode" value="cloud" checked /><span><strong>Busabase Cloud</strong><small>busabase.com</small></span></label><label class="connection-option"><input type="radio" name="server_mode" value="custom" /><span><strong>自定义服务器</strong><small>自托管或企业地址</small></span></label></fieldset><label class="custom-url" hidden><span>Busabase URL</span><input type="url" name="custom_base_url" inputmode="url" placeholder="https://busabase.example.com" autocomplete="url" /></label><input type="hidden" name="base_url" value="${escapeHtml(status.cloudBaseUrl || "https://busabase.com")}" /><button class="connect-button" type="submit">连接 Busabase</button></form><div class="setup-footer setup-footer-split"><span class="setup-security">OAuth 凭证仅保存在本机 ~/.busabase/airapps</span><a class="text-link" href="?demo=1#/strategies">进入只读 Demo</a></div></section></div>`;
-  const form = root.querySelector(".connection-form");
-  const hiddenBaseUrl = form?.querySelector('input[name="base_url"]');
-  const customWrap = form?.querySelector(".custom-url");
-  const customInput = form?.querySelector('input[name="custom_base_url"]');
-  form?.querySelectorAll('input[name="server_mode"]').forEach((radio) => {
-    radio.addEventListener("change", () => {
-      const custom = radio.checked && radio.value === "custom";
-      form
-        .querySelectorAll(".connection-option")
-        .forEach((option) => option.classList.toggle("active", option.querySelector("input")?.checked));
-      customWrap.hidden = !custom;
-      customInput.required = custom;
-      hiddenBaseUrl.value = custom ? customInput.value : status.cloudBaseUrl || "https://busabase.com";
-      if (custom) customInput.focus();
-    });
-  });
-  customInput?.addEventListener("input", () => {
-    hiddenBaseUrl.value = customInput.value;
-  });
-};
-
 const bindEvents = (scope = root) => {
   scope.querySelectorAll("[data-view]").forEach((button) =>
     button.addEventListener("click", () => {
@@ -739,35 +652,20 @@ const applyRoute = () => {
 };
 
 const load = async () => {
+  const ready = await passConnectGate({ onReady: load });
+  if (!ready) return;
   root.innerHTML = '<div class="boot-state">正在读取策略实验台...</div>';
   try {
-    const demo = new URLSearchParams(window.location.search).get("demo") === "1";
-    // The local /auth/* gateway exists only in a standalone run. Which run this
-    // is comes from the host, never from the URL — see ./runtime.js.
-    const standaloneLocalRuntime = shouldUseLocalGateway();
-    if (!demo && standaloneLocalRuntime) {
-      authStatus = await fetch("/auth/status", { headers: { accept: "application/json" } }).then((response) =>
-        response.json(),
-      );
-      const screen = selectAirAppGateScreen(authStatus);
-      if (screen === "connect") {
-        renderConnectSetup(authStatus);
-        return;
-      }
-      if (screen === "space") {
-        renderSpaceSetup(authStatus);
-        return;
-      }
-    }
     activeProvider = await getProvider();
     currentState = await activeProvider.getState();
+    closeConnectGate();
     desk = createStrategyDesk(currentState.records);
     if (!window.location.hash) window.history.replaceState(null, "", "#/strategies");
     applyRoute();
   } catch (error) {
     if (String(error?.message || error).startsWith("SETUP_")) console.info("Busabase workspace setup is not complete");
     else console.error("Provider failed", error);
-    renderSetup(error);
+    renderSetupRequired(error, load);
   }
 };
 

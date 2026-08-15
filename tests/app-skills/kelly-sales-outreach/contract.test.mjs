@@ -17,6 +17,7 @@ const requiredFiles = [
   "app/index.html",
   "app/js/app.js",
   "app/js/config.js",
+  "app/js/connect-gate.js",
   "app/js/sales-outreach-model.js",
 ];
 
@@ -25,6 +26,7 @@ const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
 const browserSource = async () => {
   const files = [
     join(browserRoot, "js", "app.js"),
+    join(browserRoot, "js", "connect-gate.js"),
     join(browserRoot, "js", "busabase-client.js"),
     join(browserRoot, "js", "sales-outreach-model.js"),
     join(browserRoot, "js", "providers", "busabase-provider.js"),
@@ -109,15 +111,17 @@ test("does not persist secrets or domain state in browser storage", async () => 
 test("local OAuth selects and validates a Space before proxying SDK requests", async () => {
   const server = await readFile(join(appRoot, "server.js"), "utf8");
   const app = await readFile(join(browserRoot, "js", "app.js"), "utf8");
+  const connectGate = await readFile(join(browserRoot, "js", "connect-gate.js"), "utf8");
   assert.match(server, /createBusabaseAirAppLocalGateway/);
   assert.match(server, /gateway\.statusResponse/);
   assert.match(server, /gateway\.selectSpace/);
   assert.match(server, /gateway\.proxy/);
   assert.doesNotMatch(server, /context\.req\.header\("x-busabase-space"\)/);
-  assert.match(app, /选择 Busabase Space/);
-  assert.match(app, /selectAirAppGateScreen/);
-  assert.match(app, /screen === "space"/);
-  assert.match(app, /fetch\("\/auth\/space"/);
+  // The connect/space/initialize screens are busabase-sdk/airapp-gate's now;
+  // this app only wires shouldGate/onProvision and calls passConnectGate.
+  assert.match(connectGate, /createAirAppConnectGate/);
+  assert.match(app, /passConnectGate/);
+  assert.match(app, /renderSetupRequired/);
 });
 
 test("first-run product onboarding is versioned Busabase domain state", async () => {
@@ -133,7 +137,7 @@ test("first-run product onboarding is versioned Busabase domain state", async ()
 
 test("first-run onboarding renders fields from a shared helper", async () => {
   const app = await readFile(join(browserRoot, "js", "app.js"), "utf8");
-  const onboarding = app.slice(app.indexOf("const renderOnboarding"), app.indexOf("const renderSpaceSetup"));
+  const onboarding = app.slice(app.indexOf("const renderOnboarding"), app.indexOf("const writeNotice"));
   assert.match(app, /const renderTextField/);
   assert.match(onboarding, /renderTextField\("data-onboarding"/);
   assert.doesNotMatch(onboarding, /\bfield\(/);

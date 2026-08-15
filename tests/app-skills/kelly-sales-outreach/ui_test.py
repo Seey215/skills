@@ -272,8 +272,8 @@ def test_busabase_round_trip(browser) -> None:
                     assert resource_keys(read_json(f"{busabase_url}/api/v1/nodes?depth=2")) == []
 
                     page.goto(f"{app_url}/#/to-send")
-                    page.get_by_role("heading", name="初始化 Busabase 工作区").wait_for()
-                    page.get_by_role("button", name="初始化工作区").click()
+                    page.get_by_role("heading", name="Initialize the Busabase workspace").wait_for()
+                    page.locator("[data-provision]").click()
                     page.get_by_role("heading", name="先告诉我你卖什么").wait_for(timeout=30_000)
                     page.locator('[data-onboarding="sellerName"]').fill("Kelly")
                     page.locator('[data-onboarding="offerName"]').fill("AI 客服质检")

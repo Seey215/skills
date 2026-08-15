@@ -10,6 +10,7 @@ const required = [
   "app/styles.css",
   "app/js/app.js",
   "app/js/config.js",
+  "app/js/connect-gate.js",
   "app/js/strategy-model.js",
   "app/js/busabase-client.js",
   "app/js/providers/busabase-provider.js",
@@ -62,12 +63,14 @@ if (
 if (/创建并审批六个 Base|写入部署配置/.test(appSource)) {
   throw new Error("Setup UI must not delegate resource creation to the user");
 }
+const connectGateSource = await readFile(path.join(root, "app/js/connect-gate.js"), "utf8");
 if (
   !serverSource.includes('app.post("/auth/space"') ||
   !serverSource.includes("createBusabaseAirAppLocalGateway") ||
-  !appSource.includes('name="space_id"') ||
-  !appSource.includes("selectAirAppGateScreen") ||
-  !appSource.includes('screen === "space"') ||
+  // The connect/space/initialize screens are busabase-sdk/airapp-gate's now;
+  // this app only wires shouldGate/onProvision through connect-gate.js.
+  !connectGateSource.includes("createAirAppConnectGate") ||
+  !appSource.includes("passConnectGate") ||
   configSource.includes("orglnl02ONE36pXGXTs")
 ) {
   throw new Error("OAuth must select a runtime Space before resource initialization");
@@ -79,6 +82,7 @@ const browserFiles = [
   "app/index.html",
   "app/js/app.js",
   "app/js/config.js",
+  "app/js/connect-gate.js",
   "app/js/strategy-model.js",
   "app/js/busabase-client.js",
   "app/js/providers/busabase-provider.js",
@@ -104,7 +108,7 @@ const assertions = [
     // nesting, and preview-path tests all misfire in both directions: a hosted
     // AirApp is served from localhost on Desktop/OSS, and a standalone run is
     // routinely reached over a LAN IP or a signed dev tunnel.
-    ok: source.includes("shouldUseLocalGateway()") && source.includes("if (!demo && standaloneLocalRuntime)"),
+    ok: source.includes("shouldUseLocalGateway()") && source.includes("!isDemo() && shouldUseLocalGateway()"),
     message: "OAuth connection UI must be gated on the injected runtime, not the URL",
   },
   {

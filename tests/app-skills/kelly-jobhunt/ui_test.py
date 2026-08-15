@@ -321,12 +321,12 @@ def test_busabase_round_trip(browser) -> None:
 
                     page.goto(f"{app_url}/#/to-send")
                     page.wait_for_load_state("networkidle")
-                    assert page.get_by_role("heading", name="初始化 Busabase 工作区").is_visible()
+                    assert page.get_by_role("heading", name="Initialize the Busabase workspace").is_visible()
                     # A deployed AirApp uses its ambient session; the local OAuth
                     # gate must not appear when BUSABASE_BASE_URL is set.
-                    assert page.get_by_role("heading", name="连接 Busabase").count() == 0
+                    assert page.get_by_role("heading", name="Connect Busabase").count() == 0
 
-                    page.get_by_role("button", name="初始化工作区").click()
+                    page.locator("[data-provision]").click()
                     try:
                         page.locator("[data-provision]").wait_for(state="detached", timeout=30_000)
                         onboarding = page.get_by_role("dialog", name="先让 Agent 整理求职档案")
@@ -443,7 +443,7 @@ def test_busabase_round_trip(browser) -> None:
                     page.wait_for_load_state("networkidle")
 
                     # A fresh process discovers the existing resources with no setup action.
-                    assert page.get_by_role("button", name="初始化工作区").count() == 0
+                    assert page.locator("[data-provision]").count() == 0
                     assert rows(page).count() == 2
                     assert page.locator('[data-select-id] .lead-count', has_text="2 个邮箱").is_visible()
                     assert page.locator(".row-warn", has_text="未找到邮箱").is_visible()

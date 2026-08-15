@@ -1,9 +1,23 @@
 import { createBusabaseClient as createSdkClient, getRecordByField } from "busabase-sdk";
+import { inspectProvisionedResources, provisionDeclaredResources } from "busabase-sdk/airapp";
 import { appConfig } from "../../app/js/config.js";
 import { isAirAppRequest, runtimeHeaders, runtimeOrigin } from "../runtime-context.ts";
 
 type BaseKey = "reviews" | "contacts" | "settings";
 type Fields = Record<string, unknown>;
+
+// Folder + Bases are the shape every App-in-Skill declares, so their
+// discovery/ownership/repair logic lives in busabase-sdk/airapp now. Kelly
+// Email is the only app in this fleet that also provisions a Drive alongside
+// its Bases, which the shared declaration has no concept of -- so the Drive
+// stays hand-rolled here, layered on top of the SDK's Folder resolution.
+const resourceConfig = {
+  appId: appConfig.appId,
+  appName: appConfig.appName,
+  schemaVersion: appConfig.schemaVersion,
+  folder: appConfig.folder,
+  bases: appConfig.bases,
+};
 
 const ownership = (resourceKey: string) => ({
   appId: appConfig.appId,
@@ -46,96 +60,49 @@ export function createBusabaseClient() {
     return resource;
   };
 
-  async function locateFolder() {
-    if (appConfig.folder.nodeId) {
-      try {
-        const detail = await sdk.nodes.get({ nodeId: appConfig.folder.nodeId, type: "folder" });
-        if (!owns(detail.node, "app-root")) throw new Error("SETUP_CONFLICT: Kelly Email Folder ownership mismatch");
-        return detail;
-      } catch (error: any) {
-        if (error?.code !== "NOT_FOUND" && error?.status !== 404) throw error;
+  // busabase-sdk/airapp resolves Folder+Bases without mutating its config, so
+  // this app's own appConfig.folder/bases (read directly by base() above, and
+  // reused as the config's own cache of the discovered Folder id) are synced
+  // back explicitly -- the same contract the hand-rolled version kept.
+  function syncResolvedConfig(resources: {
+    folder: { nodeId: string } | null;
+    bases: { key: string; nodeId: string; baseId: string }[];
+  }) {
+    if (resources.folder?.nodeId) appConfig.folder.nodeId = resources.folder.nodeId;
+    for (const resolved of resources.bases) {
+      const declaration = appConfig.bases.find((candidate) => candidate.key === resolved.key);
+      if (declaration) {
+        declaration.nodeId = resolved.nodeId;
+        declaration.baseId = resolved.baseId;
       }
     }
-    const roots = await sdk.nodes.list({ parentId: null, depth: 2 });
-    const candidates = (roots || [])
-      .flatMap((node: any) => [node, ...(node.children || [])])
-      .filter((node: any) => node.type === "folder" && node.slug === appConfig.folder.slug);
-    if (candidates.length > 1) throw new Error("SETUP_CONFLICT: duplicate Kelly Email folders");
-    if (!candidates.length) return null;
-    if (!owns(candidates[0], "app-root")) throw new Error("SETUP_CONFLICT: Kelly Email Folder is owned by another app");
-    appConfig.folder.nodeId = candidates[0].id;
-    return sdk.nodes.get({ nodeId: candidates[0].id, type: "folder" });
   }
 
-  async function inspectResources() {
-    const folder = await locateFolder();
-    if (!folder) return { folder: null, bases: [], drive: null, missing: [...appConfig.bases] };
-    const children = (folder as any).children || [];
-    const resolvedBases = [];
-    const missing = [];
-    for (const declaration of appConfig.bases) {
-      let node = declaration.nodeId ? children.find((item: any) => item.id === declaration.nodeId) : null;
-      node ||= children.find((item: any) => item.slug === declaration.slug);
-      if (!node) {
-        missing.push(declaration);
-        continue;
-      }
-      if (node.type !== "base" || !node.baseId || !owns(node, declaration.key)) {
-        throw new Error(`SETUP_CONFLICT: ${declaration.slug} does not match its declaration`);
-      }
-      declaration.nodeId = node.id;
-      declaration.baseId = node.baseId;
-      resolvedBases.push(declaration);
-    }
+  async function locateDrive(folderNodeId: string) {
+    const detail = await sdk.nodes.get({ nodeId: folderNodeId, type: "folder" });
+    const children = (detail as any).children || [];
     let drive = appConfig.drive.nodeId ? children.find((item: any) => item.id === appConfig.drive.nodeId) : null;
     drive ||= children.find((item: any) => item.type === "drive" && item.slug === appConfig.drive.slug);
     if (drive && !owns(drive, "files")) throw new Error("SETUP_CONFLICT: Kelly Email Drive ownership mismatch");
     if (drive) appConfig.drive.nodeId = drive.id;
-    return { folder, bases: resolvedBases, drive, missing };
+    return drive;
+  }
+
+  async function inspectResources() {
+    const resources = await inspectProvisionedResources(sdk, resourceConfig);
+    syncResolvedConfig(resources);
+    const drive = resources.folder ? await locateDrive(resources.folder.nodeId) : null;
+    return { folder: resources.folder, bases: resources.bases, drive, missing: resources.missing };
   }
 
   async function provisionResources() {
-    let current = await inspectResources();
-    if (!current.folder || current.missing.length) {
-      const operations: any[] = [];
-      if (!current.folder) {
-        operations.push({
-          kind: "create",
-          ref: "app-root",
-          nodeType: "folder",
-          slug: appConfig.folder.slug,
-          name: appConfig.folder.name,
-          description: appConfig.folder.description,
-          metadata: ownership("app-root"),
-        });
-      }
-      for (const declaration of current.missing) {
-        operations.push({
-          kind: "create",
-          ...(current.folder ? { parentNodeId: current.folder.node.id } : { parentNodeRef: "app-root" }),
-          nodeType: "base",
-          slug: declaration.slug,
-          name: declaration.name,
-          description: declaration.description,
-          metadata: ownership(declaration.key),
-          fields: declaration.fields,
-        });
-      }
-      const request = await sdk.nodes.createChangeRequest({
-        message: "Initialize Kelly Email workspace",
-        submittedBy: appConfig.appId,
-        autoMerge: true,
-        operations,
-      });
-      if (request?.status && request.status !== "merged") {
-        throw new Error(`SETUP_PENDING: ${request.id}`);
-      }
-      current = await inspectResources();
-    }
-    if (!current.drive) {
+    const resources = await provisionDeclaredResources(sdk, resourceConfig);
+    syncResolvedConfig(resources);
+    let drive = await locateDrive(resources.folder!.nodeId);
+    if (!drive) {
       const created = await sdk.fileTrees.create({
         type: "drive",
-        parentNodeId: current.folder.node.id,
+        parentNodeId: resources.folder!.nodeId,
         slug: appConfig.drive.slug,
         name: appConfig.drive.name,
         description: appConfig.drive.description,
@@ -150,12 +117,12 @@ export function createBusabaseClient() {
       if (createdAny?.node?.id) {
         await sdk.nodes.updateMetadata({ nodeId: createdAny.node.id, metadata: ownership("files") });
       }
-      current = await inspectResources();
+      drive = await locateDrive(resources.folder!.nodeId);
     }
-    if (!current.folder || current.missing.length || !current.drive) {
+    if (!resources.folder || resources.missing.length || !drive) {
       throw new Error("SCHEMA_INCOMPLETE: Kelly Email resources were not materialized");
     }
-    return current;
+    return { folder: resources.folder, bases: resources.bases, drive, missing: resources.missing };
   }
 
   async function verifyConnection() {

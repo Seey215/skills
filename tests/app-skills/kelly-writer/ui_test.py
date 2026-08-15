@@ -163,6 +163,17 @@ def test_busabase_provisioning(browser) -> None:
                             f"App logs: {''.join(app_logs[-100:])}\n"
                             f"Busabase logs: {''.join(busabase_logs[-100:])}"
                         )
+                    # The provision button being detached only means the gate closed;
+                    # createAirAppConnectGate()'s onProvision handler calls onRetry() without
+                    # awaiting it, so the app's own background data load (already in flight)
+                    # can still be running. Give it a real chance to finish before abandoning
+                    # the page (reduces how often reload collides with it), then discard
+                    # whatever this pre-reload page logged regardless -- a collision aborts
+                    # the fetch as a real but harmless net::ERR_ABORTED (the reload's own
+                    # fresh load re-fetches everything from scratch), and only the reloaded
+                    # page's own errors are what this assertion cares about.
+                    page.wait_for_timeout(500)
+                    errors.clear()
                     page.reload()
                     page.wait_for_load_state("networkidle")
                     assert page.locator("[data-provision]").count() == 0

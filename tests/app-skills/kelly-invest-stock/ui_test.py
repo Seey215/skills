@@ -283,6 +283,13 @@ def test_busabase_provisioning(browser) -> None:
                         )
                     assert page.get_by_text("Busabase 当前数据", exact=True).is_visible()
                     assert page.locator("[data-select-id]").count() == 0
+                    # createAirAppConnectGate()'s onProvision handler calls onRetry()
+                    # without awaiting it, so the app's own async data load can still
+                    # be in flight. Give it a real chance to finish before reloading,
+                    # and discard whatever it logged either way, so a collision this
+                    # test doesn't care about isn't mistaken for a page regression.
+                    page.wait_for_timeout(500)
+                    errors.clear()
                     page.reload()
                     page.wait_for_load_state("networkidle")
                     assert page.get_by_role("heading", name="策略", exact=True).is_visible()

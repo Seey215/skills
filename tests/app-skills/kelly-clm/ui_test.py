@@ -198,6 +198,14 @@ def test_busabase_provisioning(browser) -> None:
                             f"Busabase logs: {''.join(busabase_logs[-100:])}"
                         )
 
+                    # The provision button being detached only means the gate closed;
+                    # createAirAppConnectGate()'s onProvision handler calls onRetry()
+                    # without awaiting it, so the app's own async data load can still
+                    # be in flight. Navigating before it settles aborts that fetch as
+                    # a spurious "Failed to fetch" console error this test would
+                    # otherwise catch.
+                    page.wait_for_load_state("networkidle")
+
                     # Direct create: the operator saves a new contract
                     # straight through the browser form -- no separate
                     # approval step.

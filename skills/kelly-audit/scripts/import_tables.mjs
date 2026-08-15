@@ -28,8 +28,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 const CANONICAL_COLUMNS = {
   orders: ["order_no", "customer", "order_date", "amount", "currency"],

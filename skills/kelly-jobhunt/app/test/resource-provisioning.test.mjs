@@ -121,11 +121,14 @@ test("still rejects an unrelated AirApp inside a legacy Folder", () => {
   // Assert the code and the offending slug, not the prose: the rule now lives in
   // busabase-sdk/airapp, whose messages are English. What must not change is that
   // an AirApp we did not declare still blocks the legacy claim by name.
-  assert.throws(() => resolveProvisionedFolder(folder, appConfig), (error) => {
-    assert.equal(error.code, "SETUP_CONFLICT");
-    assert.match(error.message, /unrelated-airapp/);
-    return true;
-  });
+  assert.throws(
+    () => resolveProvisionedFolder(folder, appConfig),
+    (/** @type {any} */ error) => {
+      assert.equal(error.code, "SETUP_CONFLICT");
+      assert.match(error.message, /unrelated-airapp/);
+      return true;
+    },
+  );
 });
 
 test("submits the declared structure once and reads materialized ids back", async () => {

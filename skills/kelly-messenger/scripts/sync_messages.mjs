@@ -18,9 +18,9 @@
 // BUSABASE_API_KEY, BUSABASE_SPACE_ID), never the AirApp's ambient session.
 // Writes are gated behind --apply (default dry run).
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
 import { API_CONNECTORS, SECRET_ENV_KEYS } from "../app/app/js/messenger-model.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 function help() {
   console.log(`Usage: node scripts/sync_messages.mjs [--apply]

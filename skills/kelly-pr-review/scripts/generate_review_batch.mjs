@@ -26,8 +26,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 const execFile = promisify(execFileCallback);
 const SKILL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

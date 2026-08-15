@@ -1,7 +1,4 @@
-import {
-  describeAirAppSetupError,
-  selectAirAppGateScreen,
-} from "../vendor/busabase-airapp-gate.js";
+import { describeAirAppSetupError, selectAirAppGateScreen } from "../vendor/busabase-airapp-gate.js";
 import { appConfig } from "./config.js?v=0.9.2";
 import { getProvider } from "./providers/index.js?v=0.9.2";
 import { shouldUseLocalGateway } from "./runtime.js";

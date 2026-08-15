@@ -16,9 +16,9 @@
 import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
 import { SEVERITIES, SOURCE_KINDS } from "../app/app/js/radar-model.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 function help() {
   console.log(`Usage: node scripts/ingest_signals.mjs <payload.json>

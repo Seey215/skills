@@ -27,8 +27,8 @@
 // BUSABASE_API_KEY, BUSABASE_SPACE_ID), never the AirApp's ambient session.
 import fs from "node:fs/promises";
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 const PLATFORMS = new Set(["amazon", "meta", "tiktok", "google"]);
 const PLATFORM_NAMES = { amazon: "Amazon Ads", meta: "Meta Ads", tiktok: "TikTok Ads", google: "Google Ads" };

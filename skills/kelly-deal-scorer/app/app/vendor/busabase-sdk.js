@@ -5,12 +5,12 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/chunk-5NYQX65A.js
+// node_modules/.pnpm/busabase-sdk@0.16.1/node_modules/busabase-sdk/dist/chunk-5NYQX65A.js
 function normalizeBaseUrl(raw) {
   return raw.replace(/\/+$/, "").replace(/\/api\/v1$/, "");
 }
 
-// node_modules/.pnpm/@orpc+shared@1.14.13/node_modules/@orpc/shared/dist/index.mjs
+// node_modules/.pnpm/@orpc+shared@1.15.0/node_modules/@orpc/shared/dist/index.mjs
 function resolveMaybeOptionalOptions(rest) {
   return rest[0] ?? {};
 }
@@ -19,7 +19,7 @@ function toArray(value2) {
 }
 var ORPC_NAME = "orpc";
 var ORPC_SHARED_PACKAGE_NAME = "@orpc/shared";
-var ORPC_SHARED_PACKAGE_VERSION = "1.14.13";
+var ORPC_SHARED_PACKAGE_VERSION = "1.15.0";
 var AbortError = class extends Error {
   constructor(...rest) {
     super(...rest);
@@ -308,9 +308,28 @@ function tryDecodeURIComponent(value2) {
   }
 }
 
-// node_modules/.pnpm/@orpc+client@1.14.13/node_modules/@orpc/client/dist/shared/client.DexhfmWd.mjs
+// node_modules/.pnpm/@orpc+client@1.15.0/node_modules/@orpc/client/dist/shared/client.CZlviB0y.mjs
 var ORPC_CLIENT_PACKAGE_NAME = "@orpc/client";
-var ORPC_CLIENT_PACKAGE_VERSION = "1.14.13";
+var ORPC_CLIENT_PACKAGE_VERSION = "1.15.0";
+var RECURSIVE_CLIENT_UNWRAP_KEYS = /* @__PURE__ */ new Set([
+  /**
+   * Commonly used by libraries to bind functions to a specific `this`
+   * context.
+   */
+  "bind",
+  /**
+   * Commonly accessed during primitive conversion, inspection, and logging.
+   */
+  "valueOf",
+  /**
+   * Commonly accessed during string conversion, inspection, and logging.
+   */
+  "toString",
+  /**
+   * Commonly accessed by serializers such as `JSON.stringify`.
+   */
+  "toJSON"
+]);
 var COMMON_ORPC_ERROR_DEFS = {
   BAD_REQUEST: {
     status: 400,
@@ -476,7 +495,7 @@ function createORPCErrorFromJson(json2, options = {}) {
   });
 }
 
-// node_modules/.pnpm/@orpc+standard-server@1.14.13/node_modules/@orpc/standard-server/dist/index.mjs
+// node_modules/.pnpm/@orpc+standard-server@1.15.0/node_modules/@orpc/standard-server/dist/index.mjs
 var EventEncoderError = class extends TypeError {
 };
 var EventDecoderError = class extends TypeError {
@@ -738,7 +757,7 @@ function mergeStandardHeaders(a, b) {
   return merged;
 }
 
-// node_modules/.pnpm/@orpc+client@1.14.13/node_modules/@orpc/client/dist/shared/client.BLtwTQUg.mjs
+// node_modules/.pnpm/@orpc+client@1.15.0/node_modules/@orpc/client/dist/shared/client.BLtwTQUg.mjs
 function mapEventIterator(iterator, maps) {
   const mapError = async (error51) => {
     let mappedError = await maps.error(error51);
@@ -775,7 +794,7 @@ function mapEventIterator(iterator, maps) {
   });
 }
 
-// node_modules/.pnpm/@orpc+client@1.14.13/node_modules/@orpc/client/dist/index.mjs
+// node_modules/.pnpm/@orpc+client@1.15.0/node_modules/@orpc/client/dist/index.mjs
 function resolveFriendlyClientOptions(options) {
   return {
     ...options,
@@ -790,7 +809,7 @@ function createORPCClient(link, options = {}) {
   };
   const recursive = new Proxy(procedureClient, {
     get(target, key) {
-      if (typeof key !== "string") {
+      if (typeof key !== "string" || RECURSIVE_CLIENT_UNWRAP_KEYS.has(key)) {
         return Reflect.get(target, key);
       }
       return createORPCClient(link, {
@@ -802,7 +821,7 @@ function createORPCClient(link, options = {}) {
   return preventNativeAwait(recursive);
 }
 
-// node_modules/.pnpm/@orpc+standard-server-fetch@1.14.13/node_modules/@orpc/standard-server-fetch/dist/index.mjs
+// node_modules/.pnpm/@orpc+standard-server-fetch@1.15.0/node_modules/@orpc/standard-server-fetch/dist/index.mjs
 function toEventIterator(stream, options = {}) {
   const eventStream = stream?.pipeThrough(new TextDecoderStream()).pipeThrough(new EventDecoderStream());
   const reader = eventStream?.getReader();
@@ -1074,7 +1093,7 @@ function toStandardLazyResponse(response, options = {}) {
   };
 }
 
-// node_modules/.pnpm/@orpc+client@1.14.13/node_modules/@orpc/client/dist/shared/client.0ydsaRZW.mjs
+// node_modules/.pnpm/@orpc+client@1.15.0/node_modules/@orpc/client/dist/shared/client.BtiuJPEa.mjs
 var CompositeStandardLinkPlugin = class {
   plugins;
   constructor(plugins = []) {
@@ -1159,7 +1178,7 @@ function getMalformedResponseErrorCode(status) {
   return Object.entries(COMMON_ORPC_ERROR_DEFS).find(([, def]) => def.status === status)?.[0] ?? "MALFORMED_ORPC_ERROR_RESPONSE";
 }
 
-// node_modules/.pnpm/@orpc+client@1.14.13/node_modules/@orpc/client/dist/adapters/fetch/index.mjs
+// node_modules/.pnpm/@orpc+client@1.15.0/node_modules/@orpc/client/dist/adapters/fetch/index.mjs
 var CompositeLinkFetchPlugin = class extends CompositeStandardLinkPlugin {
   initRuntimeAdapter(options) {
     for (const plugin of this.plugins) {
@@ -1190,7 +1209,7 @@ var LinkFetchClient = class {
   }
 };
 
-// node_modules/.pnpm/@orpc+openapi-client@1.14.13/node_modules/@orpc/openapi-client/dist/shared/openapi-client.t9fCAe3x.mjs
+// node_modules/.pnpm/@orpc+openapi-client@1.15.0/node_modules/@orpc/openapi-client/dist/shared/openapi-client.t9fCAe3x.mjs
 var StandardBracketNotationSerializer = class {
   maxArrayIndex;
   constructor(options = {}) {
@@ -1334,7 +1353,7 @@ function pushStyleArrayToObject(array2) {
   return obj;
 }
 
-// node_modules/.pnpm/@orpc+contract@1.14.13/node_modules/@orpc/contract/dist/shared/contract.D_dZrO__.mjs
+// node_modules/.pnpm/@orpc+contract@1.15.0/node_modules/@orpc/contract/dist/shared/contract.D_dZrO__.mjs
 var ValidationError = class extends Error {
   issues;
   data;
@@ -1369,7 +1388,7 @@ function isContractProcedure(item) {
   return (typeof item === "object" || typeof item === "function") && item !== null && "~orpc" in item && typeof item["~orpc"] === "object" && item["~orpc"] !== null && "errorMap" in item["~orpc"] && "route" in item["~orpc"] && "meta" in item["~orpc"];
 }
 
-// node_modules/.pnpm/@orpc+contract@1.14.13/node_modules/@orpc/contract/dist/index.mjs
+// node_modules/.pnpm/@orpc+contract@1.15.0/node_modules/@orpc/contract/dist/index.mjs
 function mergeMeta(meta1, meta22) {
   return { ...meta1, ...meta22 };
 }
@@ -1617,7 +1636,7 @@ function eventIterator(yields, returns) {
   };
 }
 
-// node_modules/.pnpm/@orpc+openapi-client@1.14.13/node_modules/@orpc/openapi-client/dist/shared/openapi-client.B2Q9qU5m.mjs
+// node_modules/.pnpm/@orpc+openapi-client@1.15.0/node_modules/@orpc/openapi-client/dist/shared/openapi-client.B2Q9qU5m.mjs
 var StandardOpenAPIJsonSerializer = class {
   customSerializers;
   constructor(options = {}) {
@@ -1908,7 +1927,7 @@ var StandardOpenAPILink = class extends StandardLink {
   }
 };
 
-// node_modules/.pnpm/@orpc+openapi-client@1.14.13/node_modules/@orpc/openapi-client/dist/adapters/fetch/index.mjs
+// node_modules/.pnpm/@orpc+openapi-client@1.15.0/node_modules/@orpc/openapi-client/dist/adapters/fetch/index.mjs
 var OpenAPILink = class extends StandardOpenAPILink {
   constructor(contract, options) {
     const linkClient = new LinkFetchClient(options);
@@ -16430,7 +16449,7 @@ function date4(params) {
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/index.js
+// node_modules/.pnpm/busabase-sdk@0.16.1/node_modules/busabase-sdk/dist/index.js
 var toUnifiedFilesGrepInput = (input) => ({
   pattern: input.pattern,
   flags: input.flags,

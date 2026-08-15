@@ -1,11 +1,11 @@
 // @ts-nocheck
 
-// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/chunk-5NYQX65A.js
+// node_modules/.pnpm/busabase-sdk@0.16.1/node_modules/busabase-sdk/dist/chunk-5NYQX65A.js
 function normalizeBaseUrl(raw) {
   return raw.replace(/\/+$/, "").replace(/\/api\/v1$/, "");
 }
 
-// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/chunk-WSHJMHUS.js
+// node_modules/.pnpm/busabase-sdk@0.16.1/node_modules/busabase-sdk/dist/chunk-WSHJMHUS.js
 var BUSABASE_AIRAPP_CLIENT_ID = "busabase-airapp";
 var AIRAPP_OAUTH_SCOPE = "api";
 var BusabaseOAuthError = class extends Error {
@@ -215,7 +215,7 @@ async function revokeBusabaseOAuthToken(input, fetchImpl = fetch) {
   }
 }
 
-// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/chunk-C23JVY2Y.js
+// node_modules/.pnpm/busabase-sdk@0.16.1/node_modules/busabase-sdk/dist/chunk-C23JVY2Y.js
 import { randomUUID } from "crypto";
 import { readFileSync, rmSync, mkdirSync, chmodSync, writeFileSync, renameSync } from "fs";
 import { homedir } from "os";
@@ -423,7 +423,7 @@ async function revokeBusabaseAirAppOAuthCredential(appId, options = {}, fetchImp
   }
 }
 
-// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/airapp-node.js
+// node_modules/.pnpm/busabase-sdk@0.16.1/node_modules/busabase-sdk/dist/airapp-node.js
 var DEFAULT_CLOUD_BASE_URL = "https://busabase.com";
 var DEFAULT_PENDING_TTL_MS = 5 * 6e4;
 var DEFAULT_TIMEOUT_MS = 8e3;

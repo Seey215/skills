@@ -12,8 +12,8 @@
 // BUSABASE_API_KEY, BUSABASE_SPACE_ID), never the AirApp's ambient session.
 import fs from "node:fs/promises";
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 function help() {
   console.log(`Usage: node scripts/import_csv.mjs <path/to/ledger.csv> [--apply]

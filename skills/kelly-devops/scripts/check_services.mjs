@@ -28,8 +28,8 @@ import { readFile } from "node:fs/promises";
 // BUSABASE_API_KEY, BUSABASE_SPACE_ID), never the AirApp's ambient session.
 import tls from "node:tls";
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 const HISTORY_CAP = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;

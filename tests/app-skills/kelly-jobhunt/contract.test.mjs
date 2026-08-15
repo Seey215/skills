@@ -29,7 +29,7 @@ const browserSource = async () => {
     join(browserRoot, "js", "jobhunt-model.js"),
     join(browserRoot, "js", "providers", "busabase-provider.js"),
     join(browserRoot, "js", "providers", "demo-provider.js"),
-    join(browserRoot, "js", "resource-provisioning.js"),
+    join(browserRoot, "vendor", "busabase-airapp.js"),
   ];
   return (await Promise.all(files.map((path) => readFile(path, "utf8")))).join("\n");
 };
@@ -114,7 +114,8 @@ test("local OAuth selects and validates a Space before proxying SDK requests", a
   assert.match(server, /gateway\.proxy\(context\.req\.raw\)/);
   assert.doesNotMatch(server, /context\.req\.header\("x-busabase-space"\)/);
   assert.match(app, /选择 Busabase Space/);
-  assert.match(app, /authStatus\.requiresSpace/);
+  assert.match(app, /selectAirAppGateScreen/);
+  assert.match(app, /screen === "space"/);
   assert.match(app, /fetch\("\/auth\/space"/);
 });
 

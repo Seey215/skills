@@ -24,7 +24,6 @@ const requiredFiles = [
   "app/js/providers/index.js",
   "app/js/providers/busabase-provider.js",
   "app/js/providers/demo-provider.js",
-  "app/connect-gate.css",
 ];
 
 const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
@@ -36,7 +35,7 @@ test("has the canonical app project and deterministic commands", async () => {
   assert.equal(pkg.scripts.dev, "node server.js");
   assert.equal(pkg.scripts.start, "node server.js");
   assert.match(pkg.scripts.check, /node --test/);
-  assert.equal(pkg.dependencies["busabase-sdk"], "0.15.0");
+  assert.equal(pkg.dependencies["busabase-sdk"], "0.16.1");
 });
 
 test("keeps resource-map and runtime declarations aligned", async () => {
@@ -75,7 +74,6 @@ test("does not persist secrets or a second data provider in browser storage", as
       "js/busabase-client.js",
       "js/drama-client.js",
       "js/providers/busabase-provider.js",
-      "js/resource-provisioning.js",
       "js/connect-gate.js",
     ].map((path) => readFile(join(browserRoot, path), "utf8")),
   );
@@ -151,7 +149,7 @@ test("retires the pre-Busabase local-file/legacy-busabase provider layer", async
 
 test("ships trusted generation/hyperframe/seed/validate/export scripts using busabase-sdk with --apply dry-run gating where they write", async () => {
   const pkg = await readJson(join(skillRoot, "package.json"));
-  assert.equal(pkg.dependencies["busabase-sdk"], "0.11.0");
+  assert.equal(pkg.dependencies["busabase-sdk"], "0.16.1");
   const libSource = await readFile(join(skillRoot, "scripts", "lib", "drama-busabase.mjs"), "utf8");
   assert.match(libSource, /createBusabaseClient/);
   assert.match(libSource, /BUSABASE_BASE_URL/);

@@ -17,8 +17,8 @@
 // Writes are gated behind --apply (default dry run).
 import fs from "node:fs/promises";
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 function help() {
   console.log(`Usage: node scripts/sync_products.mjs <products.json|products.csv> [--apply]

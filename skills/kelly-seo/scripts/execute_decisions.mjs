@@ -17,8 +17,8 @@
 // BUSABASE_API_KEY / BUSABASE_SPACE_ID), never the AirApp's ambient session.
 
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 import { operationForOpportunity } from "../app/app/js/seo-model.js";
 
 const normalizeFields = (fields) =>

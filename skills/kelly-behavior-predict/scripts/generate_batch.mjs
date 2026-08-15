@@ -12,9 +12,9 @@
 // Connects with the trusted process's own credentials (BUSABASE_BASE_URL,
 // BUSABASE_API_KEY, BUSABASE_SPACE_ID), never the AirApp's ambient session.
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { DEFAULT_DATASET_SEED, SEGMENTS, generateAllSessions } from "../app/app/js/behavior-model.js";
 import { appConfig } from "../app/app/js/config.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 function help() {
   console.log(`Usage: node scripts/generate_batch.mjs [--apply] [options]

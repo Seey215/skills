@@ -47,7 +47,7 @@ test("does not persist secrets or domain state in browser storage", async () => 
     readFile(join(browserRoot, "js", "app.js"), "utf8"),
     readFile(join(browserRoot, "js", "busabase-client.js"), "utf8"),
     readFile(join(browserRoot, "js", "providers", "busabase-provider.js"), "utf8"),
-    readFile(join(browserRoot, "js", "resource-provisioning.js"), "utf8"),
+    readFile(join(browserRoot, "vendor", "busabase-airapp.js"), "utf8"),
   ]);
   const source = sources.join("\n");
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);

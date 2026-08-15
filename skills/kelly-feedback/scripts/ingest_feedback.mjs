@@ -18,8 +18,8 @@
 // Writes are gated behind --apply (default dry run).
 import fs from "node:fs/promises";
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 const CHANNELS = ["email", "discord", "slack", "x", "appstore", "survey", "interview"];
 const SENTIMENTS = ["positive", "neutral", "negative"];

@@ -1,7 +1,4 @@
-import {
-  describeAirAppSetupError,
-  selectAirAppGateScreen,
-} from "../vendor/busabase-airapp-gate.js";
+import { describeAirAppSetupError, selectAirAppGateScreen } from "../vendor/busabase-airapp-gate.js";
 import { appConfig } from "./config.js";
 import {
   buildConnectedFields,

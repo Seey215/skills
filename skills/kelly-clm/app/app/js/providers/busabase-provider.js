@@ -1,3 +1,4 @@
+import { inspectProvisionedResources, provisionDeclaredResources } from "../../vendor/busabase-airapp.js";
 import { createRuntimeClient } from "../busabase-client.js";
 import {
   approvalToFields,
@@ -10,10 +11,6 @@ import {
   obligationToFields,
 } from "../clm-model.js?v=0.1.0";
 import { appConfig } from "../config.js?v=0.1.0";
-import {
-  inspectProvisionedResources,
-  provisionDeclaredResources,
-} from "../../vendor/busabase-airapp.js";
 
 const allowedReads = new Set(appConfig.permissions.readProcedures);
 const allowedSetup = new Set(appConfig.permissions.setupProcedures);

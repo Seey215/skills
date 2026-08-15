@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/airapp.js
+// node_modules/.pnpm/busabase-sdk@0.16.1/node_modules/busabase-sdk/dist/airapp.js
 var AirAppSetupError = class extends Error {
   code;
   /** The human-readable half, without the `CODE: ` prefix. */
@@ -146,6 +146,8 @@ function buildProvisionOperations(config, folder, missingBases) {
       name: base.name,
       description: base.description ?? "",
       metadata: resourceMetadata(config, base.key),
+      // The declaration's `type` is a plain `string` (see AirAppFieldDeclaration);
+      // the server validates the real field-type enum on the wire.
       fields: base.fields
     });
   }
@@ -252,6 +254,8 @@ async function repairResourceOwnership(client, config, current) {
         baseId: migration.repair.baseId,
         slug: field.slug,
         name: field.name,
+        // The declaration's `type` is a plain `string` (see AirAppFieldDeclaration);
+        // the server validates the real field-type enum on the wire.
         type: field.type,
         required: field.required,
         message: `Upgrade ${config.appName}: add ${field.slug}`,

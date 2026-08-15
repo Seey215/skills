@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { createBusabaseClient } from "busabase-sdk";
 
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../../app/app/js/config.js";
-import { inspectProvisionedResources } from "../../app/app/js/resource-provisioning.js";
 
 export function clientFromEnv() {
   const baseUrl = process.env.BUSABASE_BASE_URL;

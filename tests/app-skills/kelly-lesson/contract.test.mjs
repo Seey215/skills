@@ -22,7 +22,6 @@ const requiredFiles = [
   "app/js/providers/index.js",
   "app/js/providers/busabase-provider.js",
   "app/js/providers/demo-provider.js",
-  "app/connect-gate.css",
 ];
 
 const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
@@ -34,7 +33,7 @@ test("has the canonical app project and deterministic commands", async () => {
   assert.equal(pkg.scripts.dev, "node server.js");
   assert.equal(pkg.scripts.start, "node server.js");
   assert.match(pkg.scripts.check, /node --test/);
-  assert.equal(pkg.dependencies["busabase-sdk"], "0.15.0");
+  assert.equal(pkg.dependencies["busabase-sdk"], "0.16.1");
 });
 
 test("keeps resource-map and runtime declarations aligned", async () => {
@@ -60,13 +59,9 @@ test("every declared Base stays within the records.list limit=100 server cap", a
 
 test("does not persist secrets or a second data provider in browser storage", async () => {
   const sources = await Promise.all(
-    [
-      "app.js",
-      "js/busabase-client.js",
-      "js/providers/busabase-provider.js",
-      "js/resource-provisioning.js",
-      "js/connect-gate.js",
-    ].map((path) => readFile(join(browserRoot, path), "utf8")),
+    ["app.js", "js/busabase-client.js", "js/providers/busabase-provider.js", "js/connect-gate.js"].map((path) =>
+      readFile(join(browserRoot, path), "utf8"),
+    ),
   );
   const source = sources.join("\n");
   assert.doesNotMatch(source, /localStorage\.setItem\("busabase|sessionStorage|indexedDB/);
@@ -152,5 +147,5 @@ test("ships all four trusted scripts: ingest_plan, run_checks, execute_decisions
   assert.doesNotMatch(exportSource, /changeRequest/);
 
   const pkg = await readJson(join(skillRoot, "package.json"));
-  assert.equal(pkg.dependencies["busabase-sdk"], "0.11.0");
+  assert.equal(pkg.dependencies["busabase-sdk"], "0.16.1");
 });

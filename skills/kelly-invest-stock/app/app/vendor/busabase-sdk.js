@@ -5,12 +5,12 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/chunk-5NYQX65A.js
+// node_modules/.pnpm/busabase-sdk@0.16.1/node_modules/busabase-sdk/dist/chunk-5NYQX65A.js
 function normalizeBaseUrl(raw) {
   return raw.replace(/\/+$/, "").replace(/\/api\/v1$/, "");
 }
 
-// node_modules/.pnpm/@orpc+shared@1.14.12/node_modules/@orpc/shared/dist/index.mjs
+// node_modules/.pnpm/@orpc+shared@1.15.0/node_modules/@orpc/shared/dist/index.mjs
 function resolveMaybeOptionalOptions(rest) {
   return rest[0] ?? {};
 }
@@ -19,7 +19,7 @@ function toArray(value2) {
 }
 var ORPC_NAME = "orpc";
 var ORPC_SHARED_PACKAGE_NAME = "@orpc/shared";
-var ORPC_SHARED_PACKAGE_VERSION = "1.14.12";
+var ORPC_SHARED_PACKAGE_VERSION = "1.15.0";
 var AbortError = class extends Error {
   constructor(...rest) {
     super(...rest);
@@ -308,9 +308,28 @@ function tryDecodeURIComponent(value2) {
   }
 }
 
-// node_modules/.pnpm/@orpc+client@1.14.12/node_modules/@orpc/client/dist/shared/client.DrCRv_sG.mjs
+// node_modules/.pnpm/@orpc+client@1.15.0/node_modules/@orpc/client/dist/shared/client.CZlviB0y.mjs
 var ORPC_CLIENT_PACKAGE_NAME = "@orpc/client";
-var ORPC_CLIENT_PACKAGE_VERSION = "1.14.12";
+var ORPC_CLIENT_PACKAGE_VERSION = "1.15.0";
+var RECURSIVE_CLIENT_UNWRAP_KEYS = /* @__PURE__ */ new Set([
+  /**
+   * Commonly used by libraries to bind functions to a specific `this`
+   * context.
+   */
+  "bind",
+  /**
+   * Commonly accessed during primitive conversion, inspection, and logging.
+   */
+  "valueOf",
+  /**
+   * Commonly accessed during string conversion, inspection, and logging.
+   */
+  "toString",
+  /**
+   * Commonly accessed by serializers such as `JSON.stringify`.
+   */
+  "toJSON"
+]);
 var COMMON_ORPC_ERROR_DEFS = {
   BAD_REQUEST: {
     status: 400,
@@ -476,7 +495,7 @@ function createORPCErrorFromJson(json2, options = {}) {
   });
 }
 
-// node_modules/.pnpm/@orpc+standard-server@1.14.12/node_modules/@orpc/standard-server/dist/index.mjs
+// node_modules/.pnpm/@orpc+standard-server@1.15.0/node_modules/@orpc/standard-server/dist/index.mjs
 var EventEncoderError = class extends TypeError {
 };
 var EventDecoderError = class extends TypeError {
@@ -488,8 +507,13 @@ var ErrorEvent = class extends Error {
     this.data = options?.data;
   }
 };
+var LINE_ENDING_REGEX$1 = /\r\n|\r(?!\n)|\n/;
+var MESSAGE_DELIMITER_REGEX = /(?:\r\n|\r(?!\n)|\n){2}/;
+var MESSAGE_DELIMITER_GLOBAL_REGEX = /(?:\r\n|\r(?!\n)|\n){2}/g;
+var CR = 13;
+var LF = 10;
+var SPACE = 32;
 function decodeEventMessage(encoded) {
-  const lines = encoded.replace(/\n+$/, "").split(/\n/);
   const message = {
     data: void 0,
     event: void 0,
@@ -497,54 +521,94 @@ function decodeEventMessage(encoded) {
     retry: void 0,
     comments: []
   };
-  for (const line of lines) {
+  for (const line of encoded.split(LINE_ENDING_REGEX$1)) {
+    if (line === "") {
+      continue;
+    }
     const index = line.indexOf(":");
-    const key = index === -1 ? line : line.slice(0, index);
-    const value2 = index === -1 ? "" : line.slice(index + 1).replace(/^\s/, "");
+    const value2 = index === -1 ? "" : line.slice(line.charCodeAt(index + 1) === SPACE ? index + 2 : index + 1);
     if (index === 0) {
       message.comments.push(value2);
-    } else if (key === "data") {
-      message.data ??= "";
-      message.data += `${value2}
-`;
-    } else if (key === "event") {
-      message.event = value2;
-    } else if (key === "id") {
-      message.id = value2;
-    } else if (key === "retry") {
-      const maybeInteger = Number.parseInt(value2);
-      if (Number.isInteger(maybeInteger) && maybeInteger >= 0 && maybeInteger.toString() === value2) {
-        message.retry = maybeInteger;
+      continue;
+    }
+    switch (index === -1 ? line : line.slice(0, index)) {
+      case "data":
+        message.data = message.data === void 0 ? value2 : `${message.data}
+${value2}`;
+        break;
+      case "event":
+        message.event = value2;
+        break;
+      case "id":
+        message.id = value2;
+        break;
+      case "retry": {
+        const maybeInteger = Number.parseInt(value2, 10);
+        if (maybeInteger >= 0 && maybeInteger.toString() === value2) {
+          message.retry = maybeInteger;
+        }
+        break;
       }
     }
   }
-  message.data = message.data?.replace(/\n$/, "");
   return message;
 }
 var EventDecoder = class {
   constructor(options = {}) {
     this.options = options;
   }
-  incomplete = "";
+  pending = [];
+  // Last up-to-3 characters of the pending buffer, prefixed to the next chunk
+  // so a delimiter straddling the boundary is still found.
+  tail = "";
+  // Set when a chunk-ending '\r' was already consumed as a line ending, so a
+  // leading '\n' in the next chunk is the second half of that CRLF pair.
+  discardLeadingLF = false;
   feed(chunk) {
-    this.incomplete += chunk;
-    const lastCompleteIndex = this.incomplete.lastIndexOf("\n\n");
-    if (lastCompleteIndex === -1) {
+    if (chunk === "") {
       return;
     }
-    const completes = this.incomplete.slice(0, lastCompleteIndex).split(/\n\n/);
-    this.incomplete = this.incomplete.slice(lastCompleteIndex + 2);
-    for (const encoded of completes) {
-      const message = decodeEventMessage(`${encoded}
-
-`);
+    if (this.discardLeadingLF) {
+      this.discardLeadingLF = false;
+      if (chunk.charCodeAt(0) === LF) {
+        chunk = chunk.slice(1);
+        if (chunk === "") {
+          return;
+        }
+      }
+    }
+    const scan = this.tail + chunk;
+    if (!MESSAGE_DELIMITER_REGEX.test(scan)) {
+      this.pending.push(chunk);
+      this.tail = scan.slice(-3);
+      return;
+    }
+    this.pending.push(chunk);
+    const buffered = this.pending.length === 1 ? chunk : this.pending.join("");
+    const offset = buffered.length - scan.length;
+    const parts = [];
+    let start = 0;
+    for (const match of scan.matchAll(MESSAGE_DELIMITER_GLOBAL_REGEX)) {
+      parts.push(buffered.slice(start, offset + match.index));
+      start = offset + match.index + match[0].length;
+    }
+    const incomplete = buffered.slice(start);
+    this.pending.length = 0;
+    this.tail = incomplete.slice(-3);
+    if (incomplete === "") {
+      this.discardLeadingLF = chunk.charCodeAt(chunk.length - 1) === CR;
+    } else {
+      this.pending.push(incomplete);
+    }
+    for (const encoded of parts) {
+      const message = decodeEventMessage(encoded);
       if (this.options.onEvent) {
         this.options.onEvent(message);
       }
     }
   }
   end() {
-    if (this.incomplete) {
+    if (this.pending.length !== 0) {
       throw new EventDecoderError("Event Iterator ended before complete");
     }
   }
@@ -569,14 +633,19 @@ var EventDecoderStream = class extends TransformStream {
     });
   }
 };
+var LINE_ENDING_REGEX = /\r\n|[\n\r]/;
+var LINE_ENDING_GLOBAL_REGEX = /\r\n|[\n\r]/g;
+function containsLineBreak(value2) {
+  return LINE_ENDING_REGEX.test(value2);
+}
 function assertEventId(id) {
-  if (id.includes("\n")) {
-    throw new EventEncoderError("Event's id must not contain a newline character");
+  if (containsLineBreak(id)) {
+    throw new EventEncoderError("Event's id must not contain a carriage return or newline character");
   }
 }
 function assertEventName(event) {
-  if (event.includes("\n")) {
-    throw new EventEncoderError("Event's event must not contain a newline character");
+  if (containsLineBreak(event)) {
+    throw new EventEncoderError("Event's event must not contain a carriage return or newline character");
   }
 }
 function assertEventRetry(retry) {
@@ -585,18 +654,16 @@ function assertEventRetry(retry) {
   }
 }
 function assertEventComment(comment) {
-  if (comment.includes("\n")) {
-    throw new EventEncoderError("Event's comment must not contain a newline character");
+  if (containsLineBreak(comment)) {
+    throw new EventEncoderError("Event's comment must not contain a carriage return or newline character");
   }
 }
 function encodeEventData(data) {
-  const lines = data?.split(/\n/) ?? [];
-  let output = "";
-  for (const line of lines) {
-    output += `data: ${line}
-`;
+  if (data === void 0) {
+    return "";
   }
-  return output;
+  return `data: ${data.replace(LINE_ENDING_GLOBAL_REGEX, "\ndata: ")}
+`;
 }
 function encodeEventComments(comments) {
   let output = "";
@@ -690,7 +757,7 @@ function mergeStandardHeaders(a, b) {
   return merged;
 }
 
-// node_modules/.pnpm/@orpc+client@1.14.12/node_modules/@orpc/client/dist/shared/client.BLtwTQUg.mjs
+// node_modules/.pnpm/@orpc+client@1.15.0/node_modules/@orpc/client/dist/shared/client.BLtwTQUg.mjs
 function mapEventIterator(iterator, maps) {
   const mapError = async (error51) => {
     let mappedError = await maps.error(error51);
@@ -727,7 +794,7 @@ function mapEventIterator(iterator, maps) {
   });
 }
 
-// node_modules/.pnpm/@orpc+client@1.14.12/node_modules/@orpc/client/dist/index.mjs
+// node_modules/.pnpm/@orpc+client@1.15.0/node_modules/@orpc/client/dist/index.mjs
 function resolveFriendlyClientOptions(options) {
   return {
     ...options,
@@ -742,7 +809,7 @@ function createORPCClient(link, options = {}) {
   };
   const recursive = new Proxy(procedureClient, {
     get(target, key) {
-      if (typeof key !== "string") {
+      if (typeof key !== "string" || RECURSIVE_CLIENT_UNWRAP_KEYS.has(key)) {
         return Reflect.get(target, key);
       }
       return createORPCClient(link, {
@@ -754,7 +821,7 @@ function createORPCClient(link, options = {}) {
   return preventNativeAwait(recursive);
 }
 
-// node_modules/.pnpm/@orpc+standard-server-fetch@1.14.12/node_modules/@orpc/standard-server-fetch/dist/index.mjs
+// node_modules/.pnpm/@orpc+standard-server-fetch@1.15.0/node_modules/@orpc/standard-server-fetch/dist/index.mjs
 function toEventIterator(stream, options = {}) {
   const eventStream = stream?.pipeThrough(new TextDecoderStream()).pipeThrough(new EventDecoderStream());
   const reader = eventStream?.getReader();
@@ -1026,7 +1093,7 @@ function toStandardLazyResponse(response, options = {}) {
   };
 }
 
-// node_modules/.pnpm/@orpc+client@1.14.12/node_modules/@orpc/client/dist/shared/client.C1VUaWTu.mjs
+// node_modules/.pnpm/@orpc+client@1.15.0/node_modules/@orpc/client/dist/shared/client.BtiuJPEa.mjs
 var CompositeStandardLinkPlugin = class {
   plugins;
   constructor(plugins = []) {
@@ -1111,7 +1178,7 @@ function getMalformedResponseErrorCode(status) {
   return Object.entries(COMMON_ORPC_ERROR_DEFS).find(([, def]) => def.status === status)?.[0] ?? "MALFORMED_ORPC_ERROR_RESPONSE";
 }
 
-// node_modules/.pnpm/@orpc+client@1.14.12/node_modules/@orpc/client/dist/adapters/fetch/index.mjs
+// node_modules/.pnpm/@orpc+client@1.15.0/node_modules/@orpc/client/dist/adapters/fetch/index.mjs
 var CompositeLinkFetchPlugin = class extends CompositeStandardLinkPlugin {
   initRuntimeAdapter(options) {
     for (const plugin of this.plugins) {
@@ -1142,7 +1209,7 @@ var LinkFetchClient = class {
   }
 };
 
-// node_modules/.pnpm/@orpc+openapi-client@1.14.12/node_modules/@orpc/openapi-client/dist/shared/openapi-client.t9fCAe3x.mjs
+// node_modules/.pnpm/@orpc+openapi-client@1.15.0/node_modules/@orpc/openapi-client/dist/shared/openapi-client.t9fCAe3x.mjs
 var StandardBracketNotationSerializer = class {
   maxArrayIndex;
   constructor(options = {}) {
@@ -1286,7 +1353,7 @@ function pushStyleArrayToObject(array2) {
   return obj;
 }
 
-// node_modules/.pnpm/@orpc+contract@1.14.12/node_modules/@orpc/contract/dist/shared/contract.D_dZrO__.mjs
+// node_modules/.pnpm/@orpc+contract@1.15.0/node_modules/@orpc/contract/dist/shared/contract.D_dZrO__.mjs
 var ValidationError = class extends Error {
   issues;
   data;
@@ -1321,7 +1388,7 @@ function isContractProcedure(item) {
   return (typeof item === "object" || typeof item === "function") && item !== null && "~orpc" in item && typeof item["~orpc"] === "object" && item["~orpc"] !== null && "errorMap" in item["~orpc"] && "route" in item["~orpc"] && "meta" in item["~orpc"];
 }
 
-// node_modules/.pnpm/@orpc+contract@1.14.12/node_modules/@orpc/contract/dist/index.mjs
+// node_modules/.pnpm/@orpc+contract@1.15.0/node_modules/@orpc/contract/dist/index.mjs
 function mergeMeta(meta1, meta22) {
   return { ...meta1, ...meta22 };
 }
@@ -1569,7 +1636,7 @@ function eventIterator(yields, returns) {
   };
 }
 
-// node_modules/.pnpm/@orpc+openapi-client@1.14.12/node_modules/@orpc/openapi-client/dist/shared/openapi-client.B2Q9qU5m.mjs
+// node_modules/.pnpm/@orpc+openapi-client@1.15.0/node_modules/@orpc/openapi-client/dist/shared/openapi-client.B2Q9qU5m.mjs
 var StandardOpenAPIJsonSerializer = class {
   customSerializers;
   constructor(options = {}) {
@@ -1860,7 +1927,7 @@ var StandardOpenAPILink = class extends StandardLink {
   }
 };
 
-// node_modules/.pnpm/@orpc+openapi-client@1.14.12/node_modules/@orpc/openapi-client/dist/adapters/fetch/index.mjs
+// node_modules/.pnpm/@orpc+openapi-client@1.15.0/node_modules/@orpc/openapi-client/dist/adapters/fetch/index.mjs
 var OpenAPILink = class extends StandardOpenAPILink {
   constructor(contract, options) {
     const linkClient = new LinkFetchClient(options);
@@ -16382,7 +16449,7 @@ function date4(params) {
 // node_modules/.pnpm/zod@4.4.3/node_modules/zod/v4/classic/external.js
 config(en_default());
 
-// node_modules/.pnpm/busabase-sdk@0.16.0/node_modules/busabase-sdk/dist/index.js
+// node_modules/.pnpm/busabase-sdk@0.16.1/node_modules/busabase-sdk/dist/index.js
 var toUnifiedFilesGrepInput = (input) => ({
   pattern: input.pattern,
   flags: input.flags,

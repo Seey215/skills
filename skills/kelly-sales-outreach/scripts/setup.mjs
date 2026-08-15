@@ -10,7 +10,7 @@
 // nothing. Running it before `profile` means nobody has to copy a Node or Base
 // ID by hand — every other script resolves them from the Folder by slug.
 
-import { inspectProvisionedResources, provisionDeclaredResources } from "../app/app/js/resource-provisioning.js";
+import { inspectProvisionedResources, provisionDeclaredResources } from "busabase-sdk/airapp";
 import { appConfig, createTrustedClient, dryRunBanner, fail, parseFlags } from "./lib.mjs";
 
 const { apply } = parseFlags(process.argv.slice(2));

@@ -14,9 +14,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
 import { computeInvoiceFromRow } from "../app/app/js/invoice-model.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 const SKILL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

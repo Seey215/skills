@@ -1,7 +1,7 @@
 import { createBusabaseClient } from "busabase-sdk";
 
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 export { appConfig };
 

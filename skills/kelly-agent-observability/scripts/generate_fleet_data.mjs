@@ -20,9 +20,9 @@
 // Connects with the trusted process's own credentials (BUSABASE_BASE_URL,
 // BUSABASE_API_KEY, BUSABASE_SPACE_ID), never the AirApp's ambient session.
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
 import { baseAgentFields, baseTraceFields, generateFleetData, summarizeFleet } from "../app/app/js/fleet-model.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 const DEFAULT_TRACES_PER_AGENT = 10;
 const DEFAULT_SEED = 7;

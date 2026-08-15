@@ -19,9 +19,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { createBusabaseClient } from "busabase-sdk";
+import { inspectProvisionedResources } from "busabase-sdk/airapp";
 import { appConfig } from "../app/app/js/config.js";
 import { baseInvoiceFields, validateInvoicesShape } from "../app/app/js/invoice-model.js";
-import { inspectProvisionedResources } from "../app/app/js/resource-provisioning.js";
 
 function help() {
   console.log(`Usage: node scripts/import_batch.mjs --file <batch.json> [--batch-id <id>] [--apply]

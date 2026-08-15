@@ -189,7 +189,13 @@ def test_busabase_provisioning(browser) -> None:
                     # with every check starting undecided (needs_review or
                     # the curated "fix" status).
                     page.goto(f"{app_url}/#/qa")
-                    page.wait_for_load_state("networkidle")
+                    # A hash-route navigation into an already-loaded SPA does not
+                    # necessarily trigger new network activity, so `networkidle`
+                    # can resolve before the render pass that populates
+                    # `.review-row` actually runs -- especially on a slower CI
+                    # runner. Poll the DOM directly instead of trusting network
+                    # quiescence as a proxy for render completion.
+                    page.wait_for_function("document.querySelectorAll('.review-row').length === 8", timeout=15_000)
                     assert page.locator(".review-row").count() == 8
 
                     # Direct write: approve the first review-queue item

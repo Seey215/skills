@@ -36,6 +36,12 @@ This schema powers the local UI for insurance data entry and governance.
       "name": "用户反馈",
       "slug": "user-feedback",
       "fields": [{ "key": "content", "value": "反馈内容 (longtext)" }]
+    },
+    "prompts": {
+      "base_id": "bse_...",
+      "name": "预置提示词",
+      "slug": "insurance-prompts",
+      "fields": [{ "key": "title", "value": "短标题 (text)" }]
     }
   },
   "metrics": {
@@ -127,6 +133,32 @@ Required:
 - `governance`
 
 The feedback item corresponds to one record in the configured user feedback Base. It should preserve the user-visible feedback text, source context, status, and any contact/rating fields that are safe to store.
+
+## Preset Prompt Item
+
+The preset prompt Base (`insurance-prompts`, 预置提示词) holds the prompts the
+insure miniapp offers on its home screen. It is a **canonical Base in the same
+folder as the other ones**, so an agent rebuilding this workspace must create it.
+
+Canonical fields:
+
+| Field slug | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `title` | text | yes | Short home-row label. Keep to 14 characters or fewer, or the miniapp row overflows. |
+| `prompt` | longtext | yes | Full question inserted into the composer. Never equal to `title`. |
+| `category` | text | no | One of `查资料` / `答异议` / `做计划书`. These are the three home slots; a row with any other value is not shown. |
+| `expected_result` | longtext | no | What a good answer should contain. Reference material for AI retrieval — never rendered to the end user. |
+| `status` | text | no | `active` shows the row. Any other non-empty value hides it. |
+
+Consumer contract: the miniapp reads this Base read-only through the insure
+knowledge proxy and rotates one prompt per category per day. Prompt content is
+insurance sales copy, so it must avoid guarantees, absolute claims, and promised
+outcomes.
+
+This Base is **not yet surfaced in the skill UI or the snapshot** — there is no
+`prompt_items` array, and `scripts/export_busabase_snapshot.ts` resolves Bases by
+configured slug, so a restore manifest currently omits it. Wiring the provider,
+snapshot, and export is separate work.
 
 ## Governance
 

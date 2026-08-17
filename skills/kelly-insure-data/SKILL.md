@@ -9,6 +9,11 @@ description: Insurance-industry App-in-Skill for high-quality data entry and gov
 
 Use this skill as Kelly's insurance data-entry and data-governance cockpit. It pairs a local App-in-Skill UI with a Busabase-backed data layer: one Busabase Drive node for the file drive, one Base for insurance QA pairs, one Base for insurance news and market-intelligence records, and one Base for user feedback.
 
+The same workspace folder also holds one more canonical Base, `insurance-prompts`
+(预置提示词), read by the insure miniapp for its home prompt rows. The skill does
+not surface it yet; create it when rebuilding the workspace and keep its schema as
+documented in `references/insure-data-schema.md`.
+
 Default interaction mode: App UI. Unless the user explicitly asks for chat-only handling, start or reuse the local app with `app/start.sh` and give the actual URL. The first screen is the usable workspace, not a landing page.
 
 ## Purpose
@@ -20,7 +25,8 @@ This skill is for insurance-industry high-quality data entry and governance:
 - inspect QA pairs from the Busabase Base named by `qa_base_id` or `qa_base_slug`;
 - inspect insurance news records from the Busabase Base named by `news_base_id` or `news_base_slug`;
 - inspect user feedback records from the Busabase Base named by `feedback_base_id` or `feedback_base_slug`;
-- surface missing fields, draft/review statuses, source gaps, and quality warnings before data becomes trusted insurance knowledge.
+- surface missing fields, draft/review statuses, source gaps, and quality warnings before data becomes trusted insurance knowledge;
+- keep the preset prompt Base (`insurance-prompts`) present and schema-correct for the miniapp, even though the UI does not yet govern it.
 
 The UI has five primary routes:
 

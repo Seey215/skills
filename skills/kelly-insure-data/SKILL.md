@@ -128,6 +128,12 @@ slug (IDs are never required):
   `featured` or `notice`.
 - `qa` (`insurance-qa`): canonical insurance question/answer pairs.
 - `feedback` (`user-feedback`): user feedback records.
+- `prompts` (`insurance-prompts`, 预置提示词): the preset prompt library read by
+  the insure miniapp, **not** by this AirApp. It is not declared in
+  `app/app/js/config.js` and never appears in the snapshot, but it lives in the
+  same workspace folder as the four Bases above, so an operator provisioning or
+  repairing this workspace must keep it — with the field contract in
+  `references/insure-data-schema.md`.
 
 See `references/insure-data-schema.md` for the exact normalized snapshot
 shape and `references/restore-manifest-schema.md` for the backup/restore

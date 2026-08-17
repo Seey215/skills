@@ -140,6 +140,34 @@ Required:
 
 The feedback item corresponds to one record in the configured user feedback Base. It should preserve the user-visible feedback text, source context, status, and any contact/rating fields that are safe to store.
 
+## Preset Prompt Item (miniapp-owned Base)
+
+`insurance-prompts` (预置提示词) sits in the same workspace folder as the four
+Bases above, but it belongs to the insure miniapp, which reads it read-only for
+its home prompt rows. This AirApp does not declare it in `app/app/js/config.js`,
+does not read it, and it is absent from the snapshot — there is no
+`prompt_items` array. It is documented here because an operator rebuilding this
+workspace must recreate it with the schema the miniapp expects.
+
+Canonical fields:
+
+| Field slug | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `title` | text | yes | Short home-row label. Keep to 14 characters or fewer, or the miniapp row overflows. |
+| `prompt` | longtext | yes | Full question inserted into the composer. Never equal to `title`. |
+| `category` | text | no | One of `查资料` / `答异议` / `做计划书`. These are the three home slots; a row with any other value is not shown. |
+| `expected_result` | longtext | no | What a good answer should contain. Reference material for AI retrieval — never rendered to the end user. |
+| `status` | text | no | `active` shows the row. Any other non-empty value hides it. |
+
+The miniapp rotates one prompt per category per day. Prompt text is insurance
+sales copy, so it must avoid guarantees, absolute claims, and promised outcomes.
+
+Known gap: `scripts/export_busabase_snapshot.mjs` resolves Bases from the fixed
+`--featured-slug` / `--notices-slug` / `--qa-slug` / `--feedback-slug` arguments,
+so a restore manifest omits this Base and restoring a workspace from a manifest
+drops the prompt library. Teaching the export/restore scripts about it is
+separate work.
+
 ## Governance
 
 Every record-like item should carry:

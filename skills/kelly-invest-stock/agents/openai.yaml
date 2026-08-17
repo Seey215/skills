@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kelly Invest Stock"
+  short_description: "用研究证据和人民币虚拟账本复核A股策略成熟度"
+  default_prompt: "Use $kelly-invest-stock to research mainland China A-share strategies, review their CNY virtual ledgers, and record a reasoned maturity decision."

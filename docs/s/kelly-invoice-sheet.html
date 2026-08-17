@@ -116,6 +116,24 @@ a:hover { text-decoration: underline; }
   border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 12.5px; cursor: pointer;
 }
 .category-chip.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  border-radius: 999px; padding: 4px 9px; font: inherit; font-size: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.tag-button:hover { background: #f4f4f5; }
+.tag-button.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-button .count { opacity: .6; font-size: 11px; }
+.risk {
+  align-self: flex-start; margin-top: 10px; border-radius: 999px; padding: 2px 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: .01em; border: 1px solid transparent;
+}
+.risk-sandbox { background: #f4f4f5; color: #52525b; border-color: #e4e4e7; }
+.risk-read-only { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.risk-local-write { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.risk-gated-write { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.empty-state { margin: 44px 0; color: var(--muted); font-size: 14px; }
 h2.group {
   margin: 44px 0 16px; font-size: 15px; font-weight: 650; letter-spacing: .04em;
   text-transform: uppercase; color: var(--muted);
@@ -127,6 +145,8 @@ h2.group {
   border-radius: var(--radius); overflow: hidden; color: var(--text); transition: box-shadow .15s, transform .15s;
 }
 .card:hover { text-decoration: none; box-shadow: 0 8px 24px rgba(24,24,27,.08); transform: translateY(-2px); }
+/* .card sets display:flex, which outranks the UA stylesheet's [hidden] { display: none }. */
+.card[hidden] { display: none; }
 .card .thumb { aspect-ratio: 3 / 2; background: #eef0f3; overflow: hidden; border-bottom: 1px solid var(--border); }
 .card .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
 .card .thumb.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 26px; }
@@ -267,19 +287,19 @@ After it is installed, invoke the skill as $kelly-invoice-sheet.</textarea>
     </section>
     <div class="panel"><h3><span class="en">When to use it</span><span class="zh">什么时候用</span></h3><p><span class="en">Use it for Invoice转表格, invoice OCR, receipt-to-spreadsheet, bookkeeping import prep, or a Lido-style Extract Data workflow.</span><span class="zh">做 Invoice转表格、发票 OCR、收据转表格、记账导入准备，或需要类似 Lido Extract Data 的本地 App-in-Skill workflow 时使用。</span></p></div>
     <div class="shots"><figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/overview.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/overview-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/overview.webp" alt="Spreadsheet extraction desk" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/overview.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/overview-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/overview.webp" alt="Spreadsheet extraction desk" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Spreadsheet extraction desk</strong><span>Sheet-like invoice table with extracted rows, status filters, confidence flags, and human-attention counts.</span></div><div class="zh"><strong>表格抽取台</strong><span>sheet 风格发票表直接展示抽取结果、状态筛选、置信度标记和人工关注计数。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/detail.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/detail-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/detail.webp" alt="Invoice detail review" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/detail.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/detail-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/detail.webp" alt="Invoice detail review" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Invoice detail review</strong><span>Editable invoice fields, line items, confidence notes, and approve/request-changes/block controls.</span></div><div class="zh"><strong>发票详情审核</strong><span>可编辑发票字段、明细行、置信度备注，以及批准/要求修改/阻塞控件。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/extract-data.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/extract-data-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/extract-data.webp" alt="Extract Data upload" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/extract-data.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/extract-data-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-invoice-sheet/assets/screenshots/extract-data.webp" alt="Extract Data upload" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Extract Data upload</strong><span>Lido-style upload modal with local file, Google Drive, OneDrive, and email source options.</span></div><div class="zh"><strong>Extract Data 上传</strong><span>类似 Lido 的上传弹窗，提供本地文件、Google Drive、OneDrive 和 Email 来源入口。</span></div>
   </figcaption>
@@ -362,31 +382,63 @@ After it is installed, invoke the skill as $kelly-invoice-sheet.</textarea>
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") document.querySelectorAll(".lightbox").forEach(function (b) { b.remove(); });
   });
-  function setCategory(id, updateUrl) {
+  var mkFilters = { category: "all", risk: "all", industry: "all" };
+  function applyFilters(updateUrl) {
     var sections = Array.prototype.slice.call(document.querySelectorAll("[data-group-section]"));
     if (!sections.length) return;
-    var selected = id || "all";
-    var exists = selected === "all" || sections.some(function (section) {
-      return section.getAttribute("data-group-section") === selected;
+    var exists = mkFilters.category === "all" || sections.some(function (section) {
+      return section.getAttribute("data-group-section") === mkFilters.category;
     });
-    if (!exists) selected = "all";
+    if (!exists) mkFilters.category = "all";
+
+    var shown = 0;
     sections.forEach(function (section) {
-      var show = selected === "all" || section.getAttribute("data-group-section") === selected;
-      section.hidden = !show;
+      var inCategory = mkFilters.category === "all"
+        || section.getAttribute("data-group-section") === mkFilters.category;
+      var visible = 0;
+      section.querySelectorAll("[data-skill-card]").forEach(function (card) {
+        var tags = (card.getAttribute("data-tags") || "").split(" ");
+        var ok = ["risk", "industry"].every(function (ns) {
+          return mkFilters[ns] === "all" || tags.indexOf(ns + ":" + mkFilters[ns]) !== -1;
+        });
+        card.hidden = !ok;
+        if (ok) visible++;
+      });
+      section.hidden = !(inCategory && visible > 0);
+      if (inCategory) shown += visible;
     });
+    var empty = document.querySelector("[data-empty-state]");
+    if (empty) empty.hidden = shown > 0;
+
     document.querySelectorAll("[data-category-filter]").forEach(function (button) {
-      button.classList.toggle("active", button.getAttribute("data-category-filter") === selected);
+      button.classList.toggle("active", button.getAttribute("data-category-filter") === mkFilters.category);
     });
+    document.querySelectorAll("[data-tag-filter]").forEach(function (button) {
+      var value = button.getAttribute("data-tag-filter").split(":");
+      button.classList.toggle("active", mkFilters[value[0]] === value[1]);
+    });
+
     if (updateUrl && window.history && window.URL) {
       var url = new URL(window.location.href);
-      if (selected === "all") url.searchParams.delete("category");
-      else url.searchParams.set("category", selected);
+      ["category", "risk", "industry"].forEach(function (key) {
+        if (mkFilters[key] === "all") url.searchParams.delete(key);
+        else url.searchParams.set(key, mkFilters[key]);
+      });
       window.history.replaceState(null, "", url.pathname + url.search + url.hash);
     }
   }
-  window.mkSetCategory = function (id) { setCategory(id, true); };
+  window.mkSetCategory = function (id) { mkFilters.category = id || "all"; applyFilters(true); };
+  window.mkSetTag = function (tag) {
+    var parts = String(tag).split(":");
+    if (parts.length === 2 && mkFilters.hasOwnProperty(parts[0])) mkFilters[parts[0]] = parts[1];
+    applyFilters(true);
+  };
   document.addEventListener("DOMContentLoaded", function () {
-    setCategory(new URLSearchParams(location.search).get("category") || "all", false);
+    var params = new URLSearchParams(location.search);
+    ["category", "risk", "industry"].forEach(function (key) {
+      mkFilters[key] = params.get(key) || "all";
+    });
+    applyFilters(false);
   });
   document.addEventListener("click", function (e) {
     var button = e.target.closest ? e.target.closest("[data-copy]") : null;

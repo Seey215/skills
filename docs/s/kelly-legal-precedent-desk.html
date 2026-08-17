@@ -116,6 +116,24 @@ a:hover { text-decoration: underline; }
   border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 12.5px; cursor: pointer;
 }
 .category-chip.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  border-radius: 999px; padding: 4px 9px; font: inherit; font-size: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.tag-button:hover { background: #f4f4f5; }
+.tag-button.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-button .count { opacity: .6; font-size: 11px; }
+.risk {
+  align-self: flex-start; margin-top: 10px; border-radius: 999px; padding: 2px 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: .01em; border: 1px solid transparent;
+}
+.risk-sandbox { background: #f4f4f5; color: #52525b; border-color: #e4e4e7; }
+.risk-read-only { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.risk-local-write { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.risk-gated-write { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.empty-state { margin: 44px 0; color: var(--muted); font-size: 14px; }
 h2.group {
   margin: 44px 0 16px; font-size: 15px; font-weight: 650; letter-spacing: .04em;
   text-transform: uppercase; color: var(--muted);
@@ -127,6 +145,8 @@ h2.group {
   border-radius: var(--radius); overflow: hidden; color: var(--text); transition: box-shadow .15s, transform .15s;
 }
 .card:hover { text-decoration: none; box-shadow: 0 8px 24px rgba(24,24,27,.08); transform: translateY(-2px); }
+/* .card sets display:flex, which outranks the UA stylesheet's [hidden] { display: none }. */
+.card[hidden] { display: none; }
 .card .thumb { aspect-ratio: 3 / 2; background: #eef0f3; overflow: hidden; border-bottom: 1px solid var(--border); }
 .card .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
 .card .thumb.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 26px; }
@@ -267,31 +287,31 @@ After it is installed, invoke the skill as $kelly-legal-precedent-desk.</textare
     </section>
     <div class="panel"><h3><span class="en">When to use it</span><span class="zh">什么时候用</span></h3><p><span class="en">Use it when lawyers need internal casebase search, similar-case matching, local court tendencies, precedent packs, or approved research exports grounded in the firm's own matters.</span><span class="zh">律师需要内部案例库检索、类案匹配、本地法院倾向、类案研究包，或导出基于本所经验的研究结论时使用。</span></p></div>
     <div class="shots"><figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/overview.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/overview-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/overview.webp" alt="Overview" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/overview.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/overview-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/overview.webp" alt="Overview" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Overview</strong><span>Precedent command desk with packs awaiting review, high-match cases, approved packs, and recent activity.</span></div><div class="zh"><strong>总览</strong><span>类案检索指挥台：待复核类案包、高相似案例、已批准类案包和近期动态。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/needs-review.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/needs-review-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/needs-review.webp" alt="Review queue" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/needs-review.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/needs-review-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/needs-review.webp" alt="Review queue" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Review queue</strong><span>Similar-case packs with local court-pattern notes, citations, evidence, and approval controls.</span></div><div class="zh"><strong>审核队列</strong><span>类案包带本地裁判尺度、引用、证据和批准控件。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/checks.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/checks-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/checks.webp" alt="Checks" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/checks.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/checks-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/checks.webp" alt="Checks" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Checks</strong><span>Quality checks for citation traceability, similarity rationale, jurisdiction fit, and confidentiality limits.</span></div><div class="zh"><strong>检查</strong><span>引用可追溯性、相似度理由、地域适配和保密边界质量检查。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/workbench.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/workbench-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/workbench.webp" alt="Workbench" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/workbench.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/workbench-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/workbench.webp" alt="Workbench" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Workbench</strong><span>Detail view for precedent reasoning, decisive facts, internal citations, draft memo, and review note.</span></div><div class="zh"><strong>工作台</strong><span>类案裁判逻辑、关键事实、内部引用、备忘录草稿和复核备注。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/entities.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/entities-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/entities.webp" alt="Library" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/entities.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/entities-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-legal-precedent-desk/assets/screenshots/entities.webp" alt="Library" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Library</strong><span>Internal precedent and trial-court pattern library, bucketed by review state.</span></div><div class="zh"><strong>库</strong><span>内部先例与庭审模式库，按复核状态分组。</span></div>
   </figcaption>
@@ -374,31 +394,63 @@ After it is installed, invoke the skill as $kelly-legal-precedent-desk.</textare
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") document.querySelectorAll(".lightbox").forEach(function (b) { b.remove(); });
   });
-  function setCategory(id, updateUrl) {
+  var mkFilters = { category: "all", risk: "all", industry: "all" };
+  function applyFilters(updateUrl) {
     var sections = Array.prototype.slice.call(document.querySelectorAll("[data-group-section]"));
     if (!sections.length) return;
-    var selected = id || "all";
-    var exists = selected === "all" || sections.some(function (section) {
-      return section.getAttribute("data-group-section") === selected;
+    var exists = mkFilters.category === "all" || sections.some(function (section) {
+      return section.getAttribute("data-group-section") === mkFilters.category;
     });
-    if (!exists) selected = "all";
+    if (!exists) mkFilters.category = "all";
+
+    var shown = 0;
     sections.forEach(function (section) {
-      var show = selected === "all" || section.getAttribute("data-group-section") === selected;
-      section.hidden = !show;
+      var inCategory = mkFilters.category === "all"
+        || section.getAttribute("data-group-section") === mkFilters.category;
+      var visible = 0;
+      section.querySelectorAll("[data-skill-card]").forEach(function (card) {
+        var tags = (card.getAttribute("data-tags") || "").split(" ");
+        var ok = ["risk", "industry"].every(function (ns) {
+          return mkFilters[ns] === "all" || tags.indexOf(ns + ":" + mkFilters[ns]) !== -1;
+        });
+        card.hidden = !ok;
+        if (ok) visible++;
+      });
+      section.hidden = !(inCategory && visible > 0);
+      if (inCategory) shown += visible;
     });
+    var empty = document.querySelector("[data-empty-state]");
+    if (empty) empty.hidden = shown > 0;
+
     document.querySelectorAll("[data-category-filter]").forEach(function (button) {
-      button.classList.toggle("active", button.getAttribute("data-category-filter") === selected);
+      button.classList.toggle("active", button.getAttribute("data-category-filter") === mkFilters.category);
     });
+    document.querySelectorAll("[data-tag-filter]").forEach(function (button) {
+      var value = button.getAttribute("data-tag-filter").split(":");
+      button.classList.toggle("active", mkFilters[value[0]] === value[1]);
+    });
+
     if (updateUrl && window.history && window.URL) {
       var url = new URL(window.location.href);
-      if (selected === "all") url.searchParams.delete("category");
-      else url.searchParams.set("category", selected);
+      ["category", "risk", "industry"].forEach(function (key) {
+        if (mkFilters[key] === "all") url.searchParams.delete(key);
+        else url.searchParams.set(key, mkFilters[key]);
+      });
       window.history.replaceState(null, "", url.pathname + url.search + url.hash);
     }
   }
-  window.mkSetCategory = function (id) { setCategory(id, true); };
+  window.mkSetCategory = function (id) { mkFilters.category = id || "all"; applyFilters(true); };
+  window.mkSetTag = function (tag) {
+    var parts = String(tag).split(":");
+    if (parts.length === 2 && mkFilters.hasOwnProperty(parts[0])) mkFilters[parts[0]] = parts[1];
+    applyFilters(true);
+  };
   document.addEventListener("DOMContentLoaded", function () {
-    setCategory(new URLSearchParams(location.search).get("category") || "all", false);
+    var params = new URLSearchParams(location.search);
+    ["category", "risk", "industry"].forEach(function (key) {
+      mkFilters[key] = params.get(key) || "all";
+    });
+    applyFilters(false);
   });
   document.addEventListener("click", function (e) {
     var button = e.target.closest ? e.target.closest("[data-copy]") : null;

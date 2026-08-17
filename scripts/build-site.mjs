@@ -5,135 +5,32 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  GROUPS,
+  INDUSTRY_LABELS,
+  LEGACY_ALIASES,
+  RISK_LABELS,
+  listSkillDirs,
+  readSkillMeta,
+} from "./lib/skill-taxonomy.mjs";
+import { MANIFEST, expectedTags } from "./sync-marketplace.mjs";
+import { README_TARGETS, expectedBlock } from "./sync-readme-skills.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DOCS = path.join(ROOT, "docs");
 const PAGES_DIR = path.join(DOCS, "s");
 const REPO_URL = "https://github.com/mr-kelly/skills";
-const RAW_REPO_URL = "https://raw.githubusercontent.com/mr-kelly/skills/main";
+// skills/**/assets/screenshots/** is Git LFS-tracked (see .gitattributes); raw.githubusercontent.com
+// serves the LFS pointer text instead of the image, so screenshots must go through the LFS media host.
+const RAW_REPO_URL = "https://media.githubusercontent.com/media/mr-kelly/skills/main";
 const INSTALL_COMMAND = "npx skills add mr-kelly/skills";
 const CLAUDE_INSTALL_COMMAND = "/plugin marketplace add mr-kelly/skills\n/plugin install mr-kelly-skills";
 const SITE_URL = "https://mr-kelly.github.io/skills/";
 
-const GROUPS = [
-  {
-    id: "finance",
-    en: "Finance & Back Office",
-    zh: "经营台账",
-    skills: [
-      "kelly-finance",
-      "kelly-money",
-      "kelly-invoice-sheet",
-      "kelly-audit",
-      "kelly-crm",
-      "kelly-clm",
-      "kelly-legal-contracts",
-    ],
-  },
-  {
-    id: "legal",
-    en: "Legal Knowledge",
-    zh: "法律知识库",
-    skills: [
-      "kelly-legal-casebase-ingest",
-      "kelly-legal-precedent-desk",
-      "kelly-legal-matter-strategy",
-      "kelly-legal-firm-radar",
-    ],
-  },
-  {
-    id: "invest",
-    en: "Investing & Wealth",
-    zh: "投资与财富",
-    skills: ["kelly-invest-webull", "kelly-family-office", "kelly-family-fund"],
-  },
-  {
-    id: "ecommerce",
-    en: "Cross-Border E-commerce",
-    zh: "跨境电商",
-    skills: ["kelly-picks", "kelly-products", "kelly-listing", "kelly-ads", "kelly-inquiry"],
-  },
-  {
-    id: "comms",
-    en: "Comms & Service",
-    zh: "沟通与协作",
-    skills: ["kelly-email", "kelly-messenger", "kelly-support", "kelly-tickets", "kelly-standup"],
-  },
-  {
-    id: "growth",
-    en: "Growth & Market",
-    zh: "增长与市场",
-    skills: ["kelly-social", "kelly-seo", "kelly-feedback", "kelly-radar", "kelly-writer"],
-  },
-  {
-    id: "industry-intel",
-    en: "Industry Intelligence",
-    zh: "行业情报",
-    skills: [
-      "kelly-ai-newsroom",
-      "kelly-real-estate-intel",
-      "kelly-education-intel",
-      "kelly-beauty-intel",
-      "kelly-insurance-intel",
-      "kelly-insure-data",
-      "kelly-retail-intel",
-      "kelly-ecommerce-intel",
-      "kelly-restaurant-intel",
-      "kelly-financial-services-intel",
-    ],
-  },
-  {
-    id: "marketing",
-    en: "Brand & Marketing",
-    zh: "品牌与营销",
-    skills: ["kelly-brand", "kelly-creators", "kelly-campaigns", "kelly-launch"],
-  },
-  {
-    id: "production",
-    en: "Production & Teaching",
-    zh: "制作与教学",
-    skills: [
-      "kelly-drama",
-      "kelly-mv",
-      "kelly-digital-human",
-      "kelly-homework-coach",
-      "kelly-lesson",
-      "kelly-ppt-factory",
-      "kelly-demo-video-factory",
-    ],
-  },
-  { id: "eng", en: "Engineering & Ops", zh: "工程与运维", skills: ["kelly-devops", "kelly-pr-review"] },
-  {
-    id: "rbf",
-    en: "Revenue-Based Finance",
-    zh: "收益分成融资",
-    skills: [
-      "kelly-revshare-simulator",
-      "kelly-deal-scorer",
-      "kelly-portfolio-health",
-      "kelly-lead-funnel",
-      "kelly-disclosure-tracker",
-    ],
-  },
-  {
-    id: "agent-ops",
-    en: "AI Agent Ops",
-    zh: "AI Agent 运维",
-    skills: [
-      "kelly-agent-observability",
-      "kelly-agent-eval",
-      "kelly-agent-builder",
-      "kelly-behavior-predict",
-      "kelly-llm-gateway",
-    ],
-  },
-  {
-    id: "workspace",
-    en: "Workspace Helpers",
-    zh: "工作区工具",
-    skills: ["agent-rules", "app-in-skill-creator", "publish-skills"],
-  },
-];
+const LEGACY_SKILL_REDIRECTS = new Map([
+  ["app-in-skill-creator", "kelly-app-skill-creator"],
+  ["kelly-app-creator", "kelly-app-skill-creator"],
+]);
 
 function esc(s) {
   return String(s ?? "")
@@ -141,6 +38,30 @@ function esc(s) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function sitemapXml(skillNames) {
+  const urls = [
+    { loc: SITE_URL, priority: "0.9" },
+    ...skillNames.sort().map((name) => ({
+      loc: `${SITE_URL}s/${encodeURIComponent(name)}.html`,
+      priority: "0.7",
+    })),
+  ];
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls
+  .map(
+    ({ loc, priority }) => `  <url>
+    <loc>${esc(loc)}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>${priority}</priority>
+  </url>`,
+  )
+  .join("\n")}
+</urlset>
+`;
 }
 
 function stripMd(s) {
@@ -202,6 +123,12 @@ async function frontmatterDescription(dir) {
   }
 }
 
+async function skillTaxonomy(dir) {
+  const meta = (await readSkillMeta(ROOT, dir)) || { category: "", tags: [] };
+  const risk = (meta.tags.find((t) => t.startsWith("risk:")) || "").slice(5);
+  return { category: meta.category, tags: meta.tags, risk };
+}
+
 async function hasAppDirectory(dir) {
   try {
     const stat = await fs.stat(path.join(ROOT, "skills", dir, "app"));
@@ -252,31 +179,63 @@ const LANG_JS = `
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") document.querySelectorAll(".lightbox").forEach(function (b) { b.remove(); });
   });
-  function setCategory(id, updateUrl) {
+  var mkFilters = { category: "all", risk: "all", industry: "all" };
+  function applyFilters(updateUrl) {
     var sections = Array.prototype.slice.call(document.querySelectorAll("[data-group-section]"));
     if (!sections.length) return;
-    var selected = id || "all";
-    var exists = selected === "all" || sections.some(function (section) {
-      return section.getAttribute("data-group-section") === selected;
+    var exists = mkFilters.category === "all" || sections.some(function (section) {
+      return section.getAttribute("data-group-section") === mkFilters.category;
     });
-    if (!exists) selected = "all";
+    if (!exists) mkFilters.category = "all";
+
+    var shown = 0;
     sections.forEach(function (section) {
-      var show = selected === "all" || section.getAttribute("data-group-section") === selected;
-      section.hidden = !show;
+      var inCategory = mkFilters.category === "all"
+        || section.getAttribute("data-group-section") === mkFilters.category;
+      var visible = 0;
+      section.querySelectorAll("[data-skill-card]").forEach(function (card) {
+        var tags = (card.getAttribute("data-tags") || "").split(" ");
+        var ok = ["risk", "industry"].every(function (ns) {
+          return mkFilters[ns] === "all" || tags.indexOf(ns + ":" + mkFilters[ns]) !== -1;
+        });
+        card.hidden = !ok;
+        if (ok) visible++;
+      });
+      section.hidden = !(inCategory && visible > 0);
+      if (inCategory) shown += visible;
     });
+    var empty = document.querySelector("[data-empty-state]");
+    if (empty) empty.hidden = shown > 0;
+
     document.querySelectorAll("[data-category-filter]").forEach(function (button) {
-      button.classList.toggle("active", button.getAttribute("data-category-filter") === selected);
+      button.classList.toggle("active", button.getAttribute("data-category-filter") === mkFilters.category);
     });
+    document.querySelectorAll("[data-tag-filter]").forEach(function (button) {
+      var value = button.getAttribute("data-tag-filter").split(":");
+      button.classList.toggle("active", mkFilters[value[0]] === value[1]);
+    });
+
     if (updateUrl && window.history && window.URL) {
       var url = new URL(window.location.href);
-      if (selected === "all") url.searchParams.delete("category");
-      else url.searchParams.set("category", selected);
+      ["category", "risk", "industry"].forEach(function (key) {
+        if (mkFilters[key] === "all") url.searchParams.delete(key);
+        else url.searchParams.set(key, mkFilters[key]);
+      });
       window.history.replaceState(null, "", url.pathname + url.search + url.hash);
     }
   }
-  window.mkSetCategory = function (id) { setCategory(id, true); };
+  window.mkSetCategory = function (id) { mkFilters.category = id || "all"; applyFilters(true); };
+  window.mkSetTag = function (tag) {
+    var parts = String(tag).split(":");
+    if (parts.length === 2 && mkFilters.hasOwnProperty(parts[0])) mkFilters[parts[0]] = parts[1];
+    applyFilters(true);
+  };
   document.addEventListener("DOMContentLoaded", function () {
-    setCategory(new URLSearchParams(location.search).get("category") || "all", false);
+    var params = new URLSearchParams(location.search);
+    ["category", "risk", "industry"].forEach(function (key) {
+      mkFilters[key] = params.get(key) || "all";
+    });
+    applyFilters(false);
   });
   document.addEventListener("click", function (e) {
     var button = e.target.closest ? e.target.closest("[data-copy]") : null;
@@ -423,6 +382,24 @@ a:hover { text-decoration: underline; }
   border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 12.5px; cursor: pointer;
 }
 .category-chip.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  border-radius: 999px; padding: 4px 9px; font: inherit; font-size: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.tag-button:hover { background: #f4f4f5; }
+.tag-button.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-button .count { opacity: .6; font-size: 11px; }
+.risk {
+  align-self: flex-start; margin-top: 10px; border-radius: 999px; padding: 2px 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: .01em; border: 1px solid transparent;
+}
+.risk-sandbox { background: #f4f4f5; color: #52525b; border-color: #e4e4e7; }
+.risk-read-only { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.risk-local-write { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.risk-gated-write { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.empty-state { margin: 44px 0; color: var(--muted); font-size: 14px; }
 h2.group {
   margin: 44px 0 16px; font-size: 15px; font-weight: 650; letter-spacing: .04em;
   text-transform: uppercase; color: var(--muted);
@@ -434,6 +411,8 @@ h2.group {
   border-radius: var(--radius); overflow: hidden; color: var(--text); transition: box-shadow .15s, transform .15s;
 }
 .card:hover { text-decoration: none; box-shadow: 0 8px 24px rgba(24,24,27,.08); transform: translateY(-2px); }
+/* .card sets display:flex, which outranks the UA stylesheet's [hidden] { display: none }. */
+.card[hidden] { display: none; }
 .card .thumb { aspect-ratio: 3 / 2; background: #eef0f3; overflow: hidden; border-bottom: 1px solid var(--border); }
 .card .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
 .card .thumb.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 26px; }
@@ -645,6 +624,30 @@ function skillMobileInstallStrip(s) {
   });
 }
 
+function riskBadge(risk) {
+  const label = RISK_LABELS.find((r) => r.id === risk);
+  if (!label) return "";
+  return `<span class="risk risk-${risk}">${bilingual(esc(label.en), esc(label.zh))}</span>`;
+}
+
+// Each namespace (risk / industry) filters independently and intersects with the others.
+function tagFacetSection(ns, titleEn, titleZh, facets) {
+  if (!facets.length) return "";
+  const buttons = facets
+    .map(
+      (f) =>
+        `<button class="tag-button" type="button" data-tag-filter="${esc(f.tag)}" onclick="mkSetTag('${esc(f.tag)}')">${bilingual(esc(f.en), esc(f.zh))}<span class="count">${f.count}</span></button>`,
+    )
+    .join("\n");
+  return `  <section class="side-card">
+    <h3>${bilingual(esc(titleEn), esc(titleZh))}</h3>
+    <div class="tag-list">
+      <button class="tag-button active" type="button" data-tag-filter="${ns}:all" onclick="mkSetTag('${ns}:all')">${bilingual("Any", "不限")}</button>
+${buttons}
+    </div>
+  </section>`;
+}
+
 function categoryButton(g, count, variant = "button") {
   const isChip = variant === "chip";
   const className = isChip ? "category-chip" : "category-button";
@@ -652,7 +655,7 @@ function categoryButton(g, count, variant = "button") {
   return `<button class="${className}" type="button" data-category-filter="${g.id}" onclick="mkSetCategory('${g.id}')">${bilingual(esc(g.en), esc(g.zh))}${suffix}</button>`;
 }
 
-function homeSidebar(groups) {
+function homeSidebar(groups, riskFacets = [], industryFacets = []) {
   const total = groups.reduce((sum, g) => sum + g.count, 0);
   const categoryButtons = [
     `<button class="category-button active" type="button" data-category-filter="all" onclick="mkSetCategory('all')">${bilingual("All skills", "全部 skills")}<span class="count">${total}</span></button>`,
@@ -671,14 +674,25 @@ function homeSidebar(groups) {
     <h3>${bilingual("Categories", "分类")}</h3>
     <div class="category-list">${categoryButtons}</div>
   </section>
+${tagFacetSection("risk", "What it can touch", "外部副作用", riskFacets)}
+${tagFacetSection("industry", "Industry", "行业", industryFacets)}
 </aside>`;
 }
 
-function homeMobileControls(groups) {
+function homeMobileControls(groups, riskFacets = []) {
   const categoryChips = [
     `<button class="category-chip active" type="button" data-category-filter="all" onclick="mkSetCategory('all')">${bilingual("All", "全部")}</button>`,
     ...groups.map((g) => categoryButton(g, g.count, "chip")),
   ].join("\n");
+  const riskChips = riskFacets.length
+    ? `\n  <nav class="category-chips" aria-label="Risk">${[
+        `<button class="category-chip active" type="button" data-tag-filter="risk:all" onclick="mkSetTag('risk:all')">${bilingual("Any risk", "副作用不限")}</button>`,
+        ...riskFacets.map(
+          (r) =>
+            `<button class="category-chip" type="button" data-tag-filter="${esc(r.tag)}" onclick="mkSetTag('${esc(r.tag)}')">${bilingual(esc(r.en), esc(r.zh))}</button>`,
+        ),
+      ].join("\n")}</nav>`
+    : "";
   const data = installData();
   return `<div class="home-mobile-controls">
   ${installCard({
@@ -691,7 +705,7 @@ function homeMobileControls(groups) {
     prompt: data.prompt,
     compact: true,
   })}
-  <nav class="category-chips" aria-label="Categories">${categoryChips}</nav>
+  <nav class="category-chips" aria-label="Categories">${categoryChips}</nav>${riskChips}
 </div>`;
 }
 
@@ -711,8 +725,7 @@ function skillSidebar(s) {
     <nav class="side-links">
       <a href="${REPO_URL}/tree/main/skills/${s.folder}" target="_blank" rel="noopener">${bilingual("Source", "源码")} ↗</a>
       <a href="${REPO_URL}/blob/main/skills/${s.folder}/SKILL.md" target="_blank" rel="noopener">SKILL.md ↗</a>
-      <a href="${REPO_URL}/blob/main/skills/${s.folder}/README.md" target="_blank" rel="noopener">README ↗</a>
-    </nav>
+${s.hasReadme ? `      <a href="${REPO_URL}/blob/main/skills/${s.folder}/README.md" target="_blank" rel="noopener">README ↗</a>\n` : ""}    </nav>
   </section>
 </aside>`;
 }
@@ -725,20 +738,15 @@ async function main() {
   const shotsEn = parseShotSections(readmeEn, "docs/");
   const shotsZh = parseShotSections(readmeZh, "");
 
-  const dirs = (await fs.readdir(path.join(ROOT, "skills"), { withFileTypes: true }))
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name);
+  const dirs = await listSkillDirs(ROOT);
 
-  // Display-name → folder mapping (kelly-writer lives in skills/kelly-content).
-  const folderFor = (name) => (dirs.includes(name) ? name : name === "kelly-writer" ? "kelly-content" : name);
-
-  const allNames = [
-    ...new Set([...Object.keys(tableEn), ...dirs.map((d) => (d === "kelly-content" ? "kelly-writer" : d))]),
-  ];
+  // Legacy alias dirs are hardlinks to their replacement's SKILL.md — they get a redirect
+  // page, not a card, otherwise the same skill shows up several times on the index.
+  const allNames = [...new Set([...Object.keys(tableEn), ...dirs])].filter((n) => !LEGACY_ALIASES.has(n));
 
   const skills = {};
   for (const name of allNames) {
-    const folder = folderFor(name);
+    const folder = name;
     const en = tableEn[name] || {};
     const zh = tableZh[name] || {};
     const descEn = en.desc || (await frontmatterDescription(folder));
@@ -760,33 +768,77 @@ async function main() {
       shots,
       hasApp: await hasAppDirectory(folder),
       hasReadme: await fileExists(ROOT, "skills", folder, "README.md"),
+      ...(await skillTaxonomy(folder)),
     };
+  }
+
+  // Classification lives in each SKILL.md, so a new skill without one is a build error
+  // rather than something that silently drops into a catch-all bucket.
+  const knownCategories = new Set(GROUPS.map((g) => g.id));
+  const taxonomyErrors = [];
+  for (const s of Object.values(skills)) {
+    if (!s.category) taxonomyErrors.push(`${s.name}: missing metadata.category in SKILL.md`);
+    else if (!knownCategories.has(s.category))
+      taxonomyErrors.push(`${s.name}: unknown metadata.category "${s.category}"`);
+    if (!s.risk) taxonomyErrors.push(`${s.name}: missing a risk:<id> tag in SKILL.md`);
+    else if (!RISK_LABELS.some((r) => r.id === s.risk))
+      taxonomyErrors.push(`${s.name}: unknown risk tag "risk:${s.risk}"`);
+  }
+  // The marketplace listing is derived from the same metadata, so catch drift here rather
+  // than shipping a stale plugin manifest.
+  const manifest = JSON.parse(await fs.readFile(MANIFEST, "utf8"));
+  const wantTags = JSON.stringify(await expectedTags());
+  for (const plugin of manifest.plugins || []) {
+    if (JSON.stringify(plugin.tags) !== wantTags)
+      taxonomyErrors.push(
+        `.claude-plugin/marketplace.json: plugin "${plugin.name}" tags are stale — run node scripts/sync-marketplace.mjs`,
+      );
+  }
+
+  // Same for the README skill tables, which must be grouped by the same categories.
+  for (const target of README_TARGETS) {
+    try {
+      const raw = await fs.readFile(target.file, "utf8");
+      if (!raw.includes(await expectedBlock(target)))
+        taxonomyErrors.push(
+          `${path.relative(ROOT, target.file)}: skills table is stale — run node scripts/sync-readme-skills.mjs`,
+        );
+    } catch (err) {
+      taxonomyErrors.push(`${path.relative(ROOT, target.file)}: ${err.message}`);
+    }
+  }
+
+  if (taxonomyErrors.length) {
+    console.error(`build-site: ${taxonomyErrors.length} taxonomy error(s) — see AGENTS.md`);
+    for (const e of taxonomyErrors) console.error(`  - ${e}`);
+    process.exit(1);
   }
 
   // --- index.html ---
   let groupsHtml = "";
-  const placed = new Set();
   const visibleGroups = [];
   for (const g of GROUPS) {
-    const members = g.skills.filter((n) => skills[n]);
+    // allNames leads with the curated README table order, so cards keep that ordering.
+    const members = allNames.filter((n) => skills[n].category === g.id);
     if (!members.length) continue;
     visibleGroups.push({ ...g, count: members.length });
-    members.forEach((n) => placed.add(n));
     groupsHtml += `<section class="group-section" data-group-section="${g.id}">
 <h2 class="group" id="${g.id}">${bilingual(esc(g.en), esc(g.zh))}</h2>
 <div class="grid">\n`;
     for (const n of members) groupsHtml += cardHtml(skills[n]);
     groupsHtml += "</div>\n</section>\n";
   }
-  const leftovers = allNames.filter((n) => !placed.has(n));
-  if (leftovers.length) {
-    visibleGroups.push({ id: "more", en: "More", zh: "更多", count: leftovers.length });
-    groupsHtml += `<section class="group-section" data-group-section="more">
-<h2 class="group" id="more">${bilingual("More", "更多")}</h2>
-<div class="grid">\n`;
-    for (const n of leftovers) groupsHtml += cardHtml(skills[n]);
-    groupsHtml += "</div>\n</section>\n";
-  }
+
+  const riskFacets = RISK_LABELS.map((r) => ({
+    ...r,
+    tag: `risk:${r.id}`,
+    count: Object.values(skills).filter((s) => s.risk === r.id).length,
+  })).filter((r) => r.count);
+  const industryFacets = INDUSTRY_LABELS.map((i) => ({
+    ...i,
+    tag: `industry:${i.id}`,
+    count: Object.values(skills).filter((s) => s.tags.includes(`industry:${i.id}`)).length,
+  })).filter((i) => i.count);
 
   const appCount = Object.values(skills).filter((s) => s.hasApp).length;
   const indexBody = `
@@ -807,15 +859,18 @@ async function main() {
       </div>
       <div class="audit-note">
         ${bilingual(
-          "<strong>App-in-Skill compliance audited.</strong> All 60 workflows include provider-safe setup, validated handoffs, explicit approval boundaries, and maintainable ESM/CSS structure.",
-          "<strong>App-in-Skill 规范已审计。</strong>60 个工作流均包含 provider-safe setup、validated handoff、明确审批边界与可维护的 ESM/CSS 结构。",
+          "<strong>Workflow contracts are explicit.</strong> New operating apps use the Busabase Research, Plan, Action, and Retrospective contract; existing local apps retain their audited safety baseline.",
+          "<strong>工作流契约明确。</strong>新的运营应用使用 Busabase Research、Plan、Action、Retrospective 契约；现有本地应用保留已审计的安全基线。",
         )}
       </div>
-      ${homeMobileControls(visibleGroups)}
+      ${homeMobileControls(visibleGroups, riskFacets)}
     </section>
-    ${groupsHtml}
+    ${groupsHtml}    <p class="empty-state" data-empty-state hidden>${bilingual(
+      "No skill matches these filters.",
+      "没有 skill 同时满足这些筛选条件。",
+    )}</p>
   </main>
-  ${homeSidebar(visibleGroups)}
+  ${homeSidebar(visibleGroups, riskFacets, industryFacets)}
 </div>`;
 
   function cardHtml(s) {
@@ -824,11 +879,12 @@ async function main() {
       ? `<div class="thumb"><img data-shot-en="${esc(siteThumbPath(thumb.en))}" data-shot-zh="${esc(siteThumbPath(thumb.zh))}" src="${esc(siteThumbPath(thumb.en))}" alt="${esc(s.name)} UI" loading="lazy"></div>`
       : `<div class="thumb empty">⚙️</div>`;
     const href = s.hasApp || s.descEn ? `s/${s.name}.html` : `${REPO_URL}/tree/main/skills/${s.folder}`;
-    return `<a class="card" href="${href}">
+    return `<a class="card" data-skill-card data-tags="${esc(s.tags.join(" "))}" href="${href}">
   ${thumbHtml}
   <div class="body">
     <span class="name">${esc(s.name)}${s.hasApp ? `<span class="pill">${bilingual("App UI", "App UI")}</span>` : ""}</span>
     <span class="desc">${bilingual(esc(s.descEn), esc(s.descZh))}</span>
+    ${riskBadge(s.risk)}
   </div>
 </a>\n`;
   }
@@ -876,8 +932,23 @@ ${whenHtml}${shotsSectionHtml}
     );
   }
 
+  for (const [legacyName, currentName] of LEGACY_SKILL_REDIRECTS) {
+    const target = `${currentName}.html`;
+    await fs.writeFile(
+      path.join(PAGES_DIR, `${legacyName}.html`),
+      `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Moved — ${currentName}</title>
+<link rel="canonical" href="${SITE_URL}s/${target}">
+<meta http-equiv="refresh" content="0; url=${target}">
+<script>location.replace(${JSON.stringify(target)} + location.search + location.hash);</script>
+</head><body><p><code>${legacyName}</code> is now <code>${currentName}</code>. Redirecting to <a href="${target}">${currentName}</a>&hellip;</p></body></html>\n`,
+    );
+  }
+
   await fs.writeFile(path.join(DOCS, ".nojekyll"), "");
-  console.log(`Built docs/index.html + ${Object.keys(skills).length} skill pages into docs/s/`);
+  await fs.writeFile(path.join(DOCS, "sitemap.xml"), sitemapXml(Object.keys(skills)));
+  console.log(`Built docs/index.html + ${Object.keys(skills).length} skill pages + docs/sitemap.xml`);
 }
 
 await main();

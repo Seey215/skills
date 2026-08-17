@@ -116,6 +116,24 @@ a:hover { text-decoration: underline; }
   border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 12.5px; cursor: pointer;
 }
 .category-chip.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  border-radius: 999px; padding: 4px 9px; font: inherit; font-size: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.tag-button:hover { background: #f4f4f5; }
+.tag-button.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-button .count { opacity: .6; font-size: 11px; }
+.risk {
+  align-self: flex-start; margin-top: 10px; border-radius: 999px; padding: 2px 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: .01em; border: 1px solid transparent;
+}
+.risk-sandbox { background: #f4f4f5; color: #52525b; border-color: #e4e4e7; }
+.risk-read-only { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.risk-local-write { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.risk-gated-write { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.empty-state { margin: 44px 0; color: var(--muted); font-size: 14px; }
 h2.group {
   margin: 44px 0 16px; font-size: 15px; font-weight: 650; letter-spacing: .04em;
   text-transform: uppercase; color: var(--muted);
@@ -127,6 +145,8 @@ h2.group {
   border-radius: var(--radius); overflow: hidden; color: var(--text); transition: box-shadow .15s, transform .15s;
 }
 .card:hover { text-decoration: none; box-shadow: 0 8px 24px rgba(24,24,27,.08); transform: translateY(-2px); }
+/* .card sets display:flex, which outranks the UA stylesheet's [hidden] { display: none }. */
+.card[hidden] { display: none; }
 .card .thumb { aspect-ratio: 3 / 2; background: #eef0f3; overflow: hidden; border-bottom: 1px solid var(--border); }
 .card .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
 .card .thumb.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 26px; }
@@ -267,19 +287,19 @@ After it is installed, invoke the skill as $kelly-finance.</textarea>
     </section>
     <div class="panel"><h3><span class="en">When to use it</span><span class="zh">什么时候用</span></h3><p><span class="en">Use it when making 财务三表, investor projections, board finance packs, scenario cases, balance-sheet checks, working-capital schedules, capex/debt schedules, or repairing broken model links.</span><span class="zh">做财务三表、融资预测、董事会财务包、情景分析、资产负债表检查、营运资本/资本开支/债务 schedule，或修三表勾稽错误时使用。</span></p></div>
     <div class="shots"><figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/overview.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/overview-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/overview.webp" alt="Three-statement builder" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/overview.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/overview-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/overview.webp" alt="Three-statement builder" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Three-statement builder</strong><span>Workbook preview with assumptions, income statement, balance sheet, cash flow, and model checks for a clean forecast.</span></div><div class="zh"><strong>三表生成器</strong><span>展示 Assumptions、利润表、资产负债表、现金流量表和 Checks 的 workbook 预览。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/checks.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/checks-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/checks.webp" alt="Model audit checks" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/checks.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/checks-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/checks.webp" alt="Model audit checks" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Model audit checks</strong><span>Audit checklist for statement ties, hardcodes, formula direction, and debt/working-capital linkage before delivery.</span></div><div class="zh"><strong>模型勾稽检查</strong><span>交付前检查三表联动、hardcode、公式方向、债务和营运资本勾稽。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/workbook.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/workbook-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/workbook.webp" alt="Workbook" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/workbook.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/workbook-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-finance/assets/screenshots/workbook.webp" alt="Workbook" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Workbook</strong><span>Generated workbook path and tab contract — Assumptions, Income Statement, Balance Sheet, Cash Flow, Checks — reviewed before any approved export.</span></div><div class="zh"><strong>工作簿</strong><span>生成的工作簿路径与页签契约——假设、利润表、资产负债表、现金流量表、检查——导出前先复核。</span></div>
   </figcaption>
@@ -362,31 +382,63 @@ After it is installed, invoke the skill as $kelly-finance.</textarea>
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") document.querySelectorAll(".lightbox").forEach(function (b) { b.remove(); });
   });
-  function setCategory(id, updateUrl) {
+  var mkFilters = { category: "all", risk: "all", industry: "all" };
+  function applyFilters(updateUrl) {
     var sections = Array.prototype.slice.call(document.querySelectorAll("[data-group-section]"));
     if (!sections.length) return;
-    var selected = id || "all";
-    var exists = selected === "all" || sections.some(function (section) {
-      return section.getAttribute("data-group-section") === selected;
+    var exists = mkFilters.category === "all" || sections.some(function (section) {
+      return section.getAttribute("data-group-section") === mkFilters.category;
     });
-    if (!exists) selected = "all";
+    if (!exists) mkFilters.category = "all";
+
+    var shown = 0;
     sections.forEach(function (section) {
-      var show = selected === "all" || section.getAttribute("data-group-section") === selected;
-      section.hidden = !show;
+      var inCategory = mkFilters.category === "all"
+        || section.getAttribute("data-group-section") === mkFilters.category;
+      var visible = 0;
+      section.querySelectorAll("[data-skill-card]").forEach(function (card) {
+        var tags = (card.getAttribute("data-tags") || "").split(" ");
+        var ok = ["risk", "industry"].every(function (ns) {
+          return mkFilters[ns] === "all" || tags.indexOf(ns + ":" + mkFilters[ns]) !== -1;
+        });
+        card.hidden = !ok;
+        if (ok) visible++;
+      });
+      section.hidden = !(inCategory && visible > 0);
+      if (inCategory) shown += visible;
     });
+    var empty = document.querySelector("[data-empty-state]");
+    if (empty) empty.hidden = shown > 0;
+
     document.querySelectorAll("[data-category-filter]").forEach(function (button) {
-      button.classList.toggle("active", button.getAttribute("data-category-filter") === selected);
+      button.classList.toggle("active", button.getAttribute("data-category-filter") === mkFilters.category);
     });
+    document.querySelectorAll("[data-tag-filter]").forEach(function (button) {
+      var value = button.getAttribute("data-tag-filter").split(":");
+      button.classList.toggle("active", mkFilters[value[0]] === value[1]);
+    });
+
     if (updateUrl && window.history && window.URL) {
       var url = new URL(window.location.href);
-      if (selected === "all") url.searchParams.delete("category");
-      else url.searchParams.set("category", selected);
+      ["category", "risk", "industry"].forEach(function (key) {
+        if (mkFilters[key] === "all") url.searchParams.delete(key);
+        else url.searchParams.set(key, mkFilters[key]);
+      });
       window.history.replaceState(null, "", url.pathname + url.search + url.hash);
     }
   }
-  window.mkSetCategory = function (id) { setCategory(id, true); };
+  window.mkSetCategory = function (id) { mkFilters.category = id || "all"; applyFilters(true); };
+  window.mkSetTag = function (tag) {
+    var parts = String(tag).split(":");
+    if (parts.length === 2 && mkFilters.hasOwnProperty(parts[0])) mkFilters[parts[0]] = parts[1];
+    applyFilters(true);
+  };
   document.addEventListener("DOMContentLoaded", function () {
-    setCategory(new URLSearchParams(location.search).get("category") || "all", false);
+    var params = new URLSearchParams(location.search);
+    ["category", "risk", "industry"].forEach(function (key) {
+      mkFilters[key] = params.get(key) || "all";
+    });
+    applyFilters(false);
   });
   document.addEventListener("click", function (e) {
     var button = e.target.closest ? e.target.closest("[data-copy]") : null;

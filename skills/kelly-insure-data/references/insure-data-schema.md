@@ -1,10 +1,12 @@
 # Kelly Insure Data UI Schema
 
-This schema powers the local UI for insurance data entry and governance.
+This schema powers the AirApp UI for insurance data governance. It is the
+`snapshot` object returned by `app/app/js/providers/busabase-provider.js`
+(read from the operator-provisioned Busabase workspace) and
+`app/app/js/providers/demo-provider.js` (deterministic offline fixture) —
+there is no local snapshot file anymore.
 
 ## Snapshot
-
-`app/.data/insure_snapshot.json`:
 
 ```json
 {
@@ -13,41 +15,43 @@ This schema powers the local UI for insurance data entry and governance.
   "source": "local|busabase",
   "drive": {
     "node_id": "Busabase Drive node id",
-    "name": "文件盘",
-    "slug": "optional slug",
+    "name": "港险资料库",
+    "slug": "hk-insurance-drive",
     "metadata": {},
     "metadata_fields": [{ "key": "owner", "value": "Kelly" }]
   },
   "bases": {
+    "featured": {
+      "base_id": "bse_...",
+      "name": "资讯精选",
+      "slug": "featured-information",
+      "fields": [{ "key": "title", "value": "Title (text)" }]
+    },
+    "notices": {
+      "base_id": "bse_...",
+      "name": "保司通知",
+      "slug": "insurance-news",
+      "fields": [{ "key": "title", "value": "Title (text)" }]
+    },
     "qa": {
       "base_id": "bse_...",
       "name": "问答",
       "slug": "insurance-qa",
       "fields": [{ "key": "question", "value": "Question (text)" }]
     },
-    "news": {
-      "base_id": "bse_...",
-      "name": "新闻资讯",
-      "slug": "insurance-news",
-      "fields": [{ "key": "title", "value": "Title (text)" }]
-    },
     "feedback": {
       "base_id": "bse_...",
       "name": "用户反馈",
       "slug": "user-feedback",
       "fields": [{ "key": "content", "value": "反馈内容 (longtext)" }]
-    },
-    "prompts": {
-      "base_id": "bse_...",
-      "name": "预置提示词",
-      "slug": "insurance-prompts",
-      "fields": [{ "key": "title", "value": "短标题 (text)" }]
     }
   },
   "metrics": {
     "file_count": 0,
     "metadata_field_count": 0,
     "qa_count": 0,
+    "featured_count": 0,
+    "notice_count": 0,
     "news_count": 0,
     "feedback_count": 0,
     "total_records": 0,
@@ -57,10 +61,14 @@ This schema powers the local UI for insurance data entry and governance.
   "files": [],
   "qa_pairs": [],
   "news_items": [],
+  "featured_items": [],
+  "notice_items": [],
   "feedback_items": [],
   "warnings": []
 }
 ```
+
+`news_items` is the ordered union of `featured_items` and `notice_items`. Every item carries `collection: "featured" | "notice"`. `news_count` is their total.
 
 ## File Item
 
@@ -86,33 +94,31 @@ Required:
 - `id`
 - `question`
 - `answer`
-- `category`
-- `source`
-- `tags`
+- `carrier` (mapped from `source`)
 - `updated_at`
 - `status`
 - `fields`
 - `governance`
 
-The QA pair corresponds to one record in the configured QA Base.
+The QA pair corresponds to one record in the configured QA Base. Raw `source_path` is preserved in `fields`.
 
-## News Item
+## News Item (Featured Information / Insurer Notices)
 
 Required:
 
 - `id`
+- `collection` (`"featured"` or `"notice"`)
 - `title`
-- `summary`
-- `url`
-- `source`
+- `summary` (mapped from `content`)
+- `url` (mapped from `source_url`)
+- `source` (mapped from `carrier`)
 - `published_at`
 - `category`
-- `tags`
 - `status`
 - `fields`
 - `governance`
 
-The news item corresponds to one record in the configured news Base.
+Both Featured Information (`featured-information`) and Insurer Notices (`insurance-news`) share the same canonical Busabase fields: `title`, `content`, `source_url`, `published_at`, `carrier`, `status`, `content_html`, `content_type` (`information`/`knowledge`), `category`, `attachments`, `lifebee_key`. Only `title` is required for governance scoring; `summary`, `source`, and `tags` are not required fields in the actual Bases.
 
 ## Feedback Item
 
@@ -134,11 +140,14 @@ Required:
 
 The feedback item corresponds to one record in the configured user feedback Base. It should preserve the user-visible feedback text, source context, status, and any contact/rating fields that are safe to store.
 
-## Preset Prompt Item
+## Preset Prompt Item (miniapp-owned Base)
 
-The preset prompt Base (`insurance-prompts`, 预置提示词) holds the prompts the
-insure miniapp offers on its home screen. It is a **canonical Base in the same
-folder as the other ones**, so an agent rebuilding this workspace must create it.
+`insurance-prompts` (预置提示词) sits in the same workspace folder as the four
+Bases above, but it belongs to the insure miniapp, which reads it read-only for
+its home prompt rows. This AirApp does not declare it in `app/app/js/config.js`,
+does not read it, and it is absent from the snapshot — there is no
+`prompt_items` array. It is documented here because an operator rebuilding this
+workspace must recreate it with the schema the miniapp expects.
 
 Canonical fields:
 
@@ -150,15 +159,14 @@ Canonical fields:
 | `expected_result` | longtext | no | What a good answer should contain. Reference material for AI retrieval — never rendered to the end user. |
 | `status` | text | no | `active` shows the row. Any other non-empty value hides it. |
 
-Consumer contract: the miniapp reads this Base read-only through the insure
-knowledge proxy and rotates one prompt per category per day. Prompt content is
-insurance sales copy, so it must avoid guarantees, absolute claims, and promised
-outcomes.
+The miniapp rotates one prompt per category per day. Prompt text is insurance
+sales copy, so it must avoid guarantees, absolute claims, and promised outcomes.
 
-This Base is **not yet surfaced in the skill UI or the snapshot** — there is no
-`prompt_items` array, and `scripts/export_busabase_snapshot.ts` resolves Bases by
-configured slug, so a restore manifest currently omits it. Wiring the provider,
-snapshot, and export is separate work.
+Known gap: `scripts/export_busabase_snapshot.mjs` resolves Bases from the fixed
+`--featured-slug` / `--notices-slug` / `--qa-slug` / `--feedback-slug` arguments,
+so a restore manifest omits this Base and restoring a workspace from a manifest
+drops the prompt library. Teaching the export/restore scripts about it is
+separate work.
 
 ## Governance
 
@@ -175,3 +183,12 @@ Every record-like item should carry:
 ```
 
 Use `missing_fields` to drive UI attention. Use `status` values such as `active`, `draft`, `review`, `needs_metadata`, `needs_review`, or a source-specific status string.
+
+## Asset text
+
+PDF binary reads yield no extracted body and PDFs have no companion `.meta` file. Full extracted text belongs only in the Asset text slot:
+
+- Write: `PUT /api/v1/assets/{assetId}/text` with `{ "text": "..." }`
+- Read: `GET /api/v1/assets/{assetId}/text/lines`
+
+`Asset.metadata` may contain parser facts, `parsed_text_chars`, a short `extraction_summary`, source details, and structured governance fields. It must never contain `parsed_text` or the full body.

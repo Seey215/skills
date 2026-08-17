@@ -116,6 +116,24 @@ a:hover { text-decoration: underline; }
   border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 12.5px; cursor: pointer;
 }
 .category-chip.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  border-radius: 999px; padding: 4px 9px; font: inherit; font-size: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.tag-button:hover { background: #f4f4f5; }
+.tag-button.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-button .count { opacity: .6; font-size: 11px; }
+.risk {
+  align-self: flex-start; margin-top: 10px; border-radius: 999px; padding: 2px 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: .01em; border: 1px solid transparent;
+}
+.risk-sandbox { background: #f4f4f5; color: #52525b; border-color: #e4e4e7; }
+.risk-read-only { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.risk-local-write { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.risk-gated-write { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.empty-state { margin: 44px 0; color: var(--muted); font-size: 14px; }
 h2.group {
   margin: 44px 0 16px; font-size: 15px; font-weight: 650; letter-spacing: .04em;
   text-transform: uppercase; color: var(--muted);
@@ -127,6 +145,8 @@ h2.group {
   border-radius: var(--radius); overflow: hidden; color: var(--text); transition: box-shadow .15s, transform .15s;
 }
 .card:hover { text-decoration: none; box-shadow: 0 8px 24px rgba(24,24,27,.08); transform: translateY(-2px); }
+/* .card sets display:flex, which outranks the UA stylesheet's [hidden] { display: none }. */
+.card[hidden] { display: none; }
 .card .thumb { aspect-ratio: 3 / 2; background: #eef0f3; overflow: hidden; border-bottom: 1px solid var(--border); }
 .card .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
 .card .thumb.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 26px; }
@@ -267,37 +287,37 @@ After it is installed, invoke the skill as $kelly-products.</textarea>
     </section>
     <div class="panel"><h3><span class="en">When to use it</span><span class="zh">什么时候用</span></h3><p><span class="en">Use it when managing product master data, inventory/reorder risks, marketplace channel status, price changes, quality holds, SKU archive decisions, or publish approvals.</span><span class="zh">管商品主数据、库存/补货风险、各平台渠道状态、调价、质检暂停、SKU 下架归档或发布审批时使用。</span></p></div>
     <div class="shots"><figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/overview.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/overview-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/overview.webp" alt="Overview" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/overview.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/overview-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/overview.webp" alt="Overview" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Overview</strong><span>Product command desk with visual product cards, margin, inventory value, activity, and approval queue.</span></div><div class="zh"><strong>总览</strong><span>商品管理台：图文商品卡、毛利、库存货值、近期动态和审批队列。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/products.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/products-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/products.webp" alt="Catalog" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/products.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/products-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/products.webp" alt="Catalog" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Catalog</strong><span>Image-rich product library with SKU, lifecycle, owner, margin, inventory cover, and status badges.</span></div><div class="zh"><strong>商品库</strong><span>图文并茂的 SKU 商品库，显示生命周期、负责人、毛利、库存覆盖和状态标签。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/detail.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/detail-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/detail.webp" alt="Product detail" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/detail.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/detail-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/detail.webp" alt="Product detail" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Product detail</strong><span>Gallery, pricing, inventory, content readiness, compliance notes, channel matrix, and related review cards.</span></div><div class="zh"><strong>商品详情</strong><span>商品图库、价格、库存、素材就绪度、合规备注、渠道矩阵和相关审批卡。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/review.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/review-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/review.webp" alt="Review queue" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/review.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/review-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/review.webp" alt="Review queue" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Review queue</strong><span>Approval-gated publish, price, quality-hold, and lifecycle recommendations with evidence.</span></div><div class="zh"><strong>审批队列</strong><span>发布、调价、质检暂停和生命周期建议，全部带证据并需人工批准。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/channels.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/channels-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/channels.webp" alt="Channels" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/channels.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/channels-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/channels.webp" alt="Channels" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Channels</strong><span>Per-channel listing matrix across Amazon, Shopify, and TikTok Shop with status, price, score, and channel issues.</span></div><div class="zh"><strong>渠道</strong><span>各渠道上架矩阵（Amazon、Shopify、TikTok Shop），含状态、价格、评分与渠道问题。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/inventory.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/inventory-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/inventory.webp" alt="Inventory" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/inventory.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/inventory-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-products/assets/screenshots/inventory.webp" alt="Inventory" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Inventory</strong><span>Stock health across warehouses — on-hand, available, days of cover, and low-stock flags.</span></div><div class="zh"><strong>库存</strong><span>跨仓库的库存健康度——在库、可用、可售天数与低库存标记。</span></div>
   </figcaption>
@@ -380,31 +400,63 @@ After it is installed, invoke the skill as $kelly-products.</textarea>
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") document.querySelectorAll(".lightbox").forEach(function (b) { b.remove(); });
   });
-  function setCategory(id, updateUrl) {
+  var mkFilters = { category: "all", risk: "all", industry: "all" };
+  function applyFilters(updateUrl) {
     var sections = Array.prototype.slice.call(document.querySelectorAll("[data-group-section]"));
     if (!sections.length) return;
-    var selected = id || "all";
-    var exists = selected === "all" || sections.some(function (section) {
-      return section.getAttribute("data-group-section") === selected;
+    var exists = mkFilters.category === "all" || sections.some(function (section) {
+      return section.getAttribute("data-group-section") === mkFilters.category;
     });
-    if (!exists) selected = "all";
+    if (!exists) mkFilters.category = "all";
+
+    var shown = 0;
     sections.forEach(function (section) {
-      var show = selected === "all" || section.getAttribute("data-group-section") === selected;
-      section.hidden = !show;
+      var inCategory = mkFilters.category === "all"
+        || section.getAttribute("data-group-section") === mkFilters.category;
+      var visible = 0;
+      section.querySelectorAll("[data-skill-card]").forEach(function (card) {
+        var tags = (card.getAttribute("data-tags") || "").split(" ");
+        var ok = ["risk", "industry"].every(function (ns) {
+          return mkFilters[ns] === "all" || tags.indexOf(ns + ":" + mkFilters[ns]) !== -1;
+        });
+        card.hidden = !ok;
+        if (ok) visible++;
+      });
+      section.hidden = !(inCategory && visible > 0);
+      if (inCategory) shown += visible;
     });
+    var empty = document.querySelector("[data-empty-state]");
+    if (empty) empty.hidden = shown > 0;
+
     document.querySelectorAll("[data-category-filter]").forEach(function (button) {
-      button.classList.toggle("active", button.getAttribute("data-category-filter") === selected);
+      button.classList.toggle("active", button.getAttribute("data-category-filter") === mkFilters.category);
     });
+    document.querySelectorAll("[data-tag-filter]").forEach(function (button) {
+      var value = button.getAttribute("data-tag-filter").split(":");
+      button.classList.toggle("active", mkFilters[value[0]] === value[1]);
+    });
+
     if (updateUrl && window.history && window.URL) {
       var url = new URL(window.location.href);
-      if (selected === "all") url.searchParams.delete("category");
-      else url.searchParams.set("category", selected);
+      ["category", "risk", "industry"].forEach(function (key) {
+        if (mkFilters[key] === "all") url.searchParams.delete(key);
+        else url.searchParams.set(key, mkFilters[key]);
+      });
       window.history.replaceState(null, "", url.pathname + url.search + url.hash);
     }
   }
-  window.mkSetCategory = function (id) { setCategory(id, true); };
+  window.mkSetCategory = function (id) { mkFilters.category = id || "all"; applyFilters(true); };
+  window.mkSetTag = function (tag) {
+    var parts = String(tag).split(":");
+    if (parts.length === 2 && mkFilters.hasOwnProperty(parts[0])) mkFilters[parts[0]] = parts[1];
+    applyFilters(true);
+  };
   document.addEventListener("DOMContentLoaded", function () {
-    setCategory(new URLSearchParams(location.search).get("category") || "all", false);
+    var params = new URLSearchParams(location.search);
+    ["category", "risk", "industry"].forEach(function (key) {
+      mkFilters[key] = params.get(key) || "all";
+    });
+    applyFilters(false);
   });
   document.addEventListener("click", function (e) {
     var button = e.target.closest ? e.target.closest("[data-copy]") : null;

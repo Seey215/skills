@@ -116,6 +116,24 @@ a:hover { text-decoration: underline; }
   border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 12.5px; cursor: pointer;
 }
 .category-chip.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-button {
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  border-radius: 999px; padding: 4px 9px; font: inherit; font-size: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.tag-button:hover { background: #f4f4f5; }
+.tag-button.active { background: var(--text); color: #fff; border-color: var(--text); }
+.tag-button .count { opacity: .6; font-size: 11px; }
+.risk {
+  align-self: flex-start; margin-top: 10px; border-radius: 999px; padding: 2px 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: .01em; border: 1px solid transparent;
+}
+.risk-sandbox { background: #f4f4f5; color: #52525b; border-color: #e4e4e7; }
+.risk-read-only { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.risk-local-write { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.risk-gated-write { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.empty-state { margin: 44px 0; color: var(--muted); font-size: 14px; }
 h2.group {
   margin: 44px 0 16px; font-size: 15px; font-weight: 650; letter-spacing: .04em;
   text-transform: uppercase; color: var(--muted);
@@ -127,6 +145,8 @@ h2.group {
   border-radius: var(--radius); overflow: hidden; color: var(--text); transition: box-shadow .15s, transform .15s;
 }
 .card:hover { text-decoration: none; box-shadow: 0 8px 24px rgba(24,24,27,.08); transform: translateY(-2px); }
+/* .card sets display:flex, which outranks the UA stylesheet's [hidden] { display: none }. */
+.card[hidden] { display: none; }
 .card .thumb { aspect-ratio: 3 / 2; background: #eef0f3; overflow: hidden; border-bottom: 1px solid var(--border); }
 .card .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
 .card .thumb.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 26px; }
@@ -267,49 +287,49 @@ After it is installed, invoke the skill as $kelly-seo.</textarea>
     </section>
     <div class="panel"><h3><span class="en">When to use it</span><span class="zh">什么时候用</span></h3><p><span class="en">Use it when analyzing search performance, tracking and improving how AI engines cite your brand, approving GEO content changes, or fixing knowledge-graph and entity signals.</span><span class="zh">分析搜索表现、追踪并提升 AI 引擎对品牌的引用、审批 GEO 内容改动，或修复知识图谱和实体信号时使用。</span></p></div>
     <div class="shots"><figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/overview.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/overview-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/overview.webp" alt="Overview" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/overview.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/overview-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/overview.webp" alt="Overview" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Overview</strong><span>Search Console KPI cards with daily clicks/impressions chart, top movers, and per-site freshness.</span></div><div class="zh"><strong>总览</strong><span>Search Console KPI 卡片、每日点击/曝光图表、Top movers 和各站点同步状态。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/queries.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/queries-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/queries.webp" alt="Queries" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/queries.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/queries-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/queries.webp" alt="Queries" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Queries</strong><span>Top queries with clicks, impressions, CTR, position, period deltas, and opportunity badges.</span></div><div class="zh"><strong>查询</strong><span>Top 查询表：点击、曝光、CTR、排名、周期变化和机会标记。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/pages.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/pages-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/pages.webp" alt="Pages" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/pages.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/pages-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/pages.webp" alt="Pages" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Pages</strong><span>Page-level click and impression table with top growth and decline movers for prioritizing content updates.</span></div><div class="zh"><strong>页面</strong><span>Kelly seo 的 页面 场景截图。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/opportunities.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/opportunities-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/opportunities.webp" alt="Opportunities" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/opportunities.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/opportunities-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/opportunities.webp" alt="Opportunities" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Opportunities</strong><span>Ranked SEO opportunity queue with impact, effort, evidence, and recommended next actions.</span></div><div class="zh"><strong>优化机会</strong><span>Kelly seo 的 优化机会 场景截图。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/geo.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/geo-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/geo.webp" alt="AI visibility (GEO)" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/geo.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/geo-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/geo.webp" alt="AI visibility (GEO)" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>AI visibility (GEO)</strong><span>An engines×prompts matrix of where the brand is cited across ChatGPT, Perplexity, Gemini, Claude, and Copilot, with an overall visibility score and trend.</span></div><div class="zh"><strong>AI 可见度（GEO）</strong><span>引擎×prompt 矩阵：品牌在 ChatGPT、Perplexity、Gemini、Claude、Copilot 的被引用情况，带总可见度分和趋势。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/optimize.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/optimize-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/optimize.webp" alt="GEO optimizer" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/optimize.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/optimize-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/optimize.webp" alt="GEO optimizer" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>GEO optimizer</strong><span>Agent-proposed rewrites that make pages more citable by AI engines, gated by geo-qa — one blocked for a fabricated stat.</span></div><div class="zh"><strong>GEO 优化</strong><span>agent 提出让页面更易被 AI 引擎引用的改写，由 geo-qa 把关——一条因编造统计被 BLOCK。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/entity.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/entity-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/entity.webp" alt="Entity readiness" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/entity.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/entity-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/entity.webp" alt="Entity readiness" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Entity readiness</strong><span>Entity readiness checklist showing schema coverage, citation signals, and blocked/ready status for AI answer engines.</span></div><div class="zh"><strong>实体就绪度</strong><span>Kelly seo 的 实体就绪度 场景截图。</span></div>
   </figcaption>
 </figure>
 <figure class="shot">
-  <img data-shot-en="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/sites.webp" data-shot-zh="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/sites-zh-CN.webp" src="https://raw.githubusercontent.com/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/sites.webp" alt="Sites" loading="lazy">
+  <img data-shot-en="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/sites.webp" data-shot-zh="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/sites-zh-CN.webp" src="https://media.githubusercontent.com/media/mr-kelly/skills/main/skills/kelly-seo/assets/screenshots/sites.webp" alt="Sites" loading="lazy">
   <figcaption class="cap">
     <div class="en"><strong>Sites</strong><span>Configured Search Console properties with verification type, last sync, and 28-day click and impression totals.</span></div><div class="zh"><strong>站点</strong><span>已配置的 Search Console 属性，含验证方式、上次同步与 28 天点击/曝光汇总。</span></div>
   </figcaption>
@@ -392,31 +412,63 @@ After it is installed, invoke the skill as $kelly-seo.</textarea>
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") document.querySelectorAll(".lightbox").forEach(function (b) { b.remove(); });
   });
-  function setCategory(id, updateUrl) {
+  var mkFilters = { category: "all", risk: "all", industry: "all" };
+  function applyFilters(updateUrl) {
     var sections = Array.prototype.slice.call(document.querySelectorAll("[data-group-section]"));
     if (!sections.length) return;
-    var selected = id || "all";
-    var exists = selected === "all" || sections.some(function (section) {
-      return section.getAttribute("data-group-section") === selected;
+    var exists = mkFilters.category === "all" || sections.some(function (section) {
+      return section.getAttribute("data-group-section") === mkFilters.category;
     });
-    if (!exists) selected = "all";
+    if (!exists) mkFilters.category = "all";
+
+    var shown = 0;
     sections.forEach(function (section) {
-      var show = selected === "all" || section.getAttribute("data-group-section") === selected;
-      section.hidden = !show;
+      var inCategory = mkFilters.category === "all"
+        || section.getAttribute("data-group-section") === mkFilters.category;
+      var visible = 0;
+      section.querySelectorAll("[data-skill-card]").forEach(function (card) {
+        var tags = (card.getAttribute("data-tags") || "").split(" ");
+        var ok = ["risk", "industry"].every(function (ns) {
+          return mkFilters[ns] === "all" || tags.indexOf(ns + ":" + mkFilters[ns]) !== -1;
+        });
+        card.hidden = !ok;
+        if (ok) visible++;
+      });
+      section.hidden = !(inCategory && visible > 0);
+      if (inCategory) shown += visible;
     });
+    var empty = document.querySelector("[data-empty-state]");
+    if (empty) empty.hidden = shown > 0;
+
     document.querySelectorAll("[data-category-filter]").forEach(function (button) {
-      button.classList.toggle("active", button.getAttribute("data-category-filter") === selected);
+      button.classList.toggle("active", button.getAttribute("data-category-filter") === mkFilters.category);
     });
+    document.querySelectorAll("[data-tag-filter]").forEach(function (button) {
+      var value = button.getAttribute("data-tag-filter").split(":");
+      button.classList.toggle("active", mkFilters[value[0]] === value[1]);
+    });
+
     if (updateUrl && window.history && window.URL) {
       var url = new URL(window.location.href);
-      if (selected === "all") url.searchParams.delete("category");
-      else url.searchParams.set("category", selected);
+      ["category", "risk", "industry"].forEach(function (key) {
+        if (mkFilters[key] === "all") url.searchParams.delete(key);
+        else url.searchParams.set(key, mkFilters[key]);
+      });
       window.history.replaceState(null, "", url.pathname + url.search + url.hash);
     }
   }
-  window.mkSetCategory = function (id) { setCategory(id, true); };
+  window.mkSetCategory = function (id) { mkFilters.category = id || "all"; applyFilters(true); };
+  window.mkSetTag = function (tag) {
+    var parts = String(tag).split(":");
+    if (parts.length === 2 && mkFilters.hasOwnProperty(parts[0])) mkFilters[parts[0]] = parts[1];
+    applyFilters(true);
+  };
   document.addEventListener("DOMContentLoaded", function () {
-    setCategory(new URLSearchParams(location.search).get("category") || "all", false);
+    var params = new URLSearchParams(location.search);
+    ["category", "risk", "industry"].forEach(function (key) {
+      mkFilters[key] = params.get(key) || "all";
+    });
+    applyFilters(false);
   });
   document.addEventListener("click", function (e) {
     var button = e.target.closest ? e.target.closest("[data-copy]") : null;

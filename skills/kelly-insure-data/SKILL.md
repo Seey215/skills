@@ -196,6 +196,46 @@ Start `pnpm --dir app dev` only when local preview/debugging is explicitly
 requested. UI language supports Chinese (primary) and English chrome with an
 `Auto` default.
 
+## Deployed AirApp node: `hk-insurance-workbench`
+
+The workspace already contains a deployed AirApp node, `hk-insurance-workbench`
+(港险资料库工作台), sitting at the space root beside the 港险公司资料库 folder. It
+is **not** a deployment of this skill's `app/` artifact — it is an older
+hand-written five-file viewer (`package.json`, `server.js`, `index.html`,
+`app.js`, `styles.css`) that predates the AirApp migration. Treat it as a second,
+much smaller surface on the same dataset: a read-only tile row of record counts
+per Base plus the five most recently updated records.
+
+Runtime contract, and the reason this node was broken for months:
+
+- Busabase starts an AirApp with `npm install` then literally `npm run dev`.
+  A `package.json` with only a `start` script never boots — the runtime reports
+  `Missing script: "dev"`. Busabase now rejects such a write
+  (`AIRAPP_NOT_RUNNABLE`), but nodes created before that check can still be in
+  this state.
+- A bundler dev server (`vite`, `next`, `webpack`, …) cannot boot in this
+  runtime at all, so renaming a Vite scaffold's script to `dev` is not a fix.
+  Serve from a plain Node server.
+- A running AirApp is proxied same-origin under
+  `/api/airapp-preview/{nodeId}/`, so browser code reaches Busabase with an
+  absolute `/api/v1/...` path, using the session of the user who clicked Run.
+  There is no API-key handling and no bridge prefix in front of `/api/v1`.
+- Reads use `GET /api/v1/records?baseId=…&limit=…` (cursor paging via
+  `nextCursor`) or `GET /api/v1/records/page` (numbered pages). Record values
+  live under `headCommit.payload`, keyed by field slug.
+
+Fixed in this node (version 0.3.0): the missing `dev` script; a request to a
+non-existent `/__busabase_api__/api/v1/records/paged` prefix and route; reading
+`headCommit.fields` instead of `headCommit.payload`; and a hardcoded three-Base
+id list that had gone stale. Bases are now resolved by slug from
+`GET /api/v1/bases`, and a slug that no longer resolves degrades to a `—` tile
+plus a warning instead of failing the page.
+
+Open question for the operator, deliberately left open: whether to keep this
+node as a thin viewer or replace its contents with this skill's `app/` artifact.
+Keeping both means two divergent readers of one dataset; replacing means
+uploading the full `app/` tree, including the vendored SDK, into the node.
+
 ## File Contract
 
 Read `references/insure-data-schema.md` before editing the app or

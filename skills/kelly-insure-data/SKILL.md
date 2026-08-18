@@ -223,11 +223,22 @@ Runtime contract, and the reason this node was broken for months:
 - Reads use `GET /api/v1/records?baseId=…&limit=…` (cursor paging via
   `nextCursor`) or `GET /api/v1/records/page` (numbered pages). Record values
   live under `headCommit.payload`, keyed by field slug.
+- The cloud engine is Nodepod, an in-browser Node runtime, and two habits that
+  are fine under real Node kill the dev server there. This node hit both:
+  `fileURLToPath(new URL(".", import.meta.url))` throws, because
+  `import.meta.url` is not guaranteed to be a `file:` URL — read static files
+  relative to cwd (`./index.html`) instead; and
+  `listen(port, function () { this.address().port })` throws
+  `this.address is not a function`, because the listen callback's `this` is not
+  bound to the server — log a captured `port` variable instead. Both throw
+  after `npm run dev` starts, so the symptom is `[dev server exited with code 1]`
+  and a run stuck before "ready". Busabase's own `PURE_HTML_SERVER_JS` demo
+  still uses the second shape, so it is not a safe template to copy verbatim.
 
-Fixed in this node (version 0.3.0): the missing `dev` script; a request to a
+Fixed in this node (version 0.3.2): the missing `dev` script; a request to a
 non-existent `/__busabase_api__/api/v1/records/paged` prefix and route; reading
-`headCommit.fields` instead of `headCommit.payload`; and a hardcoded three-Base
-id list that had gone stale. Bases are now resolved by slug from
+`headCommit.fields` instead of `headCommit.payload`; the two Nodepod crashes
+above; and a hardcoded three-Base id list that had gone stale. Bases are now resolved by slug from
 `GET /api/v1/bases`, and a slug that no longer resolves degrades to a `—` tile
 plus a warning instead of failing the page.
 

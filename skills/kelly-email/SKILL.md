@@ -8,6 +8,19 @@ metadata:
     - surface:busabase
     - surface:imap
     - surface:smtp
+  busabase:
+    # Opt in as an installable template. Explicit, never inferred from the
+    # directory's shape: publishing one means accepting that installers run
+    # this app's code and feed this file to their agent.
+    template: true
+    folderSlug: kelly-email
+    # Each key names a Base under content/. The validator checks they exist, so
+    # a manual can never describe a table the package does not ship.
+    resources:
+      - reviews
+      - contacts
+      - settings
+    risk: gated-write
 ---
 
 # Kelly Email
@@ -58,7 +71,7 @@ When changing the product, update the canonical `app/` source first and submit a
 
 ## UI Contract
 
-Preserve the established Kelly approval-desk layout and visual quality:
+Preserve the established approval-desk layout and visual quality:
 
 - Desktop uses a stable sidebar, dense list, and detail pane.
 - Mobile uses one-column navigation with explicit list/detail transitions and no horizontal overflow.

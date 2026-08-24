@@ -9,7 +9,7 @@
     "execute": "node scripts/execute_ui_decisions.ts",
     "validate": "node scripts/validate_ui_schema.ts",
     "busabase:init": "node scripts/init_busabase_schema.ts",
-    "app:check": "pnpm --dir app check"
+    "app:check": "pnpm --dir content/kelly-email-app check"
   },
   "dependencies": {
     "busabase-sdk": "0.17.2",

@@ -21,9 +21,9 @@ import {
   summaryFrom,
   utcNow,
   writeAgentLock,
-} from "../app/lib/common.ts";
-import { createProvider } from "../app/lib/data-provider/index.ts";
-import type { Config, Mailbox, ReviewItem } from "../app/lib/types.ts";
+} from "../content/kelly-email-app/lib/common.ts";
+import { createProvider } from "../content/kelly-email-app/lib/data-provider/index.ts";
+import type { Config, Mailbox, ReviewItem } from "../content/kelly-email-app/lib/types.ts";
 
 interface BatchArgs {
   reviewQuota: number;

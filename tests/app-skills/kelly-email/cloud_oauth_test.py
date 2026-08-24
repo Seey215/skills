@@ -16,7 +16,8 @@ sys.path.insert(0, str(REPO_ROOT / "tests" / "app-skills" / "harness"))
 
 from runtime import free_port, managed_process
 
-APP_ROOT = REPO_ROOT / "skills" / "kelly-email" / "app"
+# Template layout: the AirApp is the package node under content/, not app/.
+APP_ROOT = REPO_ROOT / "skills" / "kelly-email" / "content" / "kelly-email-app"
 REQUIRED_ENV = (
     "KELLY_APP_CLOUD_BASE_URL",
     "KELLY_APP_CLOUD_TEST_EMAIL",

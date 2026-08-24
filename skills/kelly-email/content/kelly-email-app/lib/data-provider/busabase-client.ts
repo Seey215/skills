@@ -7,7 +7,7 @@ type BaseKey = "reviews" | "contacts" | "settings";
 type Fields = Record<string, unknown>;
 
 // Folder + Bases are the shape every App-in-Skill declares, so their
-// discovery/ownership/repair logic lives in busabase-sdk/airapp now. Kelly
+// discovery/ownership/repair logic lives in busabase-sdk/airapp now. Busa
 // Email is the only app in this fleet that also provisions a Drive alongside
 // its Bases, which the shared declaration has no concept of -- so the Drive
 // stays hand-rolled here, layered on top of the SDK's Folder resolution.

@@ -15,7 +15,8 @@ sys.path.insert(0, str(REPO_ROOT / "tests" / "app-skills" / "harness"))
 from runtime import free_port, managed_process
 
 SKILL_ROOT = REPO_ROOT / "skills" / "kelly-email"
-APP_ROOT = SKILL_ROOT / "app"
+# Template layout: the AirApp is the package node under content/, not app/.
+APP_ROOT = SKILL_ROOT / "content" / "kelly-email-app"
 RESULTS_ROOT = REPO_ROOT / "test-results" / "kelly-email"
 BUSABASE_VERSION = "0.16.2"
 

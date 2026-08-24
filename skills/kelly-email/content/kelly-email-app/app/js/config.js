@@ -114,18 +114,20 @@ export const appConfig = {
   spaceId: "",
   schemaVersion: 3,
   folder: {
-    nodeId: "nodmscmgdpci1ebzks",
     slug: "kelly-email",
     name: "Kelly Email",
     description: "Mailbox triage, human review, trusted execution state, and account settings",
   },
-  airApp: { name: "Kelly Email", slug: "kelly-email-app", resourceKey: "airapp" },
+  // `resourceKey` must be the slug this app ships under in the package
+  // (`content/kelly-email-app/`), because that is what the installer stamps the
+  // node with. A different key here would make the app fail to recognise its
+  // own AirApp after a Template Center install — and its own setup would then
+  // refuse to touch it as a stranger's node.
+  airApp: { name: "Kelly Email", slug: "kelly-email-app", resourceKey: "kelly-email-app" },
   bases: [
     {
       key: "reviews",
-      nodeId: "nodmscmgdpwrj7i3b7",
-      baseId: "bsemscmgdpwhid8t9g",
-      slug: "kelly-email-reviews-v3",
+      slug: "kelly-email-reviews",
       name: "Email Reviews",
       description: "Mailbox review items, human decisions, and execution outcomes",
       readLimit: 100,
@@ -133,9 +135,7 @@ export const appConfig = {
     },
     {
       key: "contacts",
-      nodeId: "nodmscmgdqohwvgmwn",
-      baseId: "bsemscmgdqot5zzcp1",
-      slug: "kelly-email-contacts-v3",
+      slug: "kelly-email-contacts",
       name: "Email Contacts",
       description: "Contact observations derived from reviewed mail",
       readLimit: 100,
@@ -143,9 +143,7 @@ export const appConfig = {
     },
     {
       key: "settings",
-      nodeId: "nodmscmgdr8g774ywa",
-      baseId: "bsemscmgdr87ctxkdr",
-      slug: "kelly-email-settings-v3",
+      slug: "kelly-email-settings",
       name: "Email Settings",
       description: "Account configuration, Vault references, locks, and scan state",
       readLimit: 30,
@@ -153,8 +151,7 @@ export const appConfig = {
     },
   ],
   drive: {
-    nodeId: "nodmscmgzya0euvgyy",
-    slug: "kelly-email-files-v3",
+    slug: "kelly-email-files",
     name: "Email Files",
     description: "Email HTML and attachment artifacts",
   },

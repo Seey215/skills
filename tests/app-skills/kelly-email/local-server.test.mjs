@@ -8,7 +8,11 @@ import { fileURLToPath } from "node:url";
 import { getFreePort, startProcess } from "../harness/process.mjs";
 
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
-const appRoot = join(repoRoot, "skills", "kelly-email", "app");
+// kelly-email is laid out as a busabase TEMPLATE, so its AirApp lives where
+// the package format puts it — `content/<airapp>/` is both the node that gets
+// installed and the project a developer runs. The other app-skills here still
+// use `app/`.
+const appRoot = join(repoRoot, "skills", "kelly-email", "content", "kelly-email-app");
 let baseUrl;
 let runtime;
 let home;

@@ -20,7 +20,14 @@ const results = [];
 for (const entry of entries) {
   if (!entry.isDirectory()) continue;
   const skill = entry.name;
-  const appRoot = path.join(skillsRoot, skill, "app");
+  // A skill laid out as a busabase TEMPLATE keeps its AirApp where the package
+  // format puts it, `content/<skill>-app/`, rather than at `app/`. Looking only
+  // at `app/` did not fail for those — it silently skipped them, so the audit
+  // simply stopped covering an app while still reporting a clean run. Falling
+  // back keeps one audit over both layouts.
+  const appRoot = (await exists(path.join(skillsRoot, skill, "app", "package.json")))
+    ? path.join(skillsRoot, skill, "app")
+    : path.join(skillsRoot, skill, "content", `${skill}-app`);
   const packageJson = await exists(path.join(appRoot, "package.json"));
   if (!packageJson) continue;
   const [server, blueprint, skillDoc, cloudTest] = await Promise.all([

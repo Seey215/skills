@@ -17,14 +17,22 @@ resource implementation and AirApp deployment mechanics.
 
 ## Ownership Boundary
 
-Keep the two creator skills complementary and non-overlapping:
+This skill is a **taste layer over a format layer**, and the split is what keeps
+both honest:
 
-- This skill owns product behavior, information architecture, visible UI, layout,
-  interaction patterns, responsive behavior, accessibility, Help & Settings,
-  hash routing, and visual acceptance for every generated app.
-- `$busabase-app-creator` owns AirApp runtime language, framework, server shape,
-  dependency and SDK constraints, security boundaries, validation, sync, and
-  deployment mechanics.
+- `$busabase-app-creator` (also published as `busabase-skill-creator` and
+  `busabase-template-creator` — one skill, three names) owns everything that
+  makes the artifact *valid*: the skill/template/package format, AirApp runtime
+  language, framework, server shape, dependency and SDK constraints, security
+  boundaries, validation, sync, and deployment mechanics. Its own contract says
+  it is "format and correctness, not taste" — it deliberately carries no visual
+  opinions, so this layer can.
+- This skill owns everything that makes the artifact *Kelly's*: product
+  behavior, information architecture, visible UI, layout, interaction patterns,
+  responsive behavior, accessibility, Help & Settings, hash routing, and visual
+  acceptance for every generated app. Creating the underlying artifact is that
+  skill's package-first route (§ "Two Ways In" there) with this skill's UI
+  contract applied on top.
 - `$kelly-app-skill-creator-tests` owns repository-level conformance, process,
   responsive browser, OSS Busabase, Cloud OAuth, persistence, and AirApp parity
   tests for the generated app.
@@ -42,14 +50,17 @@ Before creating or changing an app:
    ChangeRequests, review, merge, and trusted mutations.
 2. Read and follow `$busabase-app-creator` for resource modeling, native Views,
    Vault boundaries, AirApp constraints, scaffolding, validation, sync, and
-   deployment.
+   deployment. For a new skill, its **package-first** route is the one this
+   skill layers on: the artifact is authored as a template package and verified
+   by installing it, and this skill's UI contract governs what the app inside
+   it looks like.
 
 If a dependency is unavailable, preserve this skill's local artifact and product
 contracts, stop before the unavailable Busabase operation, and report the exact
 missing dependency. Do not invent a second data backend.
 
 Before declaring a generated app complete, read and follow
-`$kelly-app-skill-creator-tests`. Keep app-owned unit tests in `<skill-root>/app/test/`
+`$kelly-app-skill-creator-tests`. Keep app-owned unit tests in `<app-root>/test/`
 and delegate shared harness, external Busabase, OAuth, responsive browser, and
 AirApp parity acceptance to that testing skill. If it is unavailable, run the
 app's deterministic local checks and report the missing conformance suites rather
@@ -75,12 +86,17 @@ the other selected references completely before acting:
 
 ## App-in-Skill Contract
 
-- Every generated skill includes a complete canonical project at
-  `<skill-root>/app/`, including its own `package.json`, lockfile, server entry,
-  browser files, checks, and blueprint/resource map. It must remain locally
-  runnable with `cd <skill-root>/app && pnpm dev` or
-  `pnpm --dir <skill-root>/app dev`, but do not start it unless the user
-  explicitly asks for local preview or local debugging.
+- Every generated skill includes a complete canonical AirApp project with its
+  own `package.json`, lockfile, server entry, browser files, and checks. **New
+  skills put it at `<skill-root>/content/<name>-app/`** — the busabase template
+  layout, which makes the skill installable as a template with no second copy of
+  anything (kelly-email is the fleet's reference for this shape). Existing
+  skills keep their `<skill-root>/app/` root and are maintained in place; do not
+  migrate one to the template layout without an explicit request, because the
+  move also touches harness paths and root scripts. Either root must remain
+  locally runnable with `pnpm --dir <that-root> dev`, but do not start it unless
+  the user explicitly asks for local preview or local debugging. The rest of
+  this document calls whichever one applies **the app root**.
 - When the user asks to start, open, or launch an existing local app, open the
   bare production URL without `?demo=1` or any other Demo selector. The normal
   launch path must exercise the Busabase connection and OAuth gate. Demo is an
@@ -117,7 +133,7 @@ the other selected references completely before acting:
 Use `airapp-first` unless the user explicitly asks for `pnpm dev`, a local URL,
 local preview, or local debugging.
 
-- In `airapp-first`, generate and keep `<skill-root>/app/` as the canonical
+- In `airapp-first`, generate and keep the app root as the canonical
   source, run its deterministic checks, and submit that same reviewed tree as a
   Busabase AirApp ChangeRequest. Do not start a standalone local server merely
   because the project supports one.
@@ -134,7 +150,7 @@ local preview, or local debugging.
   Confirm an actual `airapp` node and its merged version before saying it was
   uploaded, deployed, or is running in Busabase.
 - Local preview never becomes a second implementation. Whether or not it is
-  started, the same `<skill-root>/app/` tree remains the only source submitted to
+  started, the same app-root tree remains the only source submitted to
   AirApp.
 
 ## Connection UX Contract
@@ -380,7 +396,7 @@ Explicit exclusions: ...
 
 The overlay describes product behavior. `$busabase-app-creator` translates it
 into the complete resource graph, capability matrix, security model, canonical
-`<skill-root>/app/` scaffold, AirApp-compatible implementation, validation, sync,
+app-root scaffold, AirApp-compatible implementation, validation, sync,
 and deployment.
 
 ## Creation Workflow
@@ -392,7 +408,7 @@ and deployment.
 4. Agree on the Product Overlay and let `$busabase-app-creator` validate the
    technical blueprint.
 5. Have `$busabase-app-creator` create or update the complete canonical project at
-   `<skill-root>/app/`. Do not invent a second runtime layout in this skill.
+   the app root. Do not invent a second runtime layout in this skill.
 6. Implement one Busabase repository/service boundary over `busabase-sdk`.
    Browser code calls Hono/AirApp routes; it does not hold credentials.
 7. Implement the runtime/product onboarding state and every review/execution
@@ -406,7 +422,7 @@ and deployment.
 9. Run app-owned lint/typecheck/tests/build without starting a persistent local
    server, then use `$kelly-app-skill-creator-tests` for repository-level
    contract, browser, OSS, and available Cloud suites. When the user explicitly
-   selected `local-preview`, also run `pnpm --dir <skill-root>/app dev` and
+   selected `local-preview`, also run `pnpm --dir <app-root> dev` and
    complete local connection, workflow, recovery, desktop, and phone acceptance
    before continuing.
 10. By default, submit the same canonical source directly as a reviewable AirApp
@@ -462,8 +478,8 @@ not delegate Node/Base construction or id wiring to them.
 
 Finish only when:
 
-- the skill contains a complete canonical `<skill-root>/app/` project and
-  `pnpm --dir <skill-root>/app dev` remains supported, whether or not local
+- the skill contains a complete canonical app-root project and
+  `pnpm --dir <app-root> dev` remains supported, whether or not local
   preview was requested;
 - `$busabase-app-creator` runtime, SDK, security, validation, and deployment checks
   pass without a conflicting local runtime contract;

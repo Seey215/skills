@@ -50,10 +50,11 @@ Before creating or changing an app:
    ChangeRequests, review, merge, and trusted mutations.
 2. Read and follow `$busabase-app-creator` for resource modeling, native Views,
    Vault boundaries, AirApp constraints, scaffolding, validation, sync, and
-   deployment. For a new skill, its **package-first** route is the one this
-   skill layers on: the artifact is authored as a template package and verified
-   by installing it, and this skill's UI contract governs what the app inside
-   it looks like.
+   deployment. Creating an app-skill takes its **package-first** route — that
+   skill's own guidance already routes a skill there, because a skill carrying
+   an app is a template. The artifact is authored as a template package and
+   verified by installing it; this skill's UI contract governs what the app
+   inside it looks like.
 
 If a dependency is unavailable, preserve this skill's local artifact and product
 contracts, stop before the unavailable Busabase operation, and report the exact
@@ -87,16 +88,21 @@ the other selected references completely before acting:
 ## App-in-Skill Contract
 
 - Every generated skill includes a complete canonical AirApp project with its
-  own `package.json`, lockfile, server entry, browser files, and checks. **New
-  skills put it at `<skill-root>/content/<name>-app/`** — the busabase template
-  layout, which makes the skill installable as a template with no second copy of
-  anything (kelly-email is the fleet's reference for this shape). Existing
-  skills keep their `<skill-root>/app/` root and are maintained in place; do not
-  migrate one to the template layout without an explicit request, because the
-  move also touches harness paths and root scripts. Either root must remain
-  locally runnable with `pnpm --dir <that-root> dev`, but do not start it unless
-  the user explicitly asks for local preview or local debugging. The rest of
-  this document calls whichever one applies **the app root**.
+  own `package.json`, lockfile, server entry, browser files, and checks. **It
+  lives at `<skill-root>/content/<name>-app/`** — the busabase template layout,
+  which is simply what an app-skill looks like: the same directory is a skill, a
+  template, and an installable package, with no second copy of anything.
+  kelly-email is the fleet's reference for this shape.
+- A skill still holding its project at `<skill-root>/app/` predates that layout
+  and is awaiting migration — the fleet is being converted. Maintain such a
+  skill where it is; do not relocate one as a side effect of unrelated work,
+  because the move also rewrites harness paths, root scripts, and the scripts'
+  own relative imports, and each one needs its suite re-run. Migration is its
+  own task, not a by-product.
+- Either root must remain locally runnable with `pnpm --dir <that-root> dev`,
+  but do not start it unless the user explicitly asks for local preview or local
+  debugging. The rest of this document calls whichever one applies **the app
+  root**.
 - When the user asks to start, open, or launch an existing local app, open the
   bare production URL without `?demo=1` or any other Demo selector. The normal
   launch path must exercise the Busabase connection and OAuth gate. Demo is an

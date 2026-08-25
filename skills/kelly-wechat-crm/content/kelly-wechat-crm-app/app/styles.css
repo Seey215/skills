@@ -1,8 +1,9 @@
 :root {
   --accent: #07c160;
-  --accent-strong: #047a3d;
-  --accent-text: #046b36;
-  --accent-soft: color-mix(in srgb, var(--accent) 10%, white);
+  --accent-strong: #07c160;
+  --accent-text: #047a3d;
+  --accent-contrast: #06351d;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, white);
   --ink: #18201e;
   --muted: #68736f;
   --line: #dfe5e2;
@@ -104,7 +105,7 @@ body.sidebar-collapsed .panel-button {
   place-items: center;
   border-radius: 7px;
   background: var(--accent-strong);
-  color: white;
+  color: var(--accent-contrast);
   font-size: 14px;
   font-weight: 750;
 }
@@ -293,7 +294,7 @@ body.sidebar-collapsed .nav-item {
   border: 1px solid var(--accent-strong);
   border-radius: 7px;
   background: var(--accent-strong);
-  color: white;
+  color: var(--accent-contrast);
   cursor: pointer;
 }
 .goal-open[hidden] {
@@ -535,7 +536,7 @@ h2 {
 .decision-buttons .primary-action {
   border-color: var(--accent-strong);
   background: var(--accent-strong);
-  color: white;
+  color: var(--accent-contrast);
 }
 .back-button {
   display: none;
@@ -682,7 +683,7 @@ h2 {
 .goal-form-footer .primary-action {
   border-color: var(--accent-strong);
   background: var(--accent-strong);
-  color: white;
+  color: var(--accent-contrast);
 }
 .settings-row {
   display: grid;

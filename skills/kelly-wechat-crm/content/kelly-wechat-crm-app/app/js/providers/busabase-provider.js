@@ -1,96 +1,136 @@
+import { inspectProvisionedResources, provisionDeclaredResources } from "../../vendor/busabase-airapp.js";
 import { createRuntimeClient } from "../busabase-client.js";
 import { appConfig } from "../config.js";
 
-const allowedReads = new Set(appConfig.permissions.read_procedures);
+const allowedReads = new Set(appConfig.permissions.readProcedures);
+const allowedSetup = new Set(appConfig.permissions.setupProcedures);
+const allowedWrites = new Set(appConfig.permissions.writeProcedures);
 
-const requireProcedure = (procedure) => {
-  if (!allowedReads.has(procedure)) throw new Error(`PROCEDURE_DENIED: ${procedure}`);
+const requireProcedure = (procedures, procedure) => {
+  if (!procedures.has(procedure)) throw new Error(`PROCEDURE_DENIED: ${procedure}`);
 };
-
-const PENDING_CHANGE_REQUEST_LIMIT = 20;
-const PENDING_STATUSES = ["in_review", "changes_requested", "approved", "conflict"];
 
 const normalizeRecords = (records, baseKey) =>
   (records || []).map((record) => ({
     ...record,
     baseKey,
-    fields: record.headCommit?.payload || record.fields || {},
+    headCommitId: record.headCommitId || record.headCommit?.id,
+    fields: record.headCommit?.payload || record.headCommit?.fields || record.fields || {},
   }));
-
-const readPage = async (client, base, cursor) => {
-  requireProcedure("records.list");
-  const { baseId, key: baseKey } = base;
-  const page = await client.records.list({
-    baseId,
-    limit: base.readLimit,
-    ...(cursor ? { cursor } : {}),
-  });
-  return {
-    records: normalizeRecords(page.records, baseKey),
-    nextCursor: page.nextCursor || null,
-    limit: base.readLimit,
-  };
-};
-
-const readChangeRequests = async (client) => {
-  if (!allowedReads.has("changeRequests.list")) {
-    return { changeRequests: [], nextCursor: null };
-  }
-  const page = await client.changeRequests.list({
-    limit: PENDING_CHANGE_REQUEST_LIMIT,
-    status: PENDING_STATUSES,
-  });
-  return {
-    changeRequests: page.changeRequests || [],
-    nextCursor: page.nextCursor || null,
-  };
-};
 
 let runtimeClient;
 let runtimeBases = new Map();
+let pendingSetupError = "";
+
+async function ensureResources() {
+  runtimeClient = runtimeClient || createRuntimeClient();
+  requireProcedure(allowedReads, "nodes.list");
+  requireProcedure(allowedReads, "nodes.get");
+  let resources = await inspectProvisionedResources(runtimeClient, appConfig);
+  if (resources.folder && resources.missing.length === 0 && resources.repairs.length) {
+    requireProcedure(allowedReads, "bases.get");
+    requireProcedure(allowedSetup, "nodes.updateMetadata");
+    resources = await provisionDeclaredResources(runtimeClient, appConfig);
+  }
+  if (!resources.folder || resources.missing.length) {
+    if (pendingSetupError) throw new Error(pendingSetupError);
+    const missing = resources.missing.map((base) => base.name).join("、");
+    throw new Error(`SETUP_REQUIRED: ${missing || appConfig.folder.name}`);
+  }
+  pendingSetupError = "";
+  runtimeBases = new Map(resources.bases.map((base) => [base.key, base]));
+  return resources;
+}
+
+const resolvedBase = (key) => {
+  const runtime = runtimeBases.get(key);
+  const declared = appConfig.bases.find((base) => base.key === key);
+  if (!runtime || !declared) throw new Error(`SETUP_REQUIRED: ${key}`);
+  return { ...declared, ...runtime };
+};
+
+const readPage = async (base, cursor) => {
+  requireProcedure(allowedReads, "records.list");
+  const page = await runtimeClient.records.list({
+    baseId: base.baseId,
+    limit: base.readLimit,
+    ...(cursor ? { cursor } : {}),
+  });
+  const records = Array.isArray(page) ? page : page.records || [];
+  return {
+    records: normalizeRecords(records, base.key),
+    nextCursor: Array.isArray(page) ? null : page.nextCursor || null,
+    limit: base.readLimit,
+  };
+};
 
 export const busabaseProvider = {
   name: "busabase",
+
   async getState() {
-    const client = createRuntimeClient();
-    const bases = appConfig.schema.bases;
-    const missing = bases.filter((base) => !base.nodeId || !base.baseId);
-    if (missing.length) {
-      throw new Error(`SCHEMA_INCOMPLETE: ${missing.map((base) => base.slug).join(", ")}`);
-    }
-    runtimeClient = client;
-    runtimeBases = new Map(bases.map((base) => [base.key, base]));
-    const [pages, changeRequestPage] = await Promise.all([
-      Promise.all(
-        bases.map(async (base) => {
-          return [base.key, await readPage(client, base)];
-        }),
-      ),
-      readChangeRequests(client),
-    ]);
+    const resources = await ensureResources();
+    const bases = appConfig.bases.map((base) => resolvedBase(base.key));
+    const pages = await Promise.all(bases.map(async (base) => [base.key, await readPage(base)]));
     return {
       provider: {
         ok: true,
         name: "busabase",
         mode: "busabase_sdk_openapi",
         deployment: appConfig.deployment,
-        readOnly: appConfig.readOnly,
+        readOnly: false,
       },
+      resources: { folder: resources.folder, airApp: resources.airApp },
       bases,
       records: pages.flatMap(([, page]) => page.records),
       pageInfo: Object.fromEntries(
         pages.map(([key, page]) => [key, { nextCursor: page.nextCursor, limit: page.limit }]),
       ),
-      changeRequests: changeRequestPage.changeRequests,
-      changeRequestPageInfo: {
-        nextCursor: changeRequestPage.nextCursor,
-        limit: PENDING_CHANGE_REQUEST_LIMIT,
-      },
+      changeRequests: [],
+      changeRequestPageInfo: { nextCursor: null, limit: 0 },
     };
   },
+
   async loadMore(baseKey, cursor) {
-    const base = runtimeBases.get(baseKey);
-    if (!runtimeClient || !base || !cursor) throw new Error(`SCHEMA_INCOMPLETE: ${baseKey}`);
-    return readPage(runtimeClient, base, cursor);
+    if (!runtimeClient || !cursor) throw new Error(`SETUP_REQUIRED: ${baseKey}`);
+    return readPage(resolvedBase(baseKey), cursor);
+  },
+
+  async updateRecord({ baseKey, recordId, headCommitId, fields, message }) {
+    requireProcedure(allowedWrites, "records.changeRequest");
+    if (!recordId || !baseKey || !runtimeBases.has(baseKey)) throw new Error("RECORD_TARGET_REQUIRED");
+    return runtimeClient.records.changeRequest({
+      recordId,
+      operation: "update",
+      fields,
+      message,
+      author: appConfig.appId,
+      ...(headCommitId ? { baseCommitId: headCommitId } : {}),
+      autoMerge: false,
+    });
+  },
+
+  async createRecord({ baseKey, fields, message, idempotencyKey }) {
+    requireProcedure(allowedWrites, "bases.createChangeRequest");
+    const base = resolvedBase(baseKey);
+    return runtimeClient.bases.createChangeRequest({
+      baseId: base.baseId,
+      fields,
+      message,
+      submittedBy: appConfig.appId,
+      ...(idempotencyKey ? { idempotencyKey } : {}),
+      autoMerge: false,
+    });
+  },
+
+  async provisionResources() {
+    requireProcedure(allowedSetup, "nodes.createChangeRequest");
+    requireProcedure(allowedSetup, "nodes.updateMetadata");
+    const client = runtimeClient || createRuntimeClient();
+    try {
+      return await provisionDeclaredResources(client, appConfig);
+    } catch (error) {
+      if (String(error?.message || error).startsWith("SETUP_PENDING:")) pendingSetupError = String(error.message);
+      throw error;
+    }
   },
 };

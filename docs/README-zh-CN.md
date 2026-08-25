@@ -149,7 +149,7 @@
 | `kelly-sales-outreach` | 把产品或服务变成可持续的销售拓客台：推导可编辑 ICP，寻找有证据的目标客户和公开业务联系人，为每家公司起草一封个性化首触达，并在逐条审核后才发送。 | 根据产品建立目标客户清单、持续研究潜在客户与购买信号、审核个性化冷启动邮件，或通过自己的邮箱安全发送已批准首触达时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-sales-outreach.html?lang=zh) |
 | `kelly-support` | 客服台：agent 把邮件、WhatsApp、网页在线、表单、微信来的工单分诊，基于知识库起草回复并提议动作；你在本地 UI review、编辑、批准后才发出，带 SLA 看板、CSAT 跟踪和 support-qa 门（未经批准的退款/承诺直接 BLOCK）。 | 跨渠道处理客服工单、基于知识库起草回复、跟踪 SLA 和 CSAT，或批准退款/升级等敏感动作时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-support.html?lang=zh) |
 | `kelly-tickets` | 把微信群导出、来电记录、表单、邮件里的投诉分类成工单，生成带 SLA 的派单建议供审批，并在看板上跟踪到解决。 | 管理物业/设施投诉、给班组派工单，或运行任何「接入-分类-派单-跟踪」流程时使用。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-tickets.html?lang=zh) |
-| `kelly-wechat-crm` | 个人微信关系桌面：通过只读的 `wechat-cli-rs` 同步联系人和近期动态，把冷淡下来的对话标记进可审核的跟进队列。 | 跟踪微信联系人、标记该跟进谁、查看微信来源的跟进建议时使用——它绝不发送消息，也不修改微信数据。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-wechat-crm.html?lang=zh) |
+| `kelly-wechat-crm` | 把本机只读微信证据整理成人/群关系策略、历史快照、动态目标、可审核下一步和 Agent 工作日志。 | 维护关系、整理备注、推进尊重边界的个人目标或寻找销售机会时使用；它不会发送消息，也不会修改微信数据。 | [查看 ↗](https://mr-kelly.github.io/skills/s/kelly-wechat-crm.html?lang=zh) |
 
 ### 沟通与协同
 
@@ -568,6 +568,35 @@ Kelly Family Fund 是一个本地、只读的家庭统筹基金台账：把两�
   <tr>
     <td><strong>联系人</strong><br>联系人列表：关系强度、最近接触，以及每个联系人的互动历史和进行中交易。</td>
     <td><strong>跟进队列</strong><br>Agent 起草的跟进消息，带可编辑草稿、风险标记和批准/请求修改/搁置决定。</td>
+  </tr>
+</table>
+
+### `kelly-wechat-crm`
+
+<table>
+  <tr>
+    <td width="50%"><img src="../skills/kelly-wechat-crm/assets/screenshots/actions.webp" alt="Kelly 微信关系攻略行动审核"></td>
+    <td width="50%"><img src="../skills/kelly-wechat-crm/assets/screenshots/people.webp" alt="Kelly 微信关系攻略人物画像"></td>
+  </tr>
+  <tr>
+    <td><strong>下一步审核</strong><br>结合目标与证据审核关系行动，记录准备执行、要求修改、延后或已完成；应用不会代发微信。</td>
+    <td><strong>人物关系画像</strong><br>查看关系强度、趋势、未完成事项、建议微信备注、目标上下文和下一步建议。</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="../skills/kelly-wechat-crm/assets/screenshots/groups.webp" alt="Kelly 微信关系攻略群策略"></td>
+    <td width="50%"><img src="../skills/kelly-wechat-crm/assets/screenshots/snapshots.webp" alt="Kelly 微信关系攻略关系快照"></td>
+  </tr>
+  <tr>
+    <td><strong>群策略</strong><br>把群定位、群主、活跃度、群规、群目标和关系价值与个人关系分开管理。</td>
+    <td><strong>关系快照</strong><br>保存明确时间窗内的证据、关系强度、互惠度、趋势、不确定性和建议，供后续比较。</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="../skills/kelly-wechat-crm/assets/screenshots/goals.webp" alt="Kelly 微信关系攻略动态目标"></td>
+    <td width="50%"><img src="../skills/kelly-wechat-crm/assets/screenshots/mobile-actions.webp" alt="Kelly 微信关系攻略手机审核"></td>
+  </tr>
+  <tr>
+    <td><strong>动态目标</strong><br>创建全局、个人、群或关系分组目标，设置成功标准、期限、优先级和明确边界。</td>
+    <td><strong>手机审核</strong><br>手机详情首屏保留处理备注和主要决定，证据与关系字段在下方继续滚动。</td>
   </tr>
 </table>
 

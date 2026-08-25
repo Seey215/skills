@@ -4,32 +4,17 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-// Which language this app is written in decides which of the checks below
-// apply. Read first, because it also decides which files are required at all.
-//
-// The browser half of an AirApp — everything under `app/` — is plain HTML, CSS
-// and JavaScript and is identical either way; only the process serving it
-// differs. So every browser-source rule further down runs for both runtimes,
-// and only the host-specific ones branch.
-const manifestRaw = await readFile(path.join(root, "airapp.json"), "utf8").catch(() => null);
-const manifest = manifestRaw ? JSON.parse(manifestRaw) : {};
-const runtime = manifest.runtime ?? "node";
-if (!["node", "python"].includes(runtime)) throw new Error(`airapp.json declares unsupported runtime "${runtime}".`);
-const isNode = runtime === "node";
-const serverFile = isNode ? "server.js" : "server.py";
+const runtime = "node";
+const serverFile = "server.js";
 
 const required = [
-  ...(isNode
-    ? [
-        "package.json",
-        "server.js",
-        // The vendored SDK + gate exist to give a STANDALONE app a credential of
-        // its own. A Python AirApp is hosted-only (see server.py), so requiring
-        // them would be requiring machinery it cannot use.
-        "app/vendor/busabase-sdk.js",
-        "app/vendor/busabase-airapp-gate.js",
-      ]
-    : ["airapp.json", "server.py"]),
+  "package.json",
+  "server.js",
+  "_node.json",
+  ".busabaseignore",
+  "app/vendor/busabase-sdk.js",
+  "app/vendor/busabase-airapp.js",
+  "app/vendor/busabase-airapp-gate.js",
   "airapp-blueprint.json",
   "app/index.html",
   "app/styles.css",
@@ -45,16 +30,18 @@ const required = [
 const contents = {};
 for (const relative of required) contents[relative] = await readFile(path.join(root, relative), "utf8");
 
-const packageJson = isNode ? JSON.parse(contents["package.json"]) : {};
+if (await readFile(path.join(root, "server.py"), "utf8").catch(() => null))
+  throw new Error("Node AirApp must not ship a second Python server.");
+if (await readFile(path.join(root, "airapp.json"), "utf8").catch(() => null))
+  throw new Error("Node AirApp must not ship a conflicting airapp.json runtime manifest.");
+
+const packageJson = JSON.parse(contents["package.json"]);
 const blueprint = JSON.parse(contents["airapp-blueprint.json"]);
-const configMatch = contents["app/js/config.js"].match(/^\s*export const appConfig = ([\s\S]+);\s*$/);
-if (!configMatch) throw new Error("Generated config must export one JSON appConfig object.");
-const appConfig = JSON.parse(configMatch[1]);
+const { appConfig } = await import(path.join(root, "app/js/config.js"));
 // Everything from here to the end of this block is about an npm project, so it
 // runs only for one.
-const sdkVersion = isNode ? packageJson.dependencies?.["busabase-sdk"] || "" : "";
-if (isNode && !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(sdkVersion))
-  throw new Error("busabase-sdk must use an exact version.");
+const sdkVersion = packageJson.dependencies?.["busabase-sdk"] || "";
+if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(sdkVersion)) throw new Error("busabase-sdk must use an exact version.");
 // Scan BOTH dependency maps: a bundler declared under devDependencies is just as unable to
 // boot under Nodepod as one under dependencies, and only `dependencies` was being checked.
 const declaredDeps = { ...packageJson.dependencies, ...packageJson.devDependencies };
@@ -62,63 +49,52 @@ const unsupportedDep = ["react", "vite", "webpack", "next", "parcel", "react-scr
   (name) => declaredDeps[name],
 );
 if (unsupportedDep) throw new Error(`Unsupported frontend dependency: ${unsupportedDep}.`);
-if (isNode && !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(packageJson.devDependencies?.["esbuild-wasm"] || "")) {
+if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(packageJson.devDependencies?.["esbuild-wasm"] || "")) {
   throw new Error("esbuild-wasm must use an exact version.");
 }
 // `dev` is the script that matters: BOTH AirApp engines run `npm run dev` (nodepod-runner.ts
 // and local-runtime.ts). This check only ever asserted `start`, so a project that dropped
 // `dev` — the exact shape a Vite scaffold produces — passed here and then died at run time on
 // `npm error Missing script: "dev"`. `start` is still checked because deployment uses it.
-if (isNode && packageJson.scripts?.dev !== "node server.js")
+if (packageJson.scripts?.dev !== "node server.js")
   throw new Error('dev must be exactly "node server.js" — it is what Busabase runs.');
-if (isNode && packageJson.scripts?.start !== "node server.js")
-  throw new Error("start must not build or spawn subprocesses.");
-// A non-Node app says how it starts in `airapp.json` instead of in npm scripts.
-// The commands are what Busabase actually executes, so an app that declares
-// neither would install and then have nothing to run.
-if (!isNode) {
-  if (typeof manifest.start !== "string" || !manifest.start.trim())
-    throw new Error("airapp.json must declare a `start` command — it is what Busabase runs.");
-  if (!manifest.start.includes(serverFile)) throw new Error(`airapp.json's start command must run ${serverFile}.`);
-}
-if (isNode && contents["app/vendor/busabase-sdk.js"].length < 10_000)
+if (packageJson.scripts?.start !== "node server.js") throw new Error("start must not build or spawn subprocesses.");
+if (contents["app/vendor/busabase-sdk.js"].length < 10_000 || contents["app/vendor/busabase-airapp.js"].length < 5_000)
   throw new Error("Browser SDK bundle is missing or incomplete.");
 if (!["cloud", "desktop"].includes(appConfig.deployment)) throw new Error("Invalid deployment mode.");
-if (appConfig.deployment === "cloud" && !appConfig.spaceId) throw new Error("Cloud app requires spaceId.");
-if (!Array.isArray(appConfig.schema?.bases) || !appConfig.schema.bases.length)
-  throw new Error("Configured Bases are missing.");
-if (!appConfig.schema.folder?.nodeId) throw new Error("Configured Folder node id is missing.");
-if (appConfig.schema.bases.some((base) => !base.nodeId || !base.baseId))
-  throw new Error("Configured Base node/base ids are missing.");
-if (
-  appConfig.schema.bases.some((base) => !Number.isInteger(base.readLimit) || base.readLimit < 1 || base.readLimit > 50)
-) {
+if (!Array.isArray(appConfig.bases) || !appConfig.bases.length) throw new Error("Configured Bases are missing.");
+if (!appConfig.folder?.slug || !appConfig.airApp?.resourceKey)
+  throw new Error("Portable Folder/AirApp declaration missing.");
+if (appConfig.bases.some((base) => "nodeId" in base || "baseId" in base))
+  throw new Error("Template config must not pin resource ids from another Space.");
+if (appConfig.bases.some((base) => base.slug !== `${appConfig.appId}-${base.key}`))
+  throw new Error("Every Base slug must use the portable <app-id>-<resource-key> form.");
+if (appConfig.bases.some((base) => !Number.isInteger(base.readLimit) || base.readLimit < 1 || base.readLimit > 50)) {
   throw new Error("Every configured Base requires an integer readLimit from 1 to 50.");
 }
-for (const [index, base] of appConfig.schema.bases.entries()) {
+for (const [index, base] of appConfig.bases.entries()) {
   const expected = blueprint.workspace?.bases?.[index]?.read_limit ?? 50;
   if (base.readLimit !== expected)
     throw new Error(`Configured Base ${base.key || index} readLimit does not match blueprint.`);
 }
-if (appConfig.schema.bases.some((base) => (base.views || []).some((view) => !view.viewId)))
-  throw new Error("Configured View ids are missing.");
-const resourceCollections = ["docs", "drives", "whiteboards", "forms", "workflows", "html"];
+const demoRecordCount = appConfig.bases.reduce((count, base) => count + (base.sampleRecords || []).length, 0);
+if (demoRecordCount < 3 || demoRecordCount > 20) {
+  throw new Error("Demo provider requires 3-20 deliberately scoped records.");
+}
+if (blueprint.app?.slug !== appConfig.appId) throw new Error("Blueprint/config app slug mismatch.");
+if (!Number.isInteger(appConfig.onboarding?.version) || appConfig.onboarding.version < 1)
+  throw new Error("Onboarding requires a positive version.");
+if (!Array.isArray(appConfig.onboarding?.requiredFields))
+  throw new Error("Onboarding requiredFields must be an array.");
+if (!appConfig.onboarding.requiredFields.length && !appConfig.onboarding.rationale)
+  throw new Error("Empty onboarding requires an explicit rationale.");
+if (appConfig.onboarding.requiredFields.some((field) => !appConfig.bases.some((base) => base.key === field.resource)))
+  throw new Error("Every onboarding field must belong to a declared Base.");
 if (
-  resourceCollections.some((collection) => (appConfig.schema[collection] || []).some((resource) => !resource.nodeId))
-) {
-  throw new Error("Configured resource node ids are missing.");
-}
-if (
-  (appConfig.schema.vaultRequirements || []).some(
-    (requirement) => "value" in requirement || "secret_value" in requirement,
-  )
-) {
-  throw new Error("Vault values are forbidden in generated config.");
-}
-if (!Array.isArray(appConfig.demoRecords) || appConfig.demoRecords.length < 3 || appConfig.demoRecords.length > 5) {
-  throw new Error("Demo provider requires 3-5 records.");
-}
-if (blueprint.app?.slug !== appConfig.appSlug) throw new Error("Blueprint/config app slug mismatch.");
+  !appConfig.onboarding?.completionResource ||
+  !appConfig.bases.some((base) => base.key === appConfig.onboarding.completionResource)
+)
+  throw new Error("Onboarding completion resource must be a declared Base.");
 
 // Everything the browser downloads. `server.js` is deliberately NOT here: it is
 // the only file allowed to know about credentials, because its dev proxy reads
@@ -194,9 +170,7 @@ const serverCode = stripComments(serverSource);
 // A Node host may go through the SDK (one definition of "hosted", shared by
 // every app) or read the variable directly; both are correct. A Python host has
 // no SDK to call, so it reads it itself.
-const readsRuntimeEnv = isNode
-  ? /readBusabaseAirAppRuntime\s*\(|process\.env\.BUSABASE_AIRAPP_RUNTIME\b/.test(serverCode)
-  : /BUSABASE_AIRAPP_RUNTIME/.test(serverCode);
+const readsRuntimeEnv = /readBusabaseAirAppRuntime\s*\(|process\.env\.BUSABASE_AIRAPP_RUNTIME\b/.test(serverCode);
 if (!readsRuntimeEnv) throw new Error(`${serverFile} must read BUSABASE_AIRAPP_RUNTIME (directly or via the SDK).`);
 // The one shape that must never come back: deciding hosting from a hardcoded
 // list of engine names. That is what broke 66 apps when `local-node` became
@@ -235,27 +209,22 @@ if (/Bearer\s+(?!\$\{)[A-Za-z0-9_-]{8,}/.test(serverSource))
 // one that drifts is a security boundary. So a Node app must use it, and a
 // non-Node app must be honest that it has none rather than 404ing at /auth/*
 // and leaving the operator guessing.
-if (isNode) {
-  if (!serverSource.includes("createBusabaseAirAppLocalGateway"))
-    throw new Error("Server must use the SDK local AirApp OAuth/Space gateway.");
-  for (const route of ["/auth/status", "/auth/start", "/auth/callback", "/auth/space", "/auth/logout"]) {
-    if (!serverSource.includes(route)) throw new Error(`Server is missing ${route}.`);
-  }
-} else if (!serverSource.includes("/auth/")) {
-  throw new Error(`${serverFile} must answer /auth/* with an explanation that this runtime is hosted-only.`);
+if (!serverSource.includes("createBusabaseAirAppLocalGateway"))
+  throw new Error("Server must use the SDK local AirApp OAuth/Space gateway.");
+for (const route of ["/auth/status", "/auth/start", "/auth/callback", "/auth/space", "/auth/logout"]) {
+  if (!serverSource.includes(route)) throw new Error(`Server is missing ${route}.`);
 }
 // Space selection now lives in busabase-sdk/airapp-gate's createAirAppConnectGate(),
 // not hand-rolled per app — see runtime-and-sdk.md. Assert adoption, not the retired
 // literal route string (that now lives only in the vendored SDK bundle).
 // The connect gate is the standalone half too: it exists to walk a user through
 // obtaining a credential, which a hosted-only runtime never needs.
-if (isNode && !contents["app/js/app.js"].includes("createAirAppConnectGate"))
+if (!contents["app/js/app.js"].includes("createAirAppConnectGate"))
   throw new Error("Browser setup must use busabase-sdk/airapp-gate's createAirAppConnectGate().");
-if (appConfig.readOnly && appConfig.permissions.change_request_procedures.length) {
+if (appConfig.readOnly && appConfig.permissions.writeProcedures.length) {
   throw new Error("Read-only app declares write procedures.");
 }
 
 console.log(
-  `AirApp checks OK (${runtime}). ${appConfig.demoRecords.length} demo records;` +
-    `${isNode ? ` busabase-sdk ${sdkVersion};` : ""} ${appConfig.deployment} deployment.`,
+  `AirApp checks OK (${runtime}). ${demoRecordCount} demo records; busabase-sdk ${sdkVersion}; ${appConfig.deployment} deployment.`,
 );

@@ -1,6 +1,0 @@
-{
-  "runtime": "python",
-  "install": "python3 -c \"print('no dependencies to install')\"",
-  "start": "python3 server.py",
-  "port": 3000
-}

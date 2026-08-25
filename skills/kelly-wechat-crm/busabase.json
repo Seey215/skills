@@ -1,0 +1,28 @@
+{
+  "format": "busabase-package@1",
+  "name": "kelly-wechat-crm",
+  "description": "Goal-driven WeChat relationship strategy desk for people, groups, snapshots, actions, and Agent worklogs.",
+  "version": "0.2.0",
+  "license": "MIT",
+  "tags": ["sales-crm", "wechat", "relationship-strategy", "risk:gated-write", "surface:busabase"],
+  "template": {
+    "category": "sales-crm",
+    "schemaVersion": 2,
+    "airapp": "kelly-wechat-crm-app",
+    "tags": ["wechat", "goals", "relationship-analysis", "next-actions", "agent-worklog"],
+    "screenshots": [
+      "assets/screenshots/actions.webp",
+      "assets/screenshots/people.webp",
+      "assets/screenshots/groups.webp",
+      "assets/screenshots/snapshots.webp",
+      "assets/screenshots/goals.webp",
+      "assets/screenshots/mobile-actions.webp"
+    ],
+    "agentPrompts": [
+      "同步我本机的微信人和群，并告诉我当前关系系统的健康状况。",
+      "我想为一款产品找到合适的试用者，请建立目标并提出下一步行动。",
+      "分析我和指定联系人最近一个月的关系变化，生成快照和建议。"
+    ],
+    "requires": { "airapp": true }
+  }
+}

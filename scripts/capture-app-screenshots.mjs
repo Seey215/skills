@@ -118,6 +118,13 @@ const ROUTE_OVERRIDES = {
     qualified: "/qualified",
     connected: "/connected",
   },
+  "kelly-wechat-crm": {
+    people: "/people/wechat-person-xiaoyu",
+    groups: "/groups/wechat-group-product",
+    snapshots: "/relationship-snapshots/wechat-snapshot-xiaoyu-20260825",
+    goals: "/goals/new",
+    actions: "/actions/wechat-action-xiaoyu",
+  },
 };
 
 const GENERIC_ROUTE_MAP = {

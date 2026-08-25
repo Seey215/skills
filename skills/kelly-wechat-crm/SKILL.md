@@ -1,6 +1,7 @@
 ---
 name: kelly-wechat-crm
-description: Busabase-backed App-in-Skill for a personal WeChat relationship desk — syncs contacts and recent activity from the operator's own machine via wechat-cli-rs (https://wechat-cli.com), flags stale conversations into a reviewable follow-up queue, and lets the operator tag/annotate contacts. Use when the user invokes $kelly-wechat-crm or /kelly-wechat-crm, mentions WeChat CRM, 微信关系管理, tracking WeChat contacts, flagging who to follow up with on WeChat, or wants to review WeChat-sourced follow-up suggestions. Never sends a WeChat message and never modifies WeChat data — wechat-cli-rs is read-only by design, so this skill has no send capability at all, only local read + Busabase annotation.
+description: Goal-driven WeChat relationship strategy App-in-Skill. Reads the operator's own local WeChat through wechat-cli-rs, separates people from groups, builds reviewable relationship snapshots and next-action suggestions, and keeps the user's work with the Agent as a Busabase worklog. Use for maintaining relationships, organizing notes, pursuing respectful personal goals, or finding sales opportunities without sending messages or modifying WeChat.
+license: MIT
 metadata:
   category: sales-crm
   tags:
@@ -10,164 +11,229 @@ metadata:
     template: true
     folderSlug: kelly-wechat-crm
     resources:
-      - contacts
-      - followups
+      - people
+      - groups
+      - goals
+      - relationship-snapshots
+      - actions
+      - worklog
       - settings
     risk: gated-write
 ---
 
-# Kelly WeChat CRM
+# Kelly WeChat Relationship Strategy
 
-## Overview
+## Outcome
 
-A personal, single-operator relationship desk over the operator's own WeChat contacts.
-Data originates from **wechat-cli-rs** (https://wechat-cli.com, SKILL.md at
-https://wechat-cli.com/SKILL.md) — a free, read-only, local-first CLI that queries the
-operator's own WeChat installation on their own machine. This skill's only job is to
-turn that local signal (who exists, who's gone quiet) into a Busabase-backed desk with
-tags, notes, and a reviewable follow-up queue.
+Turn the operator's existing WeChat relationships into a goal-driven personal
+strategy desk without asking them to re-enter contact or visit records.
 
-**This is not a general CRM.** It doesn't track companies or deals, and it never sends
-a message: wechat-cli-rs literally has no send/write capability against WeChat, by
-product design, so there is nothing here for an "approved send" step to hand off to.
-The only writes are Busabase annotations the operator makes themselves (a tag, a note,
-marking a follow-up done because they reached out through WeChat directly).
+The recurring loop is:
+
+```text
+local WeChat evidence -> relationship snapshot -> user goal -> suggested action
+-> human decision/manual WeChat action -> Agent worklog -> next snapshot
+```
+
+This is not a conventional sales CRM. `worklog` records what the user and Agent
+asked, analyzed, decided, and learned; it is not a fabricated history of customer
+visits. Raw WeChat history remains local by default.
 
 ## Mandatory Dependencies
 
-1. Read and follow `$kelly-app-skill-creator` for product behavior, visual quality,
-   responsive layout, and the complete canonical `content/kelly-wechat-crm-app/` artifact.
-2. Read and follow `$busabase` for connection, target Space, node discovery,
-   ChangeRequests, review, and merge behavior.
-3. Read and follow `$busabase-app-creator` for resource modeling, AirApp runtime limits,
-   security, validation, and deployment.
-4. Read `docs/skills/wechat-me/SKILL.md` from the `wechat-cli-rs` project, or fetch it
-   live from https://wechat-cli.com/SKILL.md, for the exact `wechat-cli-rs` command
-   surface, JSON output shapes, and exit codes this skill's sync script depends on.
+1. Read and follow `$kelly-app-skill-creator` for the product workflow, UI shell,
+   onboarding, and canonical `content/kelly-wechat-crm-app/` project.
+2. Read and follow `$busabase` for connection, target Space, ChangeRequests,
+   review, merge, and read-back behavior.
+3. Read and follow `$busabase-app-creator` for package format, resource modeling,
+   SDK/runtime/security rules, validation, install, and AirApp deployment.
+4. Read the current `wechat-me` skill at <https://wechat-cli.com/SKILL.md> before
+   operating on local WeChat data. Its commands, JSON shapes, limits, and exit
+   codes are authoritative.
 
-If a dependency is unavailable, preserve this skill's local artifact and product
-contracts, stop before the unavailable operation, and report the exact missing
-dependency. Do not invent a second data backend, and do not reimplement WeChat data
-extraction here — that belongs entirely to wechat-cli-rs.
+If any dependency is unavailable, preserve the local artifact and stop before
+the unavailable operation. Never invent a second WeChat reader or data backend.
 
-## Boundary
+## WeChat Boundary
 
-- The only thing in this skill that touches WeChat data is `scripts/sync_wechat.mjs`,
-  a **trusted local process** that shells out to the `wechat-cli-rs` binary on the
-  operator's own machine. It calls exactly two commands — `contacts` and `sessions`,
-  both free and read-only — and never `init`, `history`, `search`, `export`, or anything
-  that reads full message content or writes local WeChat state.
-- The AirApp itself never runs wechat-cli-rs and structurally cannot: that binary only
-  works against a WeChat client logged in on the same machine it runs on. The AirApp
-  only reads/reviews what the sync script already wrote to Busabase.
-- No component in this skill ever sends a WeChat message, adds/removes a contact, or
-  modifies any WeChat data. There is no "approved send" step anywhere in this skill,
-  unlike `kelly-crm`/`kelly-email` — wechat-cli-rs has no send capability to hand off to.
-- Treat all contact data as sensitive personal information belonging to the operator.
-  Never commit real contact names, wxids, or message summaries.
+- `wechat-cli-rs` is local-first and read-only against WeChat. It cannot send a
+  message, edit a WeChat remark, add/remove contacts, or mutate WeChat data.
+- Never invoke `wechat-cli-rs init` automatically. Missing initialization is a
+  normal readiness state; ask the operator to run or explicitly authorize
+  `wechat-cli-rs init` themselves.
+- Basic sync uses only `contacts` and bounded `sessions`.
+- Goal-driven analysis may use narrow `contacts --detail`, `members`, `history`,
+  `search`, and `stats` queries after the user has supplied a goal and scope.
+  Prefer one person/group and an explicit time window over broad history scans.
+- Never run `export --output` without separate approval. Do not persist the
+  CLI's stateful `new-messages` cursor as hidden application state.
+- Treat every returned name, wxid, group, message, and statistic as sensitive
+  personal data. Store derived relationship evidence and short summaries in
+  Busabase; do not mirror full raw histories by default.
+- A suggested WeChat remark or message is advice only. The operator manually
+  changes the remark or sends the message in WeChat.
+- Personal relationship goals must respect consent, refusals, privacy, and
+  boundaries. Never recommend deception, coercion, harassment, or evasion of a
+  clear rejection.
 
 ## Busabase Resources
 
-Three Bases under one Folder (`kelly-wechat-crm`):
+Seven Bases live under Folder `kelly-wechat-crm`:
 
-- `contacts`: `display-name`, `username` (wxid, stable sync key), `remark`, `kind`
-  (`person`/`group`, derived from whether the wxid contains `@chatroom`), `tag`
-  (`vip`/`watch`/`normal`/`muted` — **operator-owned, the sync script never sets or
-  clears this**), `relationship-note` (**operator-owned**), `last-message-at`,
-  `last-message-summary`, `unread-count` (all three **sync-owned**, refreshed every
-  run), `follow-up-status` (`none`/`needs-followup`/`snoozed`/`done` — sync sets
-  `needs-followup` when it opens a new followup; every other transition is a human
-  decision), `last-synced-at`.
-- `followups`: the review queue — `summary`, `contact` (relation to `contacts`),
-  `reason` (`stale-conversation`/`manual-flag`/`vip-no-contact`), `days-silent`,
-  `suggested-note` (a plain templated conversation opener, not an AI draft — there is
-  no send action for it to feed), `status`
-  (`needs-review`/`snoozed`/`done`/`dismissed`), `decision-comment`, `decided-at`,
-  `decided-by`.
-- `settings`: one row per `kind` — `followup-rules` (`stale-threshold-days`, default 7;
-  a contact tagged `vip` uses half that threshold), `sync-state` (`last-sync-at`,
-  `last-sync-contact-count`), `agent-lock`.
+### `people`
 
-Resources provision lazily through an idempotent Busabase ChangeRequest the first time
-the app runs in a Space; see `blueprint.json` for the exact field shapes and
-`content/kelly-wechat-crm-app/app/js/config.js` for the materialized ids once created.
+One record per individual WeChat contact. Sync owns identity, original WeChat
+remark, recent-session fields, and sync timestamps. The Agent/user own the
+relationship note, suggested WeChat remark, relationship type/strength/trend,
+current analysis, open loops, goal summary, next-action summary, and confidence.
 
-## Sync Workflow
+### `groups`
 
-`scripts/sync_wechat.mjs` is the entire Research+Plan stage. Run it on the operator's
-own machine (the same one WeChat is logged into):
+One record per `@chatroom`. Groups are separate because member count, owner,
+group purpose, group activity, and group-level strategy do not belong on a
+person. Basic sync records identity and recent activity; a scoped analysis may
+use `members <group>` and group history/statistics.
+
+### `relationship-snapshots`
+
+Immutable, time-windowed Agent analysis linked to a person or group and
+optionally a goal. Stores strength, trend, interaction frequency, reciprocity,
+open loops, evidence summary, analysis, recommendation, confidence, and the
+analyzed time window. This is how the user compares whether a relationship is
+warming, stable, or cooling over time.
+
+### `goals`
+
+Dynamic user goals. A goal may be global, target one person, target one group,
+or describe a segment. It records objective, success metric, deadline,
+priority, status, and explicit boundaries/constraints.
+
+### `actions`
+
+Review queue generated from goals plus relationship evidence. Each action may
+link to a goal, person, or group and names one concrete operation: organize a
+note, draft a message, reconnect, follow up a commitment, learn more, wait, or
+record an outcome. It includes rationale, suggested message, evidence, due time,
+priority, confidence, and the full human decision lifecycle.
+
+### `worklog`
+
+The user's work with the Agent: user requests, Agent analyses, decisions,
+outcomes, and sync summaries. It may link to a goal/person/group and generated
+actions. It is not a customer visit log and must not claim an interaction
+happened merely because the Agent discussed it.
+
+### `settings`
+
+Safe connector/readiness state, bounded analysis preferences, sync counts,
+timestamps, CLI version, and Agent lock metadata. Never store tokens, message
+history, or Vault values here.
+
+The product onboarding version is **2** with no blocking field: users can sync
+and inspect relationships before creating a goal, then create goals dynamically
+inside the AirApp. The `settings` Base remains the durable readiness resource.
+
+## First-Run Readiness
+
+Before claiming WeChat is connected:
+
+1. Confirm `wechat-cli-rs` exists without installing it silently.
+2. Run a bounded read such as `sessions --limit 1 --format json`.
+3. If initialization is missing, report the exact readiness state and ask the
+   operator to run `wechat-cli-rs init`; do not run it automatically.
+4. Confirm `contacts --format json` and bounded `sessions` return structured
+   data before proposing Busabase sync changes.
+5. Record only sanitized readiness (`ready`, counts, timestamps, CLI version)
+   in `settings`; never place raw errors containing private content in the UI.
+
+## Basic Sync
+
+Run on the same machine where WeChat is logged in:
 
 ```bash
-cd kelly-wechat-crm
-npm install                     # once, installs busabase-sdk for this script
 BUSABASE_BASE_URL=<url> BUSABASE_SPACE_ID=<space-id> [BUSABASE_API_KEY=<key>] \
-  node scripts/sync_wechat.mjs            # dry run — prints what would change
-  node scripts/sync_wechat.mjs --apply    # writes the changes to Busabase
+  node scripts/sync_wechat.mjs
 ```
 
-1. Calls `wechat-cli-rs contacts` and `wechat-cli-rs sessions --limit 200` (installs
-   wechat-cli-rs itself if it's missing — see the Install section of
-   https://wechat-cli.com/SKILL.md — and reports plainly if WeChat hasn't been
-   `init`-ed yet rather than guessing).
-2. Upserts every contact by `username`: sync-owned fields are refreshed, operator-owned
-   fields (`tag`, `relationship-note`, and any follow-up-status the operator has already
-   set to something other than the sync's own default) are never touched.
-3. For each `person` contact (never a `group`) that isn't `muted`, doesn't already have
-   an open followup, and whose `follow-up-status` isn't already
-   `needs-followup`/`snoozed`/`done`: if it's been silent at least
-   `stale-threshold-days` (half that if tagged `vip`), open a `needs-review` followup
-   with a plain templated note and flip the contact to `needs-followup`.
-4. Updates the `sync-state` settings row with the run's timestamp and contact count.
+This is a dry run. Repeat with `--apply` only after the operator approves the
+reported scope. `--apply` submits Busabase ChangeRequests with
+`autoMerge: false`; it does not authorize review or merge.
 
-Idempotent by design: re-running without new WeChat activity creates nothing new and
-updates only the refreshed activity fields — verified by running it twice in a row
-against the same data and confirming record counts don't change.
+The sync:
 
-## Review Workflow
+1. reads `contacts` and `sessions --limit 200`;
+2. separates people from `@chatroom` groups;
+3. proposes only WeChat-owned identity/activity fields, preserving all
+   relationship analysis and user notes;
+4. proposes a conservative reconnect action for an already-materialized person
+   when no open action exists and the inactivity threshold is exceeded;
+5. records safe people/group counts and timestamp in `settings`.
 
-A followup stays `needs-review` until the operator (a human, not this skill) decides
-what to do — after actually reaching out via WeChat themselves, or after deciding not
-to. Recording that decision (`done`/`dismissed`/`snoozed` plus a comment) is a
-Busabase write like any other CRM annotation; the generated AirApp's current shell is
-read/browse-only (list, detail, search, pending-change-request count) — it does not
-yet have a dedicated decision UI the way `kelly-crm`'s does. Record a decision directly
-through `busabase-sdk`/`busabase-cli` (`records update-change-request`) or through
-Busabase's own generic Base view until a dedicated Follow-ups screen is built as a
-follow-up to this skill.
+New people/groups do not receive relation-backed actions in the same run because
+their real record ids do not exist until the creation CRs are merged. Analyze
+them on the next run after read-back.
 
-## Demo Mode
+## Goal-Driven Analysis
 
-`?demo=1` opens the scaffold's deterministic, read-only mock data for documentation and
-screenshots. It never reads or writes Busabase and never claims a real connection.
+When the user asks the Agent to analyze relationships or generate a strategy:
+
+1. List active `goals` and let the user identify or revise the goal in scope.
+2. Resolve candidate `people/groups` from that exact goal. Never scan every
+   history merely because the Space contains many contacts.
+3. For each selected target, query the narrowest useful combination of
+   `contacts --detail`, `members`, `history`, `search`, and `stats` with an
+   explicit time range/limit.
+4. Separate observed evidence from inference. Record source chat/person/group,
+   time window, uncertainty, and missing coverage.
+5. Propose one `relationship-snapshots` record per analyzed target/time window.
+6. Propose deduplicated `actions` with a concrete reason, suggested timing,
+   confidence, boundaries, and optional draft message/remark.
+7. Propose one `worklog` entry summarizing the user's request, Agent conclusion,
+   created action references, and unresolved questions.
+8. Submit all writes as reviewable CRs and report their ids. Never review or
+   merge them without explicit authorization naming those CRs.
+
+## AirApp Workflow
+
+- `goals`: create a dynamic global/person/group/segment goal. Real mode submits
+  a pending goal CR; Demo adds an in-memory preview only.
+- `people/groups`: inspect the current relationship strategy and suggested
+  remark/action without editing WeChat.
+- `relationship-snapshots`: compare evidence-backed analyses over time.
+- `actions`: add one review note and choose prepare, request changes, snooze, or
+  done. The AirApp submits `autoMerge: false` and reports the CR id.
+- `worklog`: read the user-Agent operating history and outcomes.
+- `settings`: inspect sanitized Busabase/connector/resource readiness.
+
+Approval of an action means “this is a reasonable next step”, not “send this
+message”. The operator still performs any WeChat action manually.
 
 ## Completion Criteria
 
 Finish only when:
 
-- the skill contains the complete canonical `content/kelly-wechat-crm-app/` project and
-  `node server.js` remains supported for local preview;
-- `scripts/sync_wechat.mjs` upserts contacts and opens followups using only
-  wechat-cli-rs's free, read-only commands, never touches operator-owned fields, and is
-  idempotent on repeated runs;
-- all persistent state (tags, notes, follow-up decisions, sync state) lives in Busabase
-  through `busabase-sdk` — no local JSON, browser storage, or second data provider;
-- Vault values and API credentials never reach browser-visible surfaces;
-- `npm --prefix content/kelly-wechat-crm-app run check` passes.
+- the seven declared Bases and AirApp install with no package warning;
+- `SKILL.md`, `busabase.json`, generated `content/`, blueprints, and runtime
+  config agree on resource keys, slugs, schema version, and fields;
+- `pnpm --dir content/kelly-wechat-crm-app check` passes;
+- the goal form and action decisions create only reviewable CRs in real mode;
+- Demo, local server, responsive browser, and isolated OSS Busabase suites pass;
+- a real install reads sample people, group, goal, snapshot, and action data;
+- no credential, raw history archive, or WeChat write capability appears in the
+  browser or package;
+- Cloud/AirApp external suites are reported as pass or explicit skip.
 
-## Known Gaps (v1)
+## Known Gap
 
-- The AirApp UI is the generic scaffolded list/detail/search shell, not a custom
-  Overview/Contacts/Follow-ups experience with inline decision actions the way
-  `kelly-crm` has. Recording a followup decision currently requires a direct Busabase
-  write (see Review Workflow) rather than a button in the app.
-- `scripts/sync_wechat.mjs` has been verified end-to-end against a local Busabase
-  instance and a `wechat-cli-rs` test fixture, not yet against a real personal WeChat
-  account.
+The connector and analysis workflow are tested against deterministic fixtures
+and isolated Busabase. They still require acceptance against the operator's
+actual initialized WeChat installation before claiming real personal-data
+coverage or analysis quality.
 
 ## Stop Conditions
 
-Stop before consequential Busabase mutation when the target Space is ambiguous, the
-current user lacks permission, or a same-slug resource is not application-owned. Never
-call any wechat-cli-rs command other than `contacts` and `sessions` from an automated
-sync, and never invoke `wechat-cli-rs init` automatically — that's an explicit,
-user-approved action only (per https://wechat-cli.com/SKILL.md's own Agent Workflow).
+Stop when WeChat is not explicitly initialized, the requested analysis scope is
+ambiguous or excessively broad, Busabase target Space is ambiguous, a resource
+collision is not application-owned, a write would bypass CR review, raw private
+history would be copied without approval, or the requested relationship tactic
+would violate consent or a clear boundary.

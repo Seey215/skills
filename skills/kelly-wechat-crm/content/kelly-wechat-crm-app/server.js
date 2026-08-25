@@ -73,7 +73,15 @@ app.get("/__airapp/runtime", (context) =>
 );
 console.log(`AirApp runtime: ${airappRuntime || "standalone"}`);
 
+app.use("/*", async (context, next) => {
+  await next();
+  context.header("cache-control", "no-store");
+});
 app.use("/*", serveStatic({ root: "./app" }));
+app.onError((error, context) => {
+  console.error("kelly-wechat-crm server error", error instanceof Error ? error.message : error);
+  return context.json({ error: "Internal server error" }, 500);
+});
 
 const port = Number.parseInt(process.env.PORT || "3000", 10);
 serve({ fetch: app.fetch, port }, () => {

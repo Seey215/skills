@@ -2,14 +2,20 @@
   "name": "kelly-wechat-crm",
   "private": true,
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Kelly WeChat CRM: trusted local sync from wechat-cli-rs into a Busabase follow-up desk.",
   "scripts": {
     "sync": "node scripts/sync_wechat.mjs",
-    "app:check": "npm --prefix content/kelly-wechat-crm-app run check"
+    "sync:content": "node scripts/sync-content.mjs",
+    "sync:content:check": "node scripts/sync-content.mjs --check",
+    "sync:blueprint": "node scripts/sync-blueprint.mjs",
+    "sync:blueprint:check": "node scripts/sync-blueprint.mjs --check",
+    "setup": "node scripts/setup.mjs",
+    "publish:airapp": "node scripts/publish_airapp.mjs",
+    "app:check": "pnpm --dir content/kelly-wechat-crm-app check"
   },
   "dependencies": {
-    "busabase-sdk": "0.17.2"
+    "busabase-sdk": "0.19.0"
   },
   "engines": {
     "node": ">=24.18.0"

@@ -9,7 +9,7 @@
     "app:check": "npm --prefix content/kelly-wechat-crm-app run check"
   },
   "dependencies": {
-    "busabase-sdk": "0.19.0"
+    "busabase-sdk": "0.17.2"
   },
   "engines": {
     "node": ">=24.18.0"

@@ -14,8 +14,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestRaw = await readFile(path.join(root, "airapp.json"), "utf8").catch(() => null);
 const manifest = manifestRaw ? JSON.parse(manifestRaw) : {};
 const runtime = manifest.runtime ?? "node";
-if (!["node", "python"].includes(runtime))
-  throw new Error(`airapp.json declares unsupported runtime "${runtime}".`);
+if (!["node", "python"].includes(runtime)) throw new Error(`airapp.json declares unsupported runtime "${runtime}".`);
 const isNode = runtime === "node";
 const serverFile = isNode ? "server.js" : "server.py";
 
@@ -44,14 +43,11 @@ const required = [
 ];
 
 const contents = {};
-for (const relative of required)
-  contents[relative] = await readFile(path.join(root, relative), "utf8");
+for (const relative of required) contents[relative] = await readFile(path.join(root, relative), "utf8");
 
 const packageJson = isNode ? JSON.parse(contents["package.json"]) : {};
 const blueprint = JSON.parse(contents["airapp-blueprint.json"]);
-const configMatch = contents["app/js/config.js"].match(
-  /^\s*export const appConfig = ([\s\S]+);\s*$/,
-);
+const configMatch = contents["app/js/config.js"].match(/^\s*export const appConfig = ([\s\S]+);\s*$/);
 if (!configMatch) throw new Error("Generated config must export one JSON appConfig object.");
 const appConfig = JSON.parse(configMatch[1]);
 // Everything from here to the end of this block is about an npm project, so it
@@ -66,10 +62,7 @@ const unsupportedDep = ["react", "vite", "webpack", "next", "parcel", "react-scr
   (name) => declaredDeps[name],
 );
 if (unsupportedDep) throw new Error(`Unsupported frontend dependency: ${unsupportedDep}.`);
-if (
-  isNode &&
-  !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(packageJson.devDependencies?.["esbuild-wasm"] || "")
-) {
+if (isNode && !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(packageJson.devDependencies?.["esbuild-wasm"] || "")) {
   throw new Error("esbuild-wasm must use an exact version.");
 }
 // `dev` is the script that matters: BOTH AirApp engines run `npm run dev` (nodepod-runner.ts
@@ -86,24 +79,19 @@ if (isNode && packageJson.scripts?.start !== "node server.js")
 if (!isNode) {
   if (typeof manifest.start !== "string" || !manifest.start.trim())
     throw new Error("airapp.json must declare a `start` command — it is what Busabase runs.");
-  if (!manifest.start.includes(serverFile))
-    throw new Error(`airapp.json's start command must run ${serverFile}.`);
+  if (!manifest.start.includes(serverFile)) throw new Error(`airapp.json's start command must run ${serverFile}.`);
 }
 if (isNode && contents["app/vendor/busabase-sdk.js"].length < 10_000)
   throw new Error("Browser SDK bundle is missing or incomplete.");
-if (!["cloud", "desktop"].includes(appConfig.deployment))
-  throw new Error("Invalid deployment mode.");
-if (appConfig.deployment === "cloud" && !appConfig.spaceId)
-  throw new Error("Cloud app requires spaceId.");
+if (!["cloud", "desktop"].includes(appConfig.deployment)) throw new Error("Invalid deployment mode.");
+if (appConfig.deployment === "cloud" && !appConfig.spaceId) throw new Error("Cloud app requires spaceId.");
 if (!Array.isArray(appConfig.schema?.bases) || !appConfig.schema.bases.length)
   throw new Error("Configured Bases are missing.");
 if (!appConfig.schema.folder?.nodeId) throw new Error("Configured Folder node id is missing.");
 if (appConfig.schema.bases.some((base) => !base.nodeId || !base.baseId))
   throw new Error("Configured Base node/base ids are missing.");
 if (
-  appConfig.schema.bases.some(
-    (base) => !Number.isInteger(base.readLimit) || base.readLimit < 1 || base.readLimit > 50,
-  )
+  appConfig.schema.bases.some((base) => !Number.isInteger(base.readLimit) || base.readLimit < 1 || base.readLimit > 50)
 ) {
   throw new Error("Every configured Base requires an integer readLimit from 1 to 50.");
 }
@@ -116,9 +104,7 @@ if (appConfig.schema.bases.some((base) => (base.views || []).some((view) => !vie
   throw new Error("Configured View ids are missing.");
 const resourceCollections = ["docs", "drives", "whiteboards", "forms", "workflows", "html"];
 if (
-  resourceCollections.some((collection) =>
-    (appConfig.schema[collection] || []).some((resource) => !resource.nodeId),
-  )
+  resourceCollections.some((collection) => (appConfig.schema[collection] || []).some((resource) => !resource.nodeId))
 ) {
   throw new Error("Configured resource node ids are missing.");
 }
@@ -129,15 +115,10 @@ if (
 ) {
   throw new Error("Vault values are forbidden in generated config.");
 }
-if (
-  !Array.isArray(appConfig.demoRecords) ||
-  appConfig.demoRecords.length < 3 ||
-  appConfig.demoRecords.length > 5
-) {
+if (!Array.isArray(appConfig.demoRecords) || appConfig.demoRecords.length < 3 || appConfig.demoRecords.length > 5) {
   throw new Error("Demo provider requires 3-5 records.");
 }
-if (blueprint.app?.slug !== appConfig.appSlug)
-  throw new Error("Blueprint/config app slug mismatch.");
+if (blueprint.app?.slug !== appConfig.appSlug) throw new Error("Blueprint/config app slug mismatch.");
 
 // Everything the browser downloads. `server.js` is deliberately NOT here: it is
 // the only file allowed to know about credentials, because its dev proxy reads
@@ -154,10 +135,8 @@ if (!browserSource.includes("createBusabaseClient")) throw new Error("SDK client
 // One relative path, every environment: same-origin inside Busabase, this app's
 // own dev proxy when run standalone. A hard-coded absolute Busabase URL or a
 // leftover bridge prefix would work in exactly one of them.
-if (!browserSource.includes("window.location.origin"))
-  throw new Error("Runtime client must target its own origin.");
-if (browserSource.includes("__busabase_api__"))
-  throw new Error("Obsolete /__busabase_api__ bridge prefix found.");
+if (!browserSource.includes("window.location.origin")) throw new Error("Runtime client must target its own origin.");
+if (browserSource.includes("__busabase_api__")) throw new Error("Obsolete /__busabase_api__ bridge prefix found.");
 if (/baseUrl\s*:\s*["'`]https?:\/\//.test(browserSource))
   throw new Error("Hard-coded Busabase URL found in browser source.");
 const providerSource = contents["app/js/providers/busabase-provider.js"];
@@ -172,9 +151,7 @@ if (/while\s*\(\s*cursor\s*\)|client\.bases\.list\s*\(/.test(browserSource))
 // and unaffected: it is an API call, not an asset.
 const absoluteAssetRef = /(?:src|href)="\/(?!\/)|from\s+["']\/(?!\/)/;
 if (absoluteAssetRef.test(browserSource) || absoluteAssetRef.test(contents["app/index.html"]))
-  throw new Error(
-    "Absolute asset path found; use relative paths so the Local Node sub-path proxy works.",
-  );
+  throw new Error("Absolute asset path found; use relative paths so the Local Node sub-path proxy works.");
 // --- Runtime detection -----------------------------------------------------
 // The app must learn where it runs from `BUSABASE_AIRAPP_RUNTIME`, which
 // Busabase injects into the process it spawns and `server.js` re-exposes at
@@ -185,13 +162,9 @@ if (absoluteAssetRef.test(browserSource) || absoluteAssetRef.test(contents["app/
 // is the damaging one — the app hides its own connection gate, calls
 // `/api/v1` unauthenticated, and reports an error the user cannot act on.
 // Comments are stripped first so the reasoning may name `localhost` in prose.
-const withoutComments = browserSource
-  .replace(/\/\*[\s\S]*?\*\//g, " ")
-  .replace(/(^|[^:'"`\\])\/\/[^\n]*/g, "$1 ");
+const withoutComments = browserSource.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:'"`\\])\/\/[^\n]*/g, "$1 ");
 if (/location\s*\.\s*(?:hostname|host)\b/.test(withoutComments))
-  throw new Error(
-    "Hostname-based runtime detection found; read the runtime from __airapp/runtime instead.",
-  );
+  throw new Error("Hostname-based runtime detection found; read the runtime from __airapp/runtime instead.");
 if (
   /(?:===|!==|==|!=)\s*["'`][^"'`]*(?:localhost|127\.0\.0\.1)|(?:includes|startsWith|endsWith|indexOf|search|match|test)\s*\(\s*\/?["'`]?[^"'`)]*(?:localhost|127\.0\.0\.1)/.test(
     withoutComments,
@@ -215,8 +188,7 @@ const serverSource = contents[serverFile];
 // not called yet, and matching that mention let a server that had stopped
 // reading the variable entirely pass this gate. Prose about a rule must never
 // satisfy the rule. (Same technique the browser-source rules below already use.)
-const stripComments = (source) =>
-  source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:'"`\\])\/\/[^\n]*/g, "$1 ");
+const stripComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:'"`\\])\/\/[^\n]*/g, "$1 ");
 const serverCode = stripComments(serverSource);
 
 // A Node host may go through the SDK (one definition of "hosted", shared by
@@ -225,8 +197,7 @@ const serverCode = stripComments(serverSource);
 const readsRuntimeEnv = isNode
   ? /readBusabaseAirAppRuntime\s*\(|process\.env\.BUSABASE_AIRAPP_RUNTIME\b/.test(serverCode)
   : /BUSABASE_AIRAPP_RUNTIME/.test(serverCode);
-if (!readsRuntimeEnv)
-  throw new Error(`${serverFile} must read BUSABASE_AIRAPP_RUNTIME (directly or via the SDK).`);
+if (!readsRuntimeEnv) throw new Error(`${serverFile} must read BUSABASE_AIRAPP_RUNTIME (directly or via the SDK).`);
 // The one shape that must never come back: deciding hosting from a hardcoded
 // list of engine names. That is what broke 66 apps when `local-node` became
 // `local`, and moving the list into an app would reintroduce it wholesale.
@@ -253,8 +224,7 @@ const browserDownloads = [
   contents["app/js/providers/demo-provider.js"],
   contents["app/index.html"],
 ].join("\n");
-if (/BUSABASE_API_KEY/i.test(browserDownloads))
-  throw new Error("API key reference found in browser source.");
+if (/BUSABASE_API_KEY/i.test(browserDownloads)) throw new Error("API key reference found in browser source.");
 if (/Bearer/i.test(browserDownloads)) throw new Error("Bearer header found in browser source.");
 // The dev proxy may reference the env var; it may never carry a literal token.
 if (/Bearer\s+(?!\$\{)[A-Za-z0-9_-]{8,}/.test(serverSource))
@@ -268,19 +238,11 @@ if (/Bearer\s+(?!\$\{)[A-Za-z0-9_-]{8,}/.test(serverSource))
 if (isNode) {
   if (!serverSource.includes("createBusabaseAirAppLocalGateway"))
     throw new Error("Server must use the SDK local AirApp OAuth/Space gateway.");
-  for (const route of [
-    "/auth/status",
-    "/auth/start",
-    "/auth/callback",
-    "/auth/space",
-    "/auth/logout",
-  ]) {
+  for (const route of ["/auth/status", "/auth/start", "/auth/callback", "/auth/space", "/auth/logout"]) {
     if (!serverSource.includes(route)) throw new Error(`Server is missing ${route}.`);
   }
 } else if (!serverSource.includes("/auth/")) {
-  throw new Error(
-    `${serverFile} must answer /auth/* with an explanation that this runtime is hosted-only.`,
-  );
+  throw new Error(`${serverFile} must answer /auth/* with an explanation that this runtime is hosted-only.`);
 }
 // Space selection now lives in busabase-sdk/airapp-gate's createAirAppConnectGate(),
 // not hand-rolled per app — see runtime-and-sdk.md. Assert adoption, not the retired

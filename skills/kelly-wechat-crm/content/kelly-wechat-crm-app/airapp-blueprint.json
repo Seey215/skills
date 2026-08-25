@@ -357,57 +357,36 @@
         "id": "overview",
         "name": "总览",
         "purpose": "同步状态、待跟进数量、关系标签分布",
-        "data_sources": [
-          "contacts",
-          "followups",
-          "settings"
-        ]
+        "data_sources": ["contacts", "followups", "settings"]
       },
       {
         "id": "contacts",
         "name": "联系人",
         "purpose": "联系人列表/详情，查看和编辑标签、备注",
-        "data_sources": [
-          "contacts"
-        ]
+        "data_sources": ["contacts"]
       },
       {
         "id": "followups",
         "name": "跟进队列",
         "purpose": "待审核的跟进建议，人工标记处理结果",
-        "data_sources": [
-          "followups",
-          "contacts"
-        ]
+        "data_sources": ["followups", "contacts"]
       }
     ],
-    "attention_states": [
-      "needs-followup",
-      "needs-review"
-    ],
+    "attention_states": ["needs-followup", "needs-review"],
     "actions": [
       {
         "id": "update-contact",
         "label": "更新联系人标签/备注",
         "kind": "change_request",
         "base": "contacts",
-        "fields": [
-          "tag",
-          "relationship-note",
-          "follow-up-status"
-        ]
+        "fields": ["tag", "relationship-note", "follow-up-status"]
       },
       {
         "id": "decide-followup",
         "label": "处理跟进建议",
         "kind": "change_request",
         "base": "followups",
-        "fields": [
-          "status",
-          "decision-comment",
-          "decided-at",
-          "decided-by"
-        ]
+        "fields": ["status", "decision-comment", "decided-at", "decided-by"]
       }
     ]
   },
@@ -418,22 +397,14 @@
         "key": "stale-threshold-days",
         "resource": "settings",
         "validation": "positive integer, defaults to 7",
-        "unlocks": [
-          "follow-up flagging in the sync task"
-        ]
+        "unlocks": ["follow-up flagging in the sync task"]
       }
     ],
     "completion_resource": "settings",
     "rationale": "Only one tunable threshold; shipped pre-seeded via seed_records so onboarding completes on first sync without a setup wizard."
   },
   "permissions": {
-    "read_procedures": [
-      "records.list",
-      "records.get",
-      "changeRequests.list"
-    ],
-    "change_request_procedures": [
-      "records.update"
-    ]
+    "read_procedures": ["records.list", "records.get", "changeRequests.list"],
+    "change_request_procedures": ["records.update"]
   }
 }

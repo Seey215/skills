@@ -39,9 +39,7 @@ function runWechatCli(args) {
     return JSON.parse(out);
   } catch (err) {
     if (err.code === "ENOENT") {
-      throw new Error(
-        `"${WECHAT_BIN}" isn't on PATH. Install it: curl -fsSL https://wechat-cli.com/install.sh | sh`,
-      );
+      throw new Error(`"${WECHAT_BIN}" isn't on PATH. Install it: curl -fsSL https://wechat-cli.com/install.sh | sh`);
     }
     const stderr = (err.stderr || "").toString().trim();
     if (err.status === 1 && /请先运行.*init/.test(stderr)) {
@@ -55,7 +53,7 @@ function runWechatCli(args) {
 
 const isGroup = (username) => username.includes("@chatroom");
 const daysSince = (isoDate) => {
-  if (!isoDate) return Infinity;
+  if (!isoDate) return Number.POSITIVE_INFINITY;
   return (Date.now() - new Date(isoDate).getTime()) / 86_400_000;
 };
 
@@ -113,7 +111,7 @@ async function main() {
   const contactHasOpenFollowup = (contactRecordId) =>
     openFollowups.some((record) => {
       const contactRef = fieldValue(record, "contact");
-      const refId = Array.isArray(contactRef) ? contactRef[0]?.id ?? contactRef[0] : contactRef?.id ?? contactRef;
+      const refId = Array.isArray(contactRef) ? (contactRef[0]?.id ?? contactRef[0]) : (contactRef?.id ?? contactRef);
       return refId === contactRecordId;
     });
 
@@ -207,9 +205,7 @@ async function main() {
   console.log(`Follow-up candidates: ${flaggedForFollowup.length}`);
   for (const candidate of flaggedForFollowup) {
     const reason = candidate.isVip ? "vip-no-contact" : "stale-conversation";
-    const suggestedNote = candidate.isVip
-      ? "好久没聊了，最近怎么样？"
-      : "在的话，最近忙吗？";
+    const suggestedNote = candidate.isVip ? "好久没聊了，最近怎么样？" : "在的话，最近忙吗？";
     const silentLabel = candidate.silentDays === null ? "从未联系" : `${candidate.silentDays} 天未联系`;
     console.log(`  - ${candidate.displayName}: ${silentLabel}`);
     if (apply && candidate.contactRecordId) {

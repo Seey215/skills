@@ -2,7 +2,7 @@
 name: kelly-wechat-crm
 description: Busabase-backed App-in-Skill for a personal WeChat relationship desk — syncs contacts and recent activity from the operator's own machine via wechat-cli-rs (https://wechat-cli.com), flags stale conversations into a reviewable follow-up queue, and lets the operator tag/annotate contacts. Use when the user invokes $kelly-wechat-crm or /kelly-wechat-crm, mentions WeChat CRM, 微信关系管理, tracking WeChat contacts, flagging who to follow up with on WeChat, or wants to review WeChat-sourced follow-up suggestions. Never sends a WeChat message and never modifies WeChat data — wechat-cli-rs is read-only by design, so this skill has no send capability at all, only local read + Busabase annotation.
 metadata:
-  category: personal-crm
+  category: sales-crm
   tags:
     - risk:gated-write
     - surface:busabase

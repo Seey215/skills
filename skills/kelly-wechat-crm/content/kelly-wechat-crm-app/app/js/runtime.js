@@ -53,8 +53,7 @@ export async function getRuntime() {
 }
 
 /** Human-readable runtime label for the settings panel. */
-export const runtimeLabel = (runtime) =>
-  runtime.hosted ? `${runtime.runtime} (Busabase-hosted)` : runtime.runtime;
+export const runtimeLabel = (runtime) => (runtime.hosted ? `${runtime.runtime} (Busabase-hosted)` : runtime.runtime);
 
 /**
  * Which explanation fits a failed data load. The message keys live in

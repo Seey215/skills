@@ -17,10 +17,7 @@ export const demoProvider = {
         fields: record.fields,
       })),
       pageInfo: Object.fromEntries(
-        appConfig.schema.bases.map((base) => [
-          base.key,
-          { nextCursor: null, limit: base.readLimit },
-        ]),
+        appConfig.schema.bases.map((base) => [base.key, { nextCursor: null, limit: base.readLimit }]),
       ),
       changeRequests: [],
       changeRequestPageInfo: { nextCursor: null, limit: 20 },

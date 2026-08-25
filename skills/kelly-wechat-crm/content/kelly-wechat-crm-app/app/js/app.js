@@ -26,25 +26,21 @@ const escapeHtml = (value) =>
 const displayValue = (value) => {
   if (value == null || value === "") return "-";
   if (Array.isArray(value)) return value.map((item) => displayValue(item)).join(", ");
-  if (typeof value === "object")
-    return value.name || value.title || value.id || JSON.stringify(value);
+  if (typeof value === "object") return value.name || value.title || value.id || JSON.stringify(value);
   if (typeof value === "boolean") return value ? "Yes" : "No";
   return String(value);
 };
 
 const baseConfig = () =>
   appConfig.schema.bases.find((base) => base.key === state.activeBase) || appConfig.schema.bases[0];
-const recordsForBase = () =>
-  (state.payload?.records || []).filter((record) => record.baseKey === baseConfig()?.key);
+const recordsForBase = () => (state.payload?.records || []).filter((record) => record.baseKey === baseConfig()?.key);
 const pageInfoForBase = () => state.payload?.pageInfo?.[baseConfig()?.key] || {};
 const loadedCount = (count, hasMore) => `${count}${hasMore ? "+" : ""}`;
 const primaryField = () => baseConfig()?.fields?.[0]?.slug || "name";
 const filteredRecords = () => {
   const query = state.query.trim().toLowerCase();
   return query
-    ? recordsForBase().filter((record) =>
-        JSON.stringify(record.fields).toLowerCase().includes(query),
-      )
+    ? recordsForBase().filter((record) => JSON.stringify(record.fields).toLowerCase().includes(query))
     : recordsForBase();
 };
 
@@ -146,9 +142,7 @@ function renderDetail() {
 
 function renderSettings() {
   const provider = state.payload?.provider || {};
-  const recordBudgets = appConfig.schema.bases
-    .map((base) => `${base.name}: ${base.readLimit}`)
-    .join("; ");
+  const recordBudgets = appConfig.schema.bases.map((base) => `${base.name}: ${base.readLimit}`).join("; ");
   const rows = [
     [messages.provider, provider.name || state.provider.name],
     [messages.mode, provider.mode || messages.notSet],
@@ -188,9 +182,7 @@ const gate = createAirAppConnectGate({
   demoHref: "?demo=1",
   shouldGate: () => !isDemo() && !state.runtime?.hosted,
   onProvision: () => {
-    throw new Error(
-      "This template does not self-provision; resources are created at scaffold time.",
-    );
+    throw new Error("This template does not self-provision; resources are created at scaffold time.");
   },
 });
 

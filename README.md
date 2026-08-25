@@ -149,7 +149,7 @@ The `kelly-*` skills are the everyday business tools. Helper skills such as `age
 | `kelly-sales-outreach` | Turns a product or service into a repeatable customer-prospecting desk: derives an editable ICP, finds evidence-backed target accounts and public business contacts, drafts one personalized first-touch email per company, and sends only after individual review. | Use it when building a target-account list from an offer, continuously researching potential customers and buying signals, reviewing personalized cold outreach, or safely sending approved first touches from the seller's own mailbox. | [View ↗](https://mr-kelly.github.io/skills/s/kelly-sales-outreach.html) |
 | `kelly-support` | Customer-support desk: the agent triages tickets from email, WhatsApp, web chat, forms, and WeChat, drafts replies grounded in a knowledge base, and proposes actions; you review, edit, and approve in a local UI before anything is sent, with an SLA board, CSAT tracking, and a support-qa gate that blocks refunds or commitments made without approval. | Use it when running a support inbox across channels, drafting KB-grounded replies, tracking SLA and CSAT, or approving sensitive actions like refunds and escalations. | [View ↗](https://mr-kelly.github.io/skills/s/kelly-support.html) |
 | `kelly-tickets` | Triages complaints and requests from WeChat exports, call logs, forms, and email into classified tickets, proposes crew dispatches with SLA targets for approval, and tracks everything on a resolution board. | Use it when managing property or facilities complaints, dispatching work orders to crews, or running any intake-classify-dispatch-track workflow. | [View ↗](https://mr-kelly.github.io/skills/s/kelly-tickets.html) |
-| `kelly-wechat-crm` | Turns local read-only WeChat evidence into separate people/group strategies, relationship snapshots, dynamic goals, reviewable next actions, and an Agent worklog. | Use it to maintain relationships, organize notes, pursue respectful personal goals, or find sales opportunities without sending messages or modifying WeChat. | [View ↗](https://mr-kelly.github.io/skills/s/kelly-wechat-crm.html) |
+| `kelly-wechat-crm` | Starts from an explicit goal, searches the local WeChat address book without uploading it, and promotes only user-selected people into relationship snapshots, next actions, and an Agent worklog. | Use it to identify and manage a focused set of relationships without copying the full address book, sending messages, or modifying WeChat. | [View ↗](https://mr-kelly.github.io/skills/s/kelly-wechat-crm.html) |
 
 ### Comms & Team
 
@@ -583,20 +583,12 @@ Digital-human implementation and demo desk for choosing between a fast 2D servic
     <td><strong>People strategy</strong><br>Inspect current relationship strength, trend, open loops, suggested remark, goal context, and the next recommended move.</td>
   </tr>
   <tr>
-    <td width="50%"><img src="skills/kelly-wechat-crm/assets/screenshots/groups.webp" alt="Kelly WeChat group strategy"></td>
     <td width="50%"><img src="skills/kelly-wechat-crm/assets/screenshots/snapshots.webp" alt="Kelly WeChat relationship snapshot"></td>
-  </tr>
-  <tr>
-    <td><strong>Group strategy</strong><br>Separate group purpose, owner, activity, etiquette, goals, and value from individual relationship records.</td>
-    <td><strong>Relationship snapshots</strong><br>Keep time-windowed evidence, strength, reciprocity, trend, uncertainty, and recommendations for later comparison.</td>
-  </tr>
-  <tr>
     <td width="50%"><img src="skills/kelly-wechat-crm/assets/screenshots/goals.webp" alt="Kelly WeChat dynamic goal form"></td>
-    <td width="50%"><img src="skills/kelly-wechat-crm/assets/screenshots/mobile-actions.webp" alt="Kelly WeChat mobile action review"></td>
   </tr>
   <tr>
-    <td><strong>Dynamic goals</strong><br>Create global, person, group, or segment goals with success criteria, deadlines, priorities, and explicit boundaries.</td>
-    <td><strong>Mobile review</strong><br>Phone-first detail flow keeps the review note and primary decision in the first viewport, with evidence continuing below.</td>
+    <td><strong>Relationship snapshots</strong><br>Keep time-windowed evidence, strength, reciprocity, trend, uncertainty, and recommendations for later comparison.</td>
+    <td><strong>Dynamic goals</strong><br>Create global, person, or segment goals with success criteria, deadlines, priorities, and explicit boundaries.</td>
   </tr>
 </table>
 

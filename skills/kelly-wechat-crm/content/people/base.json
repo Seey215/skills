@@ -1,6 +1,6 @@
 {
-  "name": "人",
-  "description": "微信个人联系人、当前关系画像、你的备注与 Agent 建议。",
+  "name": "重点联系人",
+  "description": "经用户确认从本机通讯录晋升的重点联系人，不是完整微信通讯录镜像。",
   "position": 0,
   "fields": [
     {

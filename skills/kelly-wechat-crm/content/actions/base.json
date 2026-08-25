@@ -1,7 +1,7 @@
 {
   "name": "下一步",
   "description": "Agent 根据目标和关系证据提出的可审核行动；微信发送始终由用户手动完成。",
-  "position": 4,
+  "position": 3,
   "fields": [
     {
       "slug": "title",
@@ -32,21 +32,11 @@
       }
     },
     {
-      "slug": "group",
-      "name": "对象（群）",
-      "type": "relation",
-      "required": false,
-      "position": 3,
-      "options": {
-        "targetBaseSlug": "groups"
-      }
-    },
-    {
       "slug": "action-type",
       "name": "行动类型",
       "type": "select",
       "required": true,
-      "position": 4,
+      "position": 3,
       "options": {
         "choices": [
           {
@@ -85,7 +75,7 @@
       "name": "为什么现在做",
       "type": "longtext",
       "required": true,
-      "position": 5,
+      "position": 4,
       "options": {}
     },
     {
@@ -93,7 +83,7 @@
       "name": "建议微信文案",
       "type": "longtext",
       "required": false,
-      "position": 6,
+      "position": 5,
       "options": {}
     },
     {
@@ -101,7 +91,7 @@
       "name": "依据摘要",
       "type": "longtext",
       "required": false,
-      "position": 7,
+      "position": 6,
       "options": {}
     },
     {
@@ -109,7 +99,7 @@
       "name": "建议时间",
       "type": "date",
       "required": false,
-      "position": 8,
+      "position": 7,
       "options": {}
     },
     {
@@ -117,7 +107,7 @@
       "name": "优先级",
       "type": "select",
       "required": true,
-      "position": 9,
+      "position": 8,
       "options": {
         "choices": [
           {
@@ -140,7 +130,7 @@
       "name": "置信度",
       "type": "number",
       "required": false,
-      "position": 10,
+      "position": 9,
       "options": {}
     },
     {
@@ -148,7 +138,7 @@
       "name": "状态",
       "type": "select",
       "required": true,
-      "position": 11,
+      "position": 10,
       "options": {
         "choices": [
           {
@@ -187,7 +177,7 @@
       "name": "处理备注",
       "type": "longtext",
       "required": false,
-      "position": 12,
+      "position": 11,
       "options": {}
     },
     {
@@ -195,7 +185,7 @@
       "name": "处理时间",
       "type": "date",
       "required": false,
-      "position": 13,
+      "position": 12,
       "options": {}
     },
     {
@@ -203,7 +193,7 @@
       "name": "处理人",
       "type": "text",
       "required": false,
-      "position": 14,
+      "position": 13,
       "options": {}
     }
   ],

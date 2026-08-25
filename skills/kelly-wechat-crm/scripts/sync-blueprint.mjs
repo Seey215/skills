@@ -60,11 +60,12 @@ const blueprint = {
     })),
     attention_states: ["needs-review", "blocked"],
     actions: [
-      { id: "create-goal", label: "设置新目标", kind: "change_request", base: "goals" },
+      { id: "create-goal", label: "设置新目标", kind: "direct_write", base: "goals" },
+      { id: "promote-person", label: "加入重点联系人", kind: "direct_write", base: "people" },
       {
         id: "decide-action",
         label: "审核下一步",
-        kind: "change_request",
+        kind: "direct_write",
         base: "actions",
         fields: ["status", "decision-comment", "decided-at", "decided-by"],
       },

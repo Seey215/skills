@@ -38,11 +38,11 @@ export const messages = {
   snooze: "延后",
   markDone: "标记已处理",
   submittingDecision: "正在提交审核记录…",
-  changeRequestCreated: "已提交 ChangeRequest：",
+  saved: "已保存：",
   decisionRecorded: "处理结果已记录",
   decisionFailed: "提交失败：",
   submittingGoal: "正在提交目标…",
-  goalChangeRequestCreated: "目标 ChangeRequest 已提交：",
+  goalSaved: "目标已保存：",
   goalFailed: "目标提交失败：",
   // One sentence per (where am I running x do I have credentials) state. Never
   // state connection status as a fixed string: it will be shown in a state

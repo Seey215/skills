@@ -46,14 +46,30 @@
           </div>
           <div class="workspace-tools">
             <button class="goal-open" id="goalOpen" type="button" title="设置新目标" hidden><span aria-hidden="true">+</span> 新目标</button>
+            <button class="goal-open" id="discoverOpen" type="button" title="从本机通讯录选择" hidden><span aria-hidden="true">+</span> 选择联系人</button>
             <label class="search">
               <span class="sr-only" id="searchLabel"></span>
               <input id="searchInput" type="search" autocomplete="off">
             </label>
           </div>
         </section>
+        <section class="connector-status" id="wechatConnector" aria-live="polite" hidden>
+          <div class="connector-copy">
+            <span class="connector-indicator" id="wechatIndicator" aria-hidden="true"></span>
+            <div>
+              <span class="eyebrow">Local connector</span>
+              <h2 id="wechatStatusTitle"></h2>
+              <p id="wechatStatusSummary"></p>
+            </div>
+          </div>
+          <div class="connector-actions">
+            <code id="wechatInitCommand" hidden>sudo wechat-cli-rs init</code>
+            <a id="wechatInstallLink" href="https://wechat-cli.com/" target="_blank" rel="noreferrer" hidden>打开官网</a>
+            <button id="wechatRecheck" type="button">重新检测</button>
+          </div>
+        </section>
         <section class="metrics" id="metrics" aria-label="Summary metrics"></section>
-        <section class="content-split">
+        <section class="content-split" id="contentSplit">
           <section class="list-panel" id="listPanel">
             <div class="panel-heading">
               <div><span class="eyebrow" id="listEyebrow"></span><h2 id="listTitle"></h2></div>
@@ -101,7 +117,7 @@
           <label><span>目标名称</span><input name="title" required maxlength="120" placeholder="例如：找到 5 个适合试用产品的人"></label>
           <label><span>想实现什么</span><textarea name="objective" required rows="4" placeholder="描述结果，而不是操控对方的方式"></textarea></label>
           <div class="goal-form-row">
-            <label><span>范围</span><select name="scope" id="goalScope"><option value="global">全局</option><option value="person">某个人</option><option value="group">某个群</option><option value="segment">一类关系</option></select></label>
+            <label><span>范围</span><select name="scope" id="goalScope"><option value="global">全局</option><option value="person">某个人</option><option value="segment">一类关系</option></select></label>
             <label id="goalTargetWrap" hidden><span>关联对象</span><select name="target" id="goalTarget"></select></label>
           </div>
           <div class="goal-form-row">
@@ -120,6 +136,34 @@
           <button class="primary-action" type="submit">提交目标 CR</button>
         </footer>
       </form>
+    </div>
+    <div class="modal-backdrop" id="candidateModal" hidden>
+      <section class="modal candidate-modal" role="dialog" aria-modal="true" aria-labelledby="candidateTitle">
+        <header class="modal-header">
+          <div><span class="eyebrow">Local discovery</span><h2 id="candidateTitle">选择重点联系人</h2></div>
+          <button class="icon-button" id="candidateClose" type="button" aria-label="关闭联系人选择" title="关闭">x</button>
+        </header>
+        <form class="candidate-search" id="candidateSearchForm">
+          <label>
+            <span>对应目标</span>
+            <select id="candidateGoal" name="goal" required></select>
+          </label>
+          <label>
+            <span>搜索本机通讯录</span>
+            <div class="candidate-search-row">
+              <input id="candidateQuery" name="query" type="search" minlength="1" required autocomplete="off" placeholder="输入姓名、微信备注或 wxid">
+              <button type="submit">搜索</button>
+            </div>
+          </label>
+        </form>
+        <div class="candidate-results" id="candidateResults">
+          <p>搜索结果只在本页临时显示，不会自动写入 Busabase。</p>
+        </div>
+        <footer class="goal-form-footer">
+          <p class="goal-form-status" id="candidateStatus" role="status"></p>
+          <button class="primary-action" id="candidatePromote" type="button" disabled>加入重点联系人</button>
+        </footer>
+      </section>
     </div>
     <script type="module" src="./js/app.js"></script>
   </body>

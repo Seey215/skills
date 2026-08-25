@@ -105,7 +105,7 @@ export const busabaseProvider = {
       message,
       author: appConfig.appId,
       ...(headCommitId ? { baseCommitId: headCommitId } : {}),
-      autoMerge: false,
+      autoMerge: true,
     });
   },
 
@@ -118,7 +118,7 @@ export const busabaseProvider = {
       message,
       submittedBy: appConfig.appId,
       ...(idempotencyKey ? { idempotencyKey } : {}),
-      autoMerge: false,
+      autoMerge: true,
     });
   },
 

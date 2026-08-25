@@ -7,7 +7,7 @@ test("declares a portable resource map", () => {
   assert.equal(appConfig.airApp.resourceKey, "kelly-wechat-crm-app");
   assert.deepEqual(
     appConfig.bases.map((base) => base.key),
-    ["people", "groups", "goals", "relationship-snapshots", "actions", "worklog", "settings"],
+    ["people", "goals", "relationship-snapshots", "actions", "worklog", "settings"],
   );
   for (const base of appConfig.bases) {
     assert.equal(base.slug, `${appConfig.appId}-${base.key}`);
@@ -23,9 +23,9 @@ test("ships a bounded deterministic relationship strategy scenario", () => {
   for (const base of appConfig.bases) {
     for (const record of base.sampleRecords || []) recordKeys.push(record.key);
   }
-  assert.equal(recordKeys.length, 19);
+  assert.equal(recordKeys.length, 15);
   assert.equal(new Set(recordKeys).size, recordKeys.length);
-  assert.equal(appConfig.onboarding.version, 2);
+  assert.equal(appConfig.onboarding.version, 3);
   assert.equal(appConfig.onboarding.completionResource, "settings");
   assert.deepEqual(appConfig.onboarding.requiredFields, []);
   assert.ok(appConfig.onboarding.rationale.length > 0);

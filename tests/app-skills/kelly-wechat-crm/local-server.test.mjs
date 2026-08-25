@@ -20,9 +20,29 @@ test.before(async () => {
     command: process.execPath,
     args: ["server.js"],
     cwd: appRoot,
-    env: { HOME: home, PORT: String(port) },
+    env: { HOME: home, PORT: String(port), WECHAT_CLI_BIN: join(home, "missing-wechat-cli-rs") },
     readyUrl: `${baseUrl}/health`,
   });
+});
+
+test("reports sanitized WeChat connector readiness", async () => {
+  const response = await fetch(`${baseUrl}/__wechat/status`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const status = await response.json();
+  assert.equal(status.ready, false);
+  assert.equal(status.state, "missing");
+  assert.equal(status.installed, false);
+  assert.equal(status.initialized, false);
+  assert.equal(status.contactsCount, 0);
+  assert.equal(status.sessionsReadable, false);
+  assert.equal(JSON.stringify(status).includes("stderr"), false);
+});
+
+test("does not enumerate contacts without an explicit query", async () => {
+  const response = await fetch(`${baseUrl}/__wechat/contacts`);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { query: "", totalMatches: 0, results: [] });
 });
 
 test.after(async () => {

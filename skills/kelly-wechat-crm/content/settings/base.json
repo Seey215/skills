@@ -1,7 +1,7 @@
 {
   "name": "系统状态",
   "description": "wechat-cli readiness、同步状态、分析范围和 Agent 锁。",
-  "position": 6,
+  "position": 5,
   "fields": [
     {
       "slug": "kind",
@@ -45,18 +45,10 @@
     },
     {
       "slug": "people-count",
-      "name": "人数",
+      "name": "重点联系人数",
       "type": "number",
       "required": false,
       "position": 5,
-      "options": {}
-    },
-    {
-      "slug": "group-count",
-      "name": "群数",
-      "type": "number",
-      "required": false,
-      "position": 6,
       "options": {}
     },
     {
@@ -64,7 +56,7 @@
       "name": "锁定人",
       "type": "text",
       "required": false,
-      "position": 7,
+      "position": 6,
       "options": {}
     },
     {
@@ -72,7 +64,7 @@
       "name": "锁定时间",
       "type": "date",
       "required": false,
-      "position": 8,
+      "position": 7,
       "options": {}
     }
   ],

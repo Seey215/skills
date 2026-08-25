@@ -15,7 +15,6 @@ test("ships the canonical installable Node AirApp project", async () => {
     "busabase.json",
     "content/_folder.json",
     "content/people/base.json",
-    "content/groups/base.json",
     "content/relationship-snapshots/base.json",
     "content/goals/base.json",
     "content/actions/base.json",
@@ -25,6 +24,7 @@ test("ships the canonical installable Node AirApp project", async () => {
     "content/kelly-wechat-crm-app/.busabaseignore",
     "content/kelly-wechat-crm-app/package.json",
     "content/kelly-wechat-crm-app/server.js",
+    "content/kelly-wechat-crm-app/wechat-status.mjs",
   ];
   await Promise.all(required.map((file) => readFile(join(skillRoot, file))));
   await assert.rejects(readFile(join(appRoot, "server.py")));
@@ -62,7 +62,7 @@ test("aligns manifest, skill resources, config, and generated content", async ()
   }
 });
 
-test("keeps credentials and direct merge authority out of browser code", async () => {
+test("keeps credentials out while limiting auto-merge to explicit app writes", async () => {
   const files = [
     "js/app.js",
     "js/config.js",
@@ -75,14 +75,15 @@ test("keeps credentials and direct merge authority out of browser code", async (
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
   assert.match(source, /createBusabaseClient/);
   assert.match(source, /window\.location\.origin/);
-  assert.match(source, /autoMerge:\s*false/);
+  assert.match(source, /autoMerge:\s*true/);
   assert.doesNotMatch(source, /changeRequests\.(?:review|merge)/);
   assert.match(source, /state\.runtime\.hosted \? null : await gate\.status\(\)/);
+  assert.match(source, /fetch\("__wechat\/status"/);
 });
 
 test("declares versioned onboarding in a real Busabase resource", async () => {
   const { appConfig } = await import(join(browserRoot, "js", "config.js"));
-  assert.equal(appConfig.onboarding.version, 2);
+  assert.equal(appConfig.onboarding.version, 3);
   assert.equal(appConfig.onboarding.completionResource, "settings");
   assert.deepEqual(appConfig.onboarding.requiredFields, []);
   assert.ok(appConfig.onboarding.rationale.length > 0);

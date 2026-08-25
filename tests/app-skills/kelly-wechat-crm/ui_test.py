@@ -18,10 +18,9 @@ APP_ROOT = REPO_ROOT / "skills" / "kelly-wechat-crm" / "content" / "kelly-wechat
 BUSABASE_VERSION = "0.19.0"
 EXPECTED_RESOURCE_KEYS = [
     "app-root",
-    "people",
-    "groups",
-    "relationship-snapshots",
     "goals",
+    "people",
+    "relationship-snapshots",
     "actions",
     "worklog",
     "settings",
@@ -84,7 +83,7 @@ def test_demo_ui(browser, base_url: str) -> None:
     errors = attach_errors(page)
     page.goto(f"{base_url}/?demo=1#/actions")
     page.wait_for_load_state("networkidle")
-    assert page.locator(".record-row").count() == 4
+    assert page.locator(".record-row").count() == 3
     assert page.locator("#attentionValue").inner_text() == "3"
     assert_no_horizontal_overflow(page)
 
@@ -104,7 +103,14 @@ def test_demo_ui(browser, base_url: str) -> None:
     page.locator('#goalForm textarea[name="constraints"]').fill("尊重拒绝，不连续催促。")
     page.locator('#goalForm button[type="submit"]').click()
     page.locator("#goalModal").wait_for(state="hidden")
-    assert "/goals/demo-goals-" in page.url
+    assert "/people" in page.url
+
+    page.locator("#discoverOpen").click()
+    page.locator("#candidateQuery").fill("Lina")
+    page.locator("#candidateSearchForm button[type='submit']").click()
+    page.locator(".candidate-row input").check()
+    page.locator("#candidatePromote").click()
+    page.locator(".record-row", has_text="Lina").wait_for(timeout=5_000)
 
     page.locator("#settingsOpen").click()
     assert page.locator("#settingsModal").is_visible()
@@ -170,7 +176,24 @@ def test_oss_provisioning_and_review(browser) -> None:
         ]
         with managed_process(busabase_command, REPO_ROOT, {}, f"{busabase_url}/api/health", timeout=90):
             with tempfile.TemporaryDirectory(prefix="kelly-wechat-crm-home-") as app_home:
-                app_env = {"BUSABASE_BASE_URL": busabase_url, "HOME": app_home, "PORT": str(app_port)}
+                wechat_cli = Path(app_home) / "wechat-cli-rs"
+                wechat_cli.write_text(
+                    "#!/bin/sh\n"
+                    "case \"$1\" in\n"
+                    "  --version) echo 'wechat-cli-rs 0.1.3' ;;\n"
+                    "  sessions) echo '[]' ;;\n"
+                    "  contacts) echo '[{\"username\":\"wxid_acceptance\",\"nick_name\":\"验收联系人\",\"remark\":\"老朋友\"}]' ;;\n"
+                    "  *) exit 2 ;;\n"
+                    "esac\n",
+                    encoding="utf-8",
+                )
+                wechat_cli.chmod(0o700)
+                app_env = {
+                    "BUSABASE_BASE_URL": busabase_url,
+                    "HOME": app_home,
+                    "PORT": str(app_port),
+                    "WECHAT_CLI_BIN": str(wechat_cli),
+                }
                 with managed_process(["node", "server.js"], APP_ROOT, app_env, f"{app_url}/health"):
                     context = browser.new_context(viewport={"width": 1280, "height": 820})
                     page = context.new_page()
@@ -189,8 +212,29 @@ def test_oss_provisioning_and_review(browser) -> None:
                 nodes = read_json(f"{busabase_url}/api/v1/nodes?depth=2")
                 assert sorted(resource_keys(nodes)) == sorted(EXPECTED_RESOURCE_KEYS), nodes
                 people = find_resource(nodes, "people")
+                goals = find_resource(nodes, "goals")
                 actions = find_resource(nodes, "actions")
-                assert people and actions
+                assert people and goals and actions
+
+                goal_cr = post_json(
+                    f"{busabase_url}/api/v1/bases/{goals['baseId']}/change-requests",
+                    {
+                        "fields": {
+                            "title": "验收目标",
+                            "objective": "验证目标优先的重点联系人流程。",
+                            "scope": "global",
+                            "priority": "high",
+                            "status": "active",
+                            "created-at": "2026-08-25T00:00:00.000Z",
+                        },
+                        "message": "Seed WeChat CRM acceptance goal",
+                        "submittedBy": "kelly-skills-test",
+                    },
+                )
+                post_json(
+                    f"{busabase_url}/api/v1/change-requests/merge",
+                    {"changeRequestIds": [goal_cr["id"]]},
+                )
 
                 person_cr = post_json(
                     f"{busabase_url}/api/v1/bases/{people['baseId']}/change-requests",
@@ -248,16 +292,17 @@ def test_oss_provisioning_and_review(browser) -> None:
                     page.wait_for_load_state("networkidle")
                     card = page.locator(".record-row", has_text="验收联系人：需要人工判断")
                     card.click()
-                    page.locator("#reviewNote").fill("真实验收只提交 CR。")
+                    page.locator("#reviewNote").fill("真实验收直接保存工作台决定。")
                     page.locator("[data-action-status='approved']").click()
-                    page.locator(".action-notice").get_by_text("ChangeRequest").wait_for(timeout=10_000)
+                    page.locator(".action-notice").get_by_text("已保存").wait_for(timeout=10_000)
                     page.goto(f"{app_url}/#/goals")
                     page.wait_for_load_state("networkidle")
                     page.locator("#goalOpen").click()
                     page.locator('#goalForm input[name="title"]').fill("验收动态目标")
-                    page.locator('#goalForm textarea[name="objective"]').fill("验证目标能通过 AirApp 提交 CR。")
+                    page.locator('#goalForm textarea[name="objective"]').fill("验证目标能通过 AirApp 直接保存。")
                     page.locator('#goalForm button[type="submit"]').click()
-                    page.locator("#goalFormStatus").get_by_text("ChangeRequest").wait_for(timeout=10_000)
+                    page.locator("#goalModal").wait_for(state="hidden", timeout=10_000)
+                    assert "/people" in page.url
                     assert_no_horizontal_overflow(page)
                     assert not errors, errors
                     context.close()
@@ -270,7 +315,7 @@ def test_oss_provisioning_and_review(browser) -> None:
                     in (((item.get("primaryOperation") or {}).get("headCommit") or {}).get("message") or "")
                 ]
                 assert len(decision_requests) == 1, requests
-                assert decision_requests[0]["status"] == "in_review", decision_requests[0]
+                assert decision_requests[0]["status"] == "merged", decision_requests[0]
                 goal_requests = [
                     item
                     for item in requests
@@ -278,7 +323,7 @@ def test_oss_provisioning_and_review(browser) -> None:
                     in (((item.get("primaryOperation") or {}).get("headCommit") or {}).get("message") or "")
                 ]
                 assert len(goal_requests) == 1, requests
-                assert goal_requests[0]["status"] == "in_review", goal_requests[0]
+                assert goal_requests[0]["status"] == "merged", goal_requests[0]
 
         with managed_process(busabase_command, REPO_ROOT, {}, f"{busabase_url}/api/health", timeout=90):
             nodes = read_json(f"{busabase_url}/api/v1/nodes?depth=2")

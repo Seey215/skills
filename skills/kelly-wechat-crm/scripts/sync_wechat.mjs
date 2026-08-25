@@ -12,10 +12,11 @@ const DEFAULT_STALE_DAYS = 7;
 function help() {
   console.log(`Usage: node scripts/sync_wechat.mjs [--apply]
 
-Reads contacts and recent sessions from the local WeChat database. People and
-groups are proposed into separate Busabase Bases. Existing relationship notes,
-goals, analyses, and worklogs are never overwritten. Without --apply this is a
-dry run. The script never sends or modifies anything in WeChat.`);
+Reads contacts and recent sessions from the local WeChat database, then refreshes
+only people already promoted into the Busabase People Base. Untracked contacts
+stay local. Existing relationship notes, goals, analyses, and worklogs are never
+overwritten. Without --apply this is a dry run. The script never sends or
+modifies anything in WeChat.`);
 }
 
 function runWechatCli(args) {
@@ -79,29 +80,14 @@ async function main() {
   const sessions = runWechatCli(["sessions", "--limit", "200"]);
   const sessionByUsername = new Map(sessions.map((session) => [session.username, session]));
   const people = contacts.filter((contact) => !isGroup(contact.username));
-  const groupsById = new Map(
-    contacts.filter((contact) => isGroup(contact.username)).map((contact) => [contact.username, contact]),
-  );
-  for (const session of sessions.filter((item) => item.is_group || isGroup(item.username))) {
-    if (!groupsById.has(session.username)) {
-      groupsById.set(session.username, {
-        username: session.username,
-        nick_name: session.chat || session.username,
-        remark: "",
-      });
-    }
-  }
-  const groups = [...groupsById.values()];
-  console.log(`  ${people.length} people, ${groups.length} groups, ${sessions.length} recent sessions`);
+  console.log(`  ${people.length} local contacts, ${sessions.length} recent sessions`);
 
-  const [peopleRows, groupRows, actionRows, settingsRows] = await Promise.all([
+  const [peopleRows, actionRows, settingsRows] = await Promise.all([
     listAll(client, baseId("people")),
-    listAll(client, baseId("groups")),
     listAll(client, baseId("actions")),
     listAll(client, baseId("settings")),
   ]);
   const peopleByUsername = new Map(peopleRows.map((record) => [fieldValue(record, "username"), record]));
-  const groupsByUsername = new Map(groupRows.map((record) => [fieldValue(record, "username"), record]));
   const openPersonIds = new Set(
     actionRows
       .filter((record) =>
@@ -113,8 +99,8 @@ async function main() {
   const staleDays = Number(fieldValue(rules, "value")) || DEFAULT_STALE_DAYS;
   const now = new Date().toISOString();
   const proposedActions = [];
-  let creates = 0;
   let updates = 0;
+  let untracked = 0;
 
   for (const contact of people) {
     const session = sessionByUsername.get(contact.username);
@@ -132,31 +118,21 @@ async function main() {
         : {}),
       "last-synced-at": now,
     };
-    if (existing) {
-      updates += 1;
-      if (apply) {
-        await client.records.changeRequest({
-          recordId: existing.id,
-          operation: "update",
-          fields,
-          message: `Refresh WeChat person ${fields["display-name"]}`,
-          author: appConfig.appId,
-          baseCommitId: existing.headCommitId || existing.headCommit?.id,
-          autoMerge: false,
-        });
-      }
-    } else {
-      creates += 1;
-      if (apply) {
-        await client.bases.createChangeRequest({
-          baseId: baseId("people"),
-          fields,
-          message: `Add WeChat person ${fields["display-name"]}`,
-          submittedBy: appConfig.appId,
-          idempotencyKey: `wechat-person:${contact.username}`,
-          autoMerge: false,
-        });
-      }
+    if (!existing) {
+      untracked += 1;
+      continue;
+    }
+    updates += 1;
+    if (apply) {
+      await client.records.changeRequest({
+        recordId: existing.id,
+        operation: "update",
+        fields,
+        message: `Refresh focused WeChat person ${fields["display-name"]}`,
+        author: appConfig.appId,
+        baseCommitId: existing.headCommitId || existing.headCommit?.id,
+        autoMerge: true,
+      });
     }
 
     const lastMessageAt = session ? new Date(session.timestamp * 1000).toISOString() : null;
@@ -165,50 +141,6 @@ async function main() {
       fieldValue(existing, "relationship-type") === "other" && fieldValue(existing, "relationship-strength") === 0;
     if (existing && !muted && !openPersonIds.has(existing.id) && silentDays >= staleDays) {
       proposedActions.push({ existing, contact, silentDays, lastMessageAt });
-    }
-  }
-
-  for (const contact of groups) {
-    const session = sessionByUsername.get(contact.username);
-    const existing = groupsByUsername.get(contact.username);
-    const fields = {
-      name: contact.nick_name || contact.username,
-      username: contact.username,
-      "wechat-remark": contact.remark || "",
-      ...(session
-        ? {
-            "last-message-at": new Date(session.timestamp * 1000).toISOString(),
-            "last-message-summary": session.last_message || "",
-            "unread-count": session.unread || 0,
-          }
-        : {}),
-      "last-synced-at": now,
-    };
-    if (existing) {
-      updates += 1;
-      if (apply) {
-        await client.records.changeRequest({
-          recordId: existing.id,
-          operation: "update",
-          fields,
-          message: `Refresh WeChat group ${fields.name}`,
-          author: appConfig.appId,
-          baseCommitId: existing.headCommitId || existing.headCommit?.id,
-          autoMerge: false,
-        });
-      }
-    } else {
-      creates += 1;
-      if (apply) {
-        await client.bases.createChangeRequest({
-          baseId: baseId("groups"),
-          fields,
-          message: `Add WeChat group ${fields.name}`,
-          submittedBy: appConfig.appId,
-          idempotencyKey: `wechat-group:${contact.username}`,
-          autoMerge: false,
-        });
-      }
     }
   }
 
@@ -234,7 +166,7 @@ async function main() {
         message: `Suggest reconnecting with ${candidate.contact.nick_name || candidate.contact.username}`,
         submittedBy: appConfig.appId,
         idempotencyKey: `wechat-reconnect:${candidate.contact.username}:${candidate.lastMessageAt || "none"}`,
-        autoMerge: false,
+        autoMerge: true,
       });
     }
   }
@@ -243,10 +175,9 @@ async function main() {
   const syncFields = {
     kind: "sync-state",
     status: "ready",
-    value: "contacts and sessions readable",
+    value: "focused contacts refreshed from local WeChat",
     "last-sync-at": now,
-    "people-count": people.length,
-    "group-count": groups.length,
+    "people-count": peopleRows.length,
   };
   if (apply) {
     if (syncState) {
@@ -257,7 +188,7 @@ async function main() {
         message: "Update WeChat connector sync state",
         author: appConfig.appId,
         baseCommitId: syncState.headCommitId || syncState.headCommit?.id,
-        autoMerge: false,
+        autoMerge: true,
       });
     } else {
       await client.bases.createChangeRequest({
@@ -266,13 +197,13 @@ async function main() {
         message: "Create WeChat connector sync state",
         submittedBy: appConfig.appId,
         idempotencyKey: "wechat-sync-state",
-        autoMerge: false,
+        autoMerge: true,
       });
     }
   }
 
   console.log(
-    `${creates} entities to create, ${updates} to refresh, ${proposedActions.length} actions to propose${apply ? "" : " (dry run)"}`,
+    `${updates} focused people to refresh, ${untracked} contacts kept local, ${proposedActions.length} actions to add${apply ? "" : " (dry run)"}`,
   );
 }
 

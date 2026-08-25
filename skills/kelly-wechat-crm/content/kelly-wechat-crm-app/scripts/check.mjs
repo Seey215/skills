@@ -10,6 +10,7 @@ const serverFile = "server.js";
 const required = [
   "package.json",
   "server.js",
+  "wechat-status.mjs",
   "_node.json",
   ".busabaseignore",
   "app/vendor/busabase-sdk.js",
@@ -221,6 +222,12 @@ for (const route of ["/auth/status", "/auth/start", "/auth/callback", "/auth/spa
 // obtaining a credential, which a hosted-only runtime never needs.
 if (!contents["app/js/app.js"].includes("createAirAppConnectGate"))
   throw new Error("Browser setup must use busabase-sdk/airapp-gate's createAirAppConnectGate().");
+if (!contents["app/js/app.js"].includes('fetch("__wechat/status"'))
+  throw new Error("Browser setup must check the local WeChat connector after the Busabase gate.");
+if (!serverSource.includes('"/__wechat/status"'))
+  throw new Error("Server must expose a sanitized WeChat connector status endpoint.");
+if (!serverSource.includes('"/__wechat/contacts"'))
+  throw new Error("Server must expose explicit-query local contact discovery.");
 if (appConfig.readOnly && appConfig.permissions.writeProcedures.length) {
   throw new Error("Read-only app declares write procedures.");
 }

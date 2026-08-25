@@ -2,6 +2,7 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { createBusabaseAirAppLocalGateway } from "busabase-sdk/airapp-node";
 import { Hono } from "hono";
+import { readWechatStatus, searchWechatContacts } from "./wechat-status.mjs";
 
 const app = new Hono();
 const gateway = createBusabaseAirAppLocalGateway({
@@ -11,6 +12,20 @@ const gateway = createBusabaseAirAppLocalGateway({
 });
 
 app.get("/health", (context) => context.json({ ok: true, app: "kelly-wechat-crm" }));
+app.get("/__wechat/status", async (context) => {
+  context.header("cache-control", "no-store");
+  return context.json(await readWechatStatus());
+});
+app.get("/__wechat/contacts", async (context) => {
+  context.header("cache-control", "no-store");
+  const query = new URL(context.req.url).searchParams.get("q") || "";
+  if (!query.trim()) return context.json({ query: "", totalMatches: 0, results: [] });
+  try {
+    return context.json(await searchWechatContacts(query));
+  } catch {
+    return context.json({ error: "WECHAT_CONTACT_SEARCH_FAILED" }, 503);
+  }
+});
 
 // These routes are used only by a standalone top-level loopback preview. In a
 // Busabase-hosted Run, the browser skips this gate and Busabase owns /api/v1.

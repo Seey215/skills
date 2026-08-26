@@ -79,8 +79,8 @@ for (const [index, base] of appConfig.bases.entries()) {
     throw new Error(`Configured Base ${base.key || index} readLimit does not match blueprint.`);
 }
 const demoRecordCount = appConfig.bases.reduce((count, base) => count + (base.sampleRecords || []).length, 0);
-if (demoRecordCount < 3 || demoRecordCount > 20) {
-  throw new Error("Demo provider requires 3-20 deliberately scoped records.");
+if (demoRecordCount < 3 || demoRecordCount > 50) {
+  throw new Error("Demo provider requires 3-50 deliberately scoped records.");
 }
 if (blueprint.app?.slug !== appConfig.appId) throw new Error("Blueprint/config app slug mismatch.");
 if (!Number.isInteger(appConfig.onboarding?.version) || appConfig.onboarding.version < 1)

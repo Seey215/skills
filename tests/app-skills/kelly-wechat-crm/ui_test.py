@@ -83,8 +83,8 @@ def test_demo_ui(browser, base_url: str) -> None:
     errors = attach_errors(page)
     page.goto(f"{base_url}/?demo=1#/actions")
     page.wait_for_load_state("networkidle")
-    assert page.locator(".record-row").count() == 3
-    assert page.locator("#attentionValue").inner_text() == "3"
+    assert page.locator(".record-row").count() == 10
+    assert page.locator("#attentionValue").inner_text() == "8"
     assert_no_horizontal_overflow(page)
 
     page.locator(".record-row").first.click()

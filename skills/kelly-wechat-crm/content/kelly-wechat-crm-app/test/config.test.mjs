@@ -23,7 +23,7 @@ test("ships a bounded deterministic relationship strategy scenario", () => {
   for (const base of appConfig.bases) {
     for (const record of base.sampleRecords || []) recordKeys.push(record.key);
   }
-  assert.equal(recordKeys.length, 15);
+  assert.equal(recordKeys.length, 45);
   assert.equal(new Set(recordKeys).size, recordKeys.length);
   assert.equal(appConfig.onboarding.version, 3);
   assert.equal(appConfig.onboarding.completionResource, "settings");

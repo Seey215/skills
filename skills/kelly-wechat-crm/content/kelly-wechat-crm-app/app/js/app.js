@@ -1,6 +1,15 @@
 import { createAirAppConnectGate } from "../vendor/busabase-airapp-gate.js";
+import {
+  ACTION_FILTERS,
+  actionMatchesFilter,
+  buildOutcomeWorklog,
+  buildWaitAction,
+  isTerminalAction,
+  outcomeStatus,
+} from "./action-workflow.js";
 import { appConfig } from "./config.js";
 import { messages } from "./messages.js";
+import { WriteResultUnknownError, createWithConfirmation, updateWithConfirmation } from "./operation-recovery.js";
 import { getProvider } from "./providers/index.js";
 import { connectionHintKey, getRuntime, runtimeLabel } from "./runtime.js";
 
@@ -17,6 +26,9 @@ const state = {
   notice: "",
   candidateResults: [],
   selectedCandidates: new Set(),
+  actionFilter: "review",
+  pendingActions: new Set(),
+  unknownActions: new Set(),
 };
 
 const byId = (id) => document.getElementById(id);
@@ -51,9 +63,12 @@ const loadedCount = (count, hasMore) => `${count}${hasMore ? "+" : ""}`;
 const primaryField = () => baseConfig()?.fields?.[0]?.slug || "name";
 const filteredRecords = () => {
   const query = state.query.trim().toLowerCase();
-  return query
+  const queried = query
     ? recordsForBase().filter((record) => JSON.stringify(record.fields).toLowerCase().includes(query))
     : recordsForBase();
+  return state.activeBase === "actions"
+    ? queried.filter((record) => actionMatchesFilter(record, state.actionFilter))
+    : queried;
 };
 const activeGoals = () =>
   (state.payload?.records || []).filter((record) => record.baseKey === "goals" && record.fields?.status === "active");
@@ -128,6 +143,12 @@ const wechatStatusCopy = (status) => {
       summary: `已读取 ${status.contactsCount} 位联系人；最近会话可正常读取。`,
     };
   }
+  if (status.state === "local_companion_required") {
+    return {
+      title: "Busabase 已连接，微信读取需要 Local Companion",
+      summary: "Cloud 页面可查看已有 CRM 数据；要同步本机微信，请在微信所在电脑启动本地应用。",
+    };
+  }
   if (status.state === "missing") {
     return { title: "尚未安装 WeChat CLI", summary: "从官网安装后返回这里重新检测。" };
   }
@@ -145,7 +166,7 @@ const wechatStatusCopy = (status) => {
 
 function renderWechatStatus() {
   const status = state.wechatStatus;
-  const ready = Boolean(status?.ready) || isDemo();
+  const ready = Boolean(status?.ready) || status?.state === "local_companion_required" || isDemo();
   const copy = wechatStatusCopy(status);
   byId("wechatConnector").hidden = isDemo() || !status;
   byId("wechatConnector").classList.toggle("is-ready", ready);
@@ -153,6 +174,7 @@ function renderWechatStatus() {
   setText("wechatStatusTitle", copy.title);
   setText("wechatStatusSummary", copy.summary);
   byId("wechatInitCommand").hidden = status?.state !== "not_initialized";
+  byId("wechatLocalCommand").hidden = status?.state !== "local_companion_required";
   byId("wechatInstallLink").hidden = status?.state !== "missing";
   byId("wechatRecheck").disabled = status?.state === "checking";
   byId("metrics").hidden = !ready;
@@ -174,6 +196,14 @@ function renderList() {
   byId("loadMore").hidden = !pageInfoForBase().nextCursor || Boolean(state.query);
   byId("goalOpen").hidden = base?.key !== "goals";
   byId("discoverOpen").hidden = base?.key !== "people" || !activeGoals().length;
+  const filters = byId("actionFilters");
+  filters.hidden = base?.key !== "actions";
+  if (base?.key === "actions") {
+    filters.innerHTML = ACTION_FILTERS.map(
+      (filter) =>
+        `<button class="action-filter ${filter.key === state.actionFilter ? "active" : ""}" type="button" role="tab" aria-selected="${filter.key === state.actionFilter}" data-action-filter="${filter.key}">${escapeHtml(filter.label)}</button>`,
+    ).join("");
+  }
   setText("loadMore", messages.loadMore);
   if (!records.length) {
     if (state.query) {
@@ -232,14 +262,41 @@ function renderDetail() {
   const actions = byId("detailActions");
   actions.hidden = base?.key !== "actions";
   if (base?.key === "actions") {
+    const status = record.fields?.status || "needs-review";
+    const pending = state.pendingActions.has(record.id) || state.unknownActions.has(record.id);
+    const terminal = isTerminalAction(status);
+    const controls = [];
+    if (["needs-review", "changes-requested"].includes(status)) {
+      controls.push(
+        ["approved", "批准，准备执行", true],
+        ["changes-requested", "要求修改"],
+        ["snoozed", "稍后再看"],
+        ["dismissed", "不再执行"],
+      );
+    } else if (status === "approved") {
+      controls.push(
+        ["record-outcome", "记录执行结果", true],
+        ["changes-requested", "退回修改"],
+        ["snoozed", "稍后执行"],
+      );
+    } else if (["awaiting-result", "snoozed"].includes(status)) {
+      controls.push(["record-outcome", "记录回复 / 结果", true], ["approved", "继续执行"], ["dismissed", "结束跟进"]);
+    } else if (terminal) {
+      controls.push(["needs-review", "重新打开"]);
+    }
+    const stateCopy = terminal
+      ? "这条行动已经结束。只有明确重新打开后，才会再次进入待判断队列。"
+      : status === "awaiting-result"
+        ? "执行动作已记录，当前等待对方反馈。收到回复后记录实际结果。"
+        : status === "approved"
+          ? "行动已批准。执行后请记录实际结果，系统会写入工作日志。"
+          : "先判断建议是否值得执行；批准并不代表已经完成。";
     actions.innerHTML = `
       <div class="action-notice" role="status">${escapeHtml(state.notice)}</div>
-      <label class="review-note"><span>${escapeHtml(messages.reviewNote)}</span><textarea id="reviewNote" rows="3" placeholder="${escapeHtml(messages.reviewNotePlaceholder)}">${escapeHtml(record.fields?.["decision-comment"] || "")}</textarea></label>
+      <p class="action-state-copy">${escapeHtml(stateCopy)}</p>
+      <label class="review-note"><span>${escapeHtml(messages.reviewNote)}</span><textarea id="reviewNote" rows="3" placeholder="${escapeHtml(messages.reviewNotePlaceholder)}" ${pending ? "disabled" : ""}>${escapeHtml(record.fields?.["decision-comment"] || "")}</textarea></label>
       <div class="decision-buttons">
-        <button class="primary-action" type="button" data-action-status="approved">${escapeHtml(messages.approveAction)}</button>
-        <button type="button" data-action-status="changes-requested">${escapeHtml(messages.requestChanges)}</button>
-        <button type="button" data-action-status="snoozed">${escapeHtml(messages.snooze)}</button>
-        <button type="button" data-action-status="done">${escapeHtml(messages.markDone)}</button>
+        ${controls.map(([action, label, primary]) => `<button class="${primary ? "primary-action" : ""}" type="button" ${action === "record-outcome" ? "data-outcome-open" : `data-action-status="${action}"`} ${pending ? "disabled" : ""}>${escapeHtml(label)}</button>`).join("")}
       </div>`;
   }
 }
@@ -266,7 +323,9 @@ function renderSettings() {
       messages.space,
       state.authStatus?.selectedSpace
         ? `${state.authStatus.selectedSpace.name} (${state.authStatus.selectedSpace.id})`
-        : appConfig.spaceId || messages.notSet,
+        : state.runtime?.hosted
+          ? "由当前 Busabase 会话决定"
+          : appConfig.spaceId || "已在连接步骤选择",
     ],
     [messages.folder, state.payload?.resources?.folder?.nodeId || appConfig.folder.slug],
     [messages.configuredBases, appConfig.bases.map((base) => base.slug).join(", ")],
@@ -338,7 +397,7 @@ function render() {
 }
 
 async function load() {
-  setText("loadingState", messages.loading);
+  setText("loadingState", "正在确认运行环境…");
   byId("errorState").hidden = true;
   // Resolved before the first data call so a failure can be explained in terms
   // of where this app actually runs. It must never gate the call itself: the
@@ -350,23 +409,27 @@ async function load() {
       setText("loadingState", "");
       return;
     }
-    state.authStatus = state.runtime.hosted ? null : await gate.status();
+    state.authStatus = null;
     state.wechatStatus = isDemo()
       ? { ready: true, state: "demo", version: "demo", contactsCount: 0, sessionsReadable: true }
-      : { ready: false, state: "checking" };
+      : state.runtime.hosted
+        ? { ready: false, state: "local_companion_required" }
+        : { ready: false, state: "checking" };
     render();
-    if (!isDemo()) {
+    if (!isDemo() && !state.runtime.hosted) {
+      setText("loadingState", "正在检测本机 WeChat CLI…");
       try {
         state.wechatStatus = await readWechatStatus();
       } catch {
         state.wechatStatus = { ready: false, state: "unavailable" };
       }
     }
-    if (!state.wechatStatus.ready) {
+    if (!state.wechatStatus.ready && state.wechatStatus.state !== "local_companion_required") {
       setText("loadingState", "");
       render();
       return;
     }
+    setText("loadingState", "正在读取 Busabase 工作区…");
     state.provider = await getProvider();
     state.payload = await state.provider.getState();
     if (!activeGoals().length) {
@@ -389,14 +452,35 @@ async function load() {
   }
 }
 
+const operationKey = () =>
+  globalThis.crypto?.randomUUID?.() || `op-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const stableOperationKey = (scope, input) => {
+  let hash = 2166136261;
+  for (const character of String(input)) {
+    hash ^= character.codePointAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${scope}-${(hash >>> 0).toString(36)}`;
+};
+
+async function refreshState() {
+  if (state.provider.name !== "demo") state.payload = await state.provider.getState();
+}
+
+async function reliableCreate({ baseKey, fields, message, idempotencyKey, findFieldSlug, findValue, onConfirming }) {
+  return createWithConfirmation({
+    create: () => state.provider.createRecord({ baseKey, fields, message, idempotencyKey }),
+    find: () => state.provider.findRecord({ baseKey, fieldSlug: findFieldSlug, valueText: findValue }),
+    onConfirming,
+  });
+}
+
 async function submitActionDecision(status) {
   const record = recordsForBase().find((item) => item.id === state.selectedRecordId);
-  if (!record || state.activeBase !== "actions") return;
+  if (!record || state.activeBase !== "actions" || state.pendingActions.has(record.id)) return;
   const comment = byId("reviewNote")?.value.trim() || "";
-  const buttons = [...byId("detailActions").querySelectorAll("button")];
-  buttons.forEach((button) => {
-    button.disabled = true;
-  });
+  const key = operationKey();
+  state.pendingActions.add(record.id);
   state.notice = messages.submittingDecision;
   renderDetail();
   try {
@@ -405,21 +489,150 @@ async function submitActionDecision(status) {
       "decision-comment": comment,
       "decided-at": new Date().toISOString(),
       "decided-by": "operator",
+      "operation-key": key,
     };
-    const result = await state.provider.updateRecord({
-      baseKey: "actions",
-      recordId: record.id,
-      headCommitId: record.headCommitId,
-      fields,
-      message: `Review relationship action ${record.fields?.title || record.id}: ${status}`,
+    const { result, reconciled } = await updateWithConfirmation({
+      write: () =>
+        state.provider.updateRecord({
+          baseKey: "actions",
+          recordId: record.id,
+          headCommitId: record.headCommitId,
+          fields,
+          message: `Review relationship action ${record.fields?.title || record.id}: ${status}`,
+        }),
+      read: () => state.provider.readRecord(record.id),
+      expectedFields: fields,
+      onConfirming: () => {
+        state.notice = "响应超时，正在回读 Busabase 确认是否已经保存…";
+        renderDetail();
+      },
     });
     if (state.provider.name === "demo") Object.assign(record.fields, fields);
-    else state.payload = await state.provider.getState();
-    state.notice = result?.id ? `${messages.saved} ${result.id}` : messages.decisionRecorded;
+    await refreshState();
+    state.unknownActions.delete(record.id);
+    state.notice = reconciled
+      ? "已从 Busabase 回读确认，决定只保存了一次。"
+      : result?.id
+        ? `${messages.saved} ${result.id}`
+        : messages.decisionRecorded;
   } catch (error) {
-    state.notice = `${messages.decisionFailed} ${error instanceof Error ? error.message : error}`;
+    if (error instanceof WriteResultUnknownError) {
+      state.unknownActions.add(record.id);
+      state.notice = "写入结果仍未知。按钮已锁定，请刷新页面后根据 Busabase 中的状态再决定，避免重复提交。";
+    } else {
+      state.notice = `${messages.decisionFailed} ${error instanceof Error ? error.message : error}`;
+    }
+  } finally {
+    state.pendingActions.delete(record.id);
   }
   render();
+}
+
+function setOutcomeModal(open) {
+  byId("outcomeModal").hidden = !open;
+  if (!open) return;
+  setText("outcomeFormStatus", "");
+  byId("outcomeForm").querySelector('textarea[name="outcome"]').focus();
+}
+
+async function submitOutcome(event) {
+  event.preventDefault();
+  const action = recordsForBase().find((item) => item.id === state.selectedRecordId);
+  if (!action || state.pendingActions.has(action.id)) return;
+  const form = new FormData(byId("outcomeForm"));
+  const outcome = String(form.get("outcome") || "").trim();
+  const outcomeType = String(form.get("outcome_type") || "");
+  if (!outcome || !outcomeType) return;
+
+  const key = stableOperationKey("outcome", `${action.id}\n${outcomeType}\n${outcome}`);
+  const now = new Date().toISOString();
+  const dueAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  const submit = byId("outcomeForm").querySelector('button[type="submit"]');
+  state.pendingActions.add(action.id);
+  submit.disabled = true;
+  setText("outcomeFormStatus", "正在保存工作日志…");
+  try {
+    const worklogFields = buildOutcomeWorklog({ action, outcome, operationKey: key, now });
+    const worklog = await reliableCreate({
+      baseKey: "worklog",
+      fields: worklogFields,
+      message: `Record action outcome: ${action.fields?.title || action.id}`,
+      idempotencyKey: `action-outcome-worklog:${key}`,
+      findFieldSlug: "operation-key",
+      findValue: key,
+      onConfirming: () => setText("outcomeFormStatus", "响应超时，正在回读确认工作日志…"),
+    });
+    let waitAction = null;
+    if (outcomeType === "sent-awaiting-reply") {
+      setText("outcomeFormStatus", "正在创建等待回复的后续行动…");
+      const waitFields = buildWaitAction({ action, operationKey: key, now, dueAt });
+      waitAction = await reliableCreate({
+        baseKey: "actions",
+        fields: waitFields,
+        message: `Create reply wait action for ${action.fields?.title || action.id}`,
+        idempotencyKey: `action-outcome-wait:${key}`,
+        findFieldSlug: "operation-key",
+        findValue: key,
+        onConfirming: () => setText("outcomeFormStatus", "响应超时，正在回读确认等待行动…"),
+      });
+    }
+
+    setText("outcomeFormStatus", "正在更新原行动状态…");
+    const fields = {
+      status: outcomeStatus(outcomeType),
+      "outcome-type": outcomeType,
+      outcome,
+      "outcome-at": now,
+      "operation-key": key,
+      "decision-comment": byId("reviewNote")?.value.trim() || action.fields?.["decision-comment"] || "",
+      "decided-at": now,
+      "decided-by": "operator",
+    };
+    const updated = await updateWithConfirmation({
+      write: () =>
+        state.provider.updateRecord({
+          baseKey: "actions",
+          recordId: action.id,
+          headCommitId: action.headCommitId,
+          fields,
+          message: `Complete relationship action with outcome: ${action.fields?.title || action.id}`,
+        }),
+      read: () => state.provider.readRecord(action.id),
+      expectedFields: fields,
+      onConfirming: () => setText("outcomeFormStatus", "响应超时，正在回读确认原行动…"),
+    });
+
+    if (state.provider.name === "demo") {
+      Object.assign(action.fields, fields);
+      const appendDemoRecord = (baseKey, result, recordFields) => {
+        const id = result.result?.id || `demo-${baseKey}-${key}`;
+        state.payload.records.push({ id, headCommitId: `demo-head-${id}`, baseKey, fields: recordFields });
+      };
+      appendDemoRecord("worklog", worklog, worklogFields);
+      if (waitAction)
+        appendDemoRecord("actions", waitAction, buildWaitAction({ action, operationKey: key, now, dueAt }));
+    }
+    await refreshState();
+    state.unknownActions.delete(action.id);
+    state.notice = updated.reconciled
+      ? "已回读确认执行结果。工作日志和行动状态只保存了一次。"
+      : outcomeType === "sent-awaiting-reply"
+        ? "执行结果已记录，并创建了等待回复的后续行动。"
+        : "执行结果已记录，行动已结束；Agent 将基于工作日志更新关系判断。";
+    byId("outcomeForm").reset();
+    setOutcomeModal(false);
+  } catch (error) {
+    if (error instanceof WriteResultUnknownError) {
+      state.unknownActions.add(action.id);
+      setText("outcomeFormStatus", "至少一个写入结果仍未知。请刷新并核对操作键后再继续，不要重复提交。 ");
+    } else {
+      setText("outcomeFormStatus", `保存失败：${error instanceof Error ? error.message : error}`);
+    }
+  } finally {
+    state.pendingActions.delete(action.id);
+    submit.disabled = false;
+    render();
+  }
 }
 
 function goalTargets(scope) {
@@ -463,6 +676,7 @@ async function submitGoal(event) {
   const scope = String(form.get("scope") || "global");
   const target = String(form.get("target") || "");
   const deadline = String(form.get("deadline") || "");
+  const key = stableOperationKey("goal", `${title}\n${objective}\n${deadline}\n${scope}\n${target}`);
   const fields = {
     title,
     objective,
@@ -473,17 +687,21 @@ async function submitGoal(event) {
     status: String(form.get("status") || "active"),
     constraints: String(form.get("constraints") || "").trim(),
     "created-at": new Date().toISOString(),
+    "operation-key": key,
     ...(scope === "person" && target ? { people: [target] } : {}),
   };
   const submit = byId("goalForm").querySelector('button[type="submit"]');
   submit.disabled = true;
   setText("goalFormStatus", messages.submittingGoal);
   try {
-    const result = await state.provider.createRecord({
+    const { result, reconciled } = await reliableCreate({
       baseKey: "goals",
       fields,
       message: `Create relationship goal: ${title}`,
-      idempotencyKey: `goal:${title}:${deadline || "open"}`,
+      idempotencyKey: `goal:${key}`,
+      findFieldSlug: "operation-key",
+      findValue: key,
+      onConfirming: () => setText("goalFormStatus", "响应超时，正在回读确认目标是否已经保存…"),
     });
     if (state.provider.name === "demo") {
       const id = result.id;
@@ -501,7 +719,11 @@ async function submitGoal(event) {
       byId("goalForm").reset();
       setGoalModal(false);
       window.location.hash = "#/people";
-      state.notice = result?.id ? `${messages.goalSaved} ${result.id}` : messages.goalSaved;
+      state.notice = reconciled
+        ? "已从 Busabase 回读确认，目标只创建了一次。"
+        : result?.id
+          ? `${messages.goalSaved} ${result.id}`
+          : messages.goalSaved;
       render();
     }
   } catch (error) {
@@ -695,6 +917,16 @@ byId("recordList").addEventListener("click", (event) => {
   renderDetail();
 });
 
+byId("actionFilters").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-action-filter]");
+  if (!button) return;
+  state.actionFilter = button.dataset.actionFilter;
+  state.selectedRecordId = null;
+  setMobileDetail(false);
+  renderList();
+  renderDetail();
+});
+
 byId("searchInput").addEventListener("input", (event) => {
   state.query = event.target.value;
   renderList();
@@ -717,8 +949,19 @@ byId("candidateModal").addEventListener("click", (event) => {
   if (event.target === byId("candidateModal")) setCandidateModal(false);
 });
 byId("detailPanel").addEventListener("click", (event) => {
+  const outcomeButton = event.target.closest("[data-outcome-open]");
+  if (outcomeButton) {
+    setOutcomeModal(true);
+    return;
+  }
   const button = event.target.closest("[data-action-status]");
   if (button) submitActionDecision(button.dataset.actionStatus);
+});
+byId("outcomeForm").addEventListener("submit", submitOutcome);
+byId("outcomeClose").addEventListener("click", () => setOutcomeModal(false));
+byId("outcomeCancel").addEventListener("click", () => setOutcomeModal(false));
+byId("outcomeModal").addEventListener("click", (event) => {
+  if (event.target === byId("outcomeModal")) setOutcomeModal(false);
 });
 byId("goalOpen").addEventListener("click", () => {
   window.location.hash = "#/goals/new";

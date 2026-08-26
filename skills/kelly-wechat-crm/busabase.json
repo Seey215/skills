@@ -2,12 +2,12 @@
   "format": "busabase-package@1",
   "name": "kelly-wechat-crm",
   "description": "Goal-first WeChat relationship desk that promotes only selected contacts into focused People workflows.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "tags": ["sales-crm", "wechat", "relationship-strategy", "risk:local-write", "surface:busabase"],
   "template": {
     "category": "sales-crm",
-    "schemaVersion": 3,
+    "schemaVersion": 4,
     "airapp": "kelly-wechat-crm-app",
     "tags": ["wechat", "goals", "relationship-analysis", "next-actions", "agent-worklog"],
     "screenshots": [

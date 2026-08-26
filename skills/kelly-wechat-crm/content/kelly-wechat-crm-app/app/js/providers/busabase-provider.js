@@ -95,6 +95,19 @@ export const busabaseProvider = {
     return readPage(resolvedBase(baseKey), cursor);
   },
 
+  async readRecord(recordId) {
+    requireProcedure(allowedReads, "records.get");
+    const record = await runtimeClient.records.get({ recordId });
+    return normalizeRecords([record], "")[0];
+  },
+
+  async findRecord({ baseKey, fieldSlug, valueText }) {
+    requireProcedure(allowedReads, "records.getByField");
+    const base = resolvedBase(baseKey);
+    const record = await runtimeClient.records.getByField({ baseId: base.baseId, fieldSlug, valueText });
+    return record ? normalizeRecords([record], baseKey)[0] : null;
+  },
+
   async updateRecord({ baseKey, recordId, headCommitId, fields, message }) {
     requireProcedure(allowedWrites, "records.changeRequest");
     if (!recordId || !baseKey || !runtimeBases.has(baseKey)) throw new Error("RECORD_TARGET_REQUIRED");

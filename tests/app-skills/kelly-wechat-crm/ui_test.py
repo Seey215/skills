@@ -83,7 +83,7 @@ def test_demo_ui(browser, base_url: str) -> None:
     errors = attach_errors(page)
     page.goto(f"{base_url}/?demo=1#/actions")
     page.wait_for_load_state("networkidle")
-    assert page.locator(".record-row").count() == 10
+    assert page.locator(".record-row").count() == 8
     assert page.locator("#attentionValue").inner_text() == "8"
     assert_no_horizontal_overflow(page)
 
@@ -91,6 +91,12 @@ def test_demo_ui(browser, base_url: str) -> None:
     page.locator("#reviewNote").fill("先确认近况，不直接发送消息。")
     page.locator("[data-action-status='approved']").click()
     page.locator(".action-notice").get_by_text("demo-change-").wait_for(timeout=5_000)
+    page.locator("[data-outcome-open]").click()
+    page.locator('#outcomeForm textarea[name="outcome"]').fill("已经发出邀请，对方说周五前回复。")
+    page.locator('#outcomeForm select[name="outcome_type"]').select_option("sent-awaiting-reply")
+    page.locator('#outcomeForm button[type="submit"]').click()
+    page.locator("#outcomeModal").wait_for(state="hidden")
+    assert page.locator(".action-notice").get_by_text("等待回复").is_visible()
     assert "/actions/" in page.url
 
     page.goto(f"{base_url}/?demo=1#/goals")
@@ -214,7 +220,8 @@ def test_oss_provisioning_and_review(browser) -> None:
                 people = find_resource(nodes, "people")
                 goals = find_resource(nodes, "goals")
                 actions = find_resource(nodes, "actions")
-                assert people and goals and actions
+                worklog = find_resource(nodes, "worklog")
+                assert people and goals and actions and worklog
 
                 goal_cr = post_json(
                     f"{busabase_url}/api/v1/bases/{goals['baseId']}/change-requests",
@@ -295,6 +302,12 @@ def test_oss_provisioning_and_review(browser) -> None:
                     page.locator("#reviewNote").fill("真实验收直接保存工作台决定。")
                     page.locator("[data-action-status='approved']").click()
                     page.locator(".action-notice").get_by_text("已保存").wait_for(timeout=10_000)
+                    page.locator("[data-outcome-open]").click()
+                    page.locator('#outcomeForm textarea[name="outcome"]').fill("已发送近况问候，对方说周五回复。")
+                    page.locator('#outcomeForm select[name="outcome_type"]').select_option("sent-awaiting-reply")
+                    page.locator('#outcomeForm button[type="submit"]').click()
+                    page.locator("#outcomeModal").wait_for(state="hidden", timeout=15_000)
+                    page.locator(".action-notice").get_by_text("等待回复").wait_for(timeout=10_000)
                     page.goto(f"{app_url}/#/goals")
                     page.wait_for_load_state("networkidle")
                     page.locator("#goalOpen").click()
@@ -324,12 +337,38 @@ def test_oss_provisioning_and_review(browser) -> None:
                 ]
                 assert len(goal_requests) == 1, requests
                 assert goal_requests[0]["status"] == "merged", goal_requests[0]
+                outcome_requests = [
+                    item
+                    for item in requests
+                    if "Record action outcome: 验收联系人：需要人工判断"
+                    in (((item.get("primaryOperation") or {}).get("headCommit") or {}).get("message") or "")
+                ]
+                wait_requests = [
+                    item
+                    for item in requests
+                    if "Create reply wait action for 验收联系人：需要人工判断"
+                    in (((item.get("primaryOperation") or {}).get("headCommit") or {}).get("message") or "")
+                ]
+                complete_requests = [
+                    item
+                    for item in requests
+                    if "Complete relationship action with outcome: 验收联系人：需要人工判断"
+                    in (((item.get("primaryOperation") or {}).get("headCommit") or {}).get("message") or "")
+                ]
+                assert len(outcome_requests) == 1, requests
+                assert len(wait_requests) == 1, requests
+                assert len(complete_requests) == 1, requests
+                assert all(item["status"] == "merged" for item in outcome_requests + wait_requests + complete_requests)
 
         with managed_process(busabase_command, REPO_ROOT, {}, f"{busabase_url}/api/health", timeout=90):
             nodes = read_json(f"{busabase_url}/api/v1/nodes?depth=2")
             assert sorted(resource_keys(nodes)) == sorted(EXPECTED_RESOURCE_KEYS)
             actions = find_resource(nodes, "actions")
+            worklog = find_resource(nodes, "worklog")
             encoded = urllib.parse.urlencode({"baseId": actions["baseId"]})
+            rows = read_json(f"{busabase_url}/api/v1/records?{encoded}")
+            assert len(rows if isinstance(rows, list) else rows.get("records", [])) == 2
+            encoded = urllib.parse.urlencode({"baseId": worklog["baseId"]})
             rows = read_json(f"{busabase_url}/api/v1/records?{encoded}")
             assert len(rows if isinstance(rows, list) else rows.get("records", [])) == 1
 

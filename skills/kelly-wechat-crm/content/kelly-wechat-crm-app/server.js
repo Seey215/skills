@@ -9,6 +9,7 @@ const gateway = createBusabaseAirAppLocalGateway({
   appId: "kelly-wechat-crm",
   successPath: "/",
   errorPath: "/",
+  requestTimeoutMs: 30_000,
 });
 
 app.get("/health", (context) => context.json({ ok: true, app: "kelly-wechat-crm" }));

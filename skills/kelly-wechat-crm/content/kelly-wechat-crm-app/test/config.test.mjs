@@ -25,7 +25,7 @@ test("ships a bounded deterministic relationship strategy scenario", () => {
   }
   assert.equal(recordKeys.length, 45);
   assert.equal(new Set(recordKeys).size, recordKeys.length);
-  assert.equal(appConfig.onboarding.version, 3);
+  assert.equal(appConfig.onboarding.version, 4);
   assert.equal(appConfig.onboarding.completionResource, "settings");
   assert.deepEqual(appConfig.onboarding.requiredFields, []);
   assert.ok(appConfig.onboarding.rationale.length > 0);

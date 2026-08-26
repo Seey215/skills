@@ -29,6 +29,12 @@ export const demoProvider = {
   async updateRecord({ recordId }) {
     return { id: `demo-change-${recordId}`, materialized: false, demo: true };
   },
+  async readRecord() {
+    return null;
+  },
+  async findRecord() {
+    return null;
+  },
   async createRecord({ baseKey, fields }) {
     return { id: `demo-${baseKey}-${Date.now()}`, materialized: false, demo: true, fields };
   },

@@ -70,20 +70,26 @@ test("keeps credentials out while limiting auto-merge to explicit app writes", a
     "js/providers/busabase-provider.js",
     "js/providers/demo-provider.js",
   ];
-  const source = (await Promise.all(files.map((file) => readFile(join(browserRoot, file), "utf8")))).join("\n");
+  const source = [
+    ...(await Promise.all(files.map((file) => readFile(join(browserRoot, file), "utf8")))),
+    await readFile(join(appRoot, "server.js"), "utf8"),
+  ].join("\n");
   assert.doesNotMatch(source, /BUSABASE_API_KEY|Authorization\s*:\s*[`'"]Bearer|__busabase_api__/i);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/);
   assert.match(source, /createBusabaseClient/);
   assert.match(source, /window\.location\.origin/);
   assert.match(source, /autoMerge:\s*true/);
   assert.doesNotMatch(source, /changeRequests\.(?:review|merge)/);
-  assert.match(source, /state\.runtime\.hosted \? null : await gate\.status\(\)/);
+  assert.doesNotMatch(source, /await gate\.status\(\)/);
+  assert.match(source, /state\.runtime\.hosted[\s\S]*local_companion_required/);
+  assert.match(source, /updateWithConfirmation/);
+  assert.match(source, /requestTimeoutMs:\s*30_000/);
   assert.match(source, /fetch\("__wechat\/status"/);
 });
 
 test("declares versioned onboarding in a real Busabase resource", async () => {
   const { appConfig } = await import(join(browserRoot, "js", "config.js"));
-  assert.equal(appConfig.onboarding.version, 3);
+  assert.equal(appConfig.onboarding.version, 4);
   assert.equal(appConfig.onboarding.completionResource, "settings");
   assert.deepEqual(appConfig.onboarding.requiredFields, []);
   assert.ok(appConfig.onboarding.rationale.length > 0);

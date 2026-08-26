@@ -63,7 +63,8 @@
             </div>
           </div>
           <div class="connector-actions">
-            <code id="wechatInitCommand" hidden>sudo wechat-cli-rs init</code>
+            <code id="wechatInitCommand" hidden>wechat-cli-rs init</code>
+            <code id="wechatLocalCommand" hidden>npm run start:local</code>
             <a id="wechatInstallLink" href="https://wechat-cli.com/" target="_blank" rel="noreferrer" hidden>打开官网</a>
             <button id="wechatRecheck" type="button">重新检测</button>
           </div>
@@ -75,6 +76,7 @@
               <div><span class="eyebrow" id="listEyebrow"></span><h2 id="listTitle"></h2></div>
               <span class="count" id="recordCount"></span>
             </div>
+            <div class="action-filters" id="actionFilters" role="tablist" aria-label="行动状态" hidden></div>
             <div class="state-message" id="loadingState" role="status"></div>
             <div class="state-message error" id="errorState" role="alert" hidden></div>
             <div class="record-list" id="recordList"></div>
@@ -164,6 +166,24 @@
           <button class="primary-action" id="candidatePromote" type="button" disabled>加入重点联系人</button>
         </footer>
       </section>
+    </div>
+    <div class="modal-backdrop" id="outcomeModal" hidden>
+      <form class="modal outcome-modal" id="outcomeForm" role="dialog" aria-modal="true" aria-labelledby="outcomeTitle">
+        <header class="modal-header">
+          <div><span class="eyebrow">Outcome</span><h2 id="outcomeTitle">记录执行结果</h2></div>
+          <button class="icon-button" id="outcomeClose" type="button" aria-label="关闭执行结果表单" title="关闭">x</button>
+        </header>
+        <div class="goal-form-body">
+          <label><span>实际发生了什么</span><textarea name="outcome" required rows="5" placeholder="记录已经执行的动作和可观察到的结果，不要写计划或猜测。"></textarea></label>
+          <label><span>结果类型</span><select name="outcome_type" required><option value="sent-awaiting-reply">已发出，等待回复</option><option value="positive-reply">收到积极回复</option><option value="negative-reply">收到拒绝或负面回复</option><option value="no-reply">到期仍无回复</option><option value="completed-other">其他已完成结果</option></select></label>
+          <p class="outcome-hint">记录后会写入工作日志；“等待回复”会另外创建一条等待行动。</p>
+          <p class="goal-form-status" id="outcomeFormStatus" role="status"></p>
+        </div>
+        <footer class="goal-form-footer">
+          <button type="button" id="outcomeCancel">取消</button>
+          <button class="primary-action" type="submit">保存执行结果</button>
+        </footer>
+      </form>
     </div>
     <script type="module" src="./js/app.js"></script>
   </body>

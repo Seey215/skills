@@ -127,11 +127,19 @@
       "options": {}
     },
     {
+      "slug": "operation-key",
+      "name": "操作键",
+      "type": "text",
+      "required": false,
+      "position": 9,
+      "options": {}
+    },
+    {
       "slug": "created-at",
       "name": "创建时间",
       "type": "date",
       "required": true,
-      "position": 9,
+      "position": 10,
       "options": {}
     }
   ],

@@ -154,6 +154,10 @@
             "name": "准备执行"
           },
           {
+            "id": "awaiting-result",
+            "name": "等待结果"
+          },
+          {
             "id": "snoozed",
             "name": "已延后"
           },
@@ -195,6 +199,71 @@
       "required": false,
       "position": 13,
       "options": {}
+    },
+    {
+      "slug": "outcome-type",
+      "name": "结果类型",
+      "type": "select",
+      "required": false,
+      "position": 14,
+      "options": {
+        "choices": [
+          {
+            "id": "sent-awaiting-reply",
+            "name": "已发送，等待回复"
+          },
+          {
+            "id": "positive-reply",
+            "name": "积极回复"
+          },
+          {
+            "id": "negative-reply",
+            "name": "拒绝或不合适"
+          },
+          {
+            "id": "no-reply",
+            "name": "暂未回复"
+          },
+          {
+            "id": "completed-other",
+            "name": "其他已完成结果"
+          }
+        ]
+      }
+    },
+    {
+      "slug": "outcome",
+      "name": "实际结果",
+      "type": "longtext",
+      "required": false,
+      "position": 15,
+      "options": {}
+    },
+    {
+      "slug": "outcome-at",
+      "name": "结果时间",
+      "type": "date",
+      "required": false,
+      "position": 16,
+      "options": {}
+    },
+    {
+      "slug": "operation-key",
+      "name": "操作键",
+      "type": "text",
+      "required": false,
+      "position": 17,
+      "options": {}
+    },
+    {
+      "slug": "parent-action",
+      "name": "上一行动",
+      "type": "relation",
+      "required": false,
+      "position": 18,
+      "options": {
+        "targetBaseSlug": "actions"
+      }
     }
   ],
   "views": []

@@ -64,6 +64,10 @@ the unavailable operation. Never invent a second WeChat reader or data backend.
 - Basic sync uses only `contacts` and bounded `sessions`.
 - Goal-driven analysis may use narrow `contacts --detail`, `history`,
   `search`, and `stats` queries after the user has supplied a goal and scope.
+  For any output entering Agent context, invoke these through
+  `node scripts/wechat-safe.mjs <command> ...`; do not paste or pipe direct CLI
+  output into a prompt. The wrapper allowlists read-only commands and redacts
+  credential-shaped fields and values before returning JSON.
   Prefer one person and an explicit time window over broad history scans.
 - Never run `export --output` without separate approval. Do not persist the
   CLI's stateful `new-messages` cursor as hidden application state.
@@ -123,7 +127,7 @@ Safe connector/readiness state, bounded analysis preferences, sync counts,
 timestamps, CLI version, and Agent lock metadata. Never store tokens, message
 history, or Vault values here.
 
-The product onboarding version is **3**. After Busabase and WeChat CLI are
+The product onboarding version is **4**. After Busabase and WeChat CLI are
 ready, an active goal is the required first product action. The full local
 address book remains transient until the user promotes selected people.
 
@@ -187,7 +191,7 @@ When the user asks the Agent to analyze relationships or generate a strategy:
    history merely because the Space contains many contacts.
 3. For each selected target, query the narrowest useful combination of
    `contacts --detail`, `history`, `search`, and `stats` with an
-   explicit time range/limit.
+   explicit time range/limit through `node scripts/wechat-safe.mjs`.
 4. Separate observed evidence from inference. Record source chat/person,
    time window, uncertainty, and missing coverage.
 5. Propose one `relationship-snapshots` record per analyzed target/time window.
@@ -211,7 +215,10 @@ When the user asks the Agent to analyze relationships or generate a strategy:
   suggested remark/action without editing WeChat.
 - `relationship-snapshots`: compare evidence-backed analyses over time.
 - `actions`: add one review note and choose prepare, request changes, snooze, or
-  done. The AirApp saves the explicit user decision with `autoMerge: true`.
+  dismiss. Approval means ready to execute, not done. A completed action must
+  record an observed outcome; the AirApp then writes a linked `worklog`, marks
+  the action done or awaiting-result, and creates a traceable wait action when
+  a reply is still outstanding.
 - `worklog`: read the user-Agent operating history and outcomes.
 - `settings`: inspect sanitized Busabase/connector/resource readiness.
 

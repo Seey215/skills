@@ -1184,14 +1184,7 @@ export const appConfig = {
     },
   ].sort((left, right) => baseOrder.indexOf(left.key) - baseOrder.indexOf(right.key)),
   permissions: {
-    readProcedures: [
-      "nodes.list",
-      "nodes.get",
-      "bases.get",
-      "records.list",
-      "records.get",
-      "records.getByField",
-    ],
+    readProcedures: ["nodes.list", "nodes.get", "bases.get", "records.list", "records.get", "records.getByField"],
     setupProcedures: ["nodes.createChangeRequest", "nodes.updateMetadata"],
     writeProcedures: ["bases.createChangeRequest", "records.changeRequest"],
   },

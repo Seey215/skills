@@ -24,6 +24,7 @@ const state = {
   wechatStatus: null,
   settingsTab: "guide",
   notice: "",
+  flash: "",
   candidateResults: [],
   selectedCandidates: new Set(),
   actionFilter: "review",
@@ -227,7 +228,7 @@ function renderList() {
     }
     return;
   }
-  const secondaryFields = (base?.fields || []).slice(1, 4);
+  const secondaryFields = (base?.fields || []).filter((field) => field.slug !== "username").slice(1, 4);
   byId("recordList").innerHTML = records
     .map(
       (record) => `
@@ -253,6 +254,7 @@ function renderDetail() {
   setText("detailTitle", displayValue(record.fields?.[primaryField()]));
   byId("detailFields").innerHTML = (base?.fields || [])
     .slice(1)
+    .filter((field) => field.slug !== "username")
     .map(
       (field) => `
     <div class="field-row"><span>${escapeHtml(field.name)}</span><strong>${escapeHtml(displayValue(record.fields?.[field.slug]))}</strong></div>
@@ -351,6 +353,11 @@ function renderSettings() {
     .join("");
 }
 
+function renderFlash() {
+  byId("appNotice").hidden = !state.flash;
+  setText("appNoticeText", state.flash);
+}
+
 // Connection UX Contract gate — `busabase-sdk/airapp-gate`, configured. The
 // three screens (connect / choose a Space / initialize the workspace), the
 // state machine behind them, and their stylesheet all live in the SDK; only
@@ -378,6 +385,8 @@ function render() {
   setText("brandName", appConfig.appName);
   setText("brandDescription", appConfig.description);
   setText("viewEyebrow", messages.overview);
+  byId("modeBadge").hidden = !isDemo();
+  setText("modeBadge", "Demo · 刷新后重置");
   setText("viewTitle", appConfig.appName);
   setText("viewSummary", appConfig.ui.summary);
   setText("attentionTitle", messages.attentionTitle);
@@ -391,6 +400,7 @@ function render() {
   renderNavigation();
   renderMetrics();
   renderWechatStatus();
+  renderFlash();
   renderList();
   renderDetail();
   renderSettings();
@@ -707,10 +717,11 @@ async function submitGoal(event) {
       const id = result.id;
       state.payload.records.push({ id, headCommitId: `demo-head-${id}`, baseKey: "goals", fields });
       state.activeBase = "people";
-      state.selectedRecordId = id;
+      state.selectedRecordId = null;
       byId("goalForm").reset();
       setGoalModal(false);
       window.location.hash = "#/people";
+      state.flash = "目标已保存（Demo 临时预览）。下一步：从本机通讯录选择重点联系人。";
       render();
     } else {
       state.payload = await state.provider.getState();
@@ -719,7 +730,7 @@ async function submitGoal(event) {
       byId("goalForm").reset();
       setGoalModal(false);
       window.location.hash = "#/people";
-      state.notice = reconciled
+      state.flash = reconciled
         ? "已从 Busabase 回读确认，目标只创建了一次。"
         : result?.id
           ? `${messages.goalSaved} ${result.id}`
@@ -776,7 +787,7 @@ function renderCandidates() {
       (candidate) => `
         <label class="candidate-row">
           <input type="checkbox" value="${escapeHtml(candidate.username)}">
-          <span><strong>${escapeHtml(candidate.displayName)}</strong><small>${escapeHtml(candidate.remark || candidate.username)}</small></span>
+          <span><strong>${escapeHtml(candidate.displayName)}</strong><small>${escapeHtml(candidate.remark || "微信联系人")}</small></span>
         </label>`,
     )
     .join("");
@@ -859,6 +870,7 @@ async function promoteCandidates() {
     setCandidateModal(false);
     state.activeBase = "people";
     window.location.hash = "#/people";
+    state.flash = `已加入 ${selected.length} 位重点联系人${state.provider.name === "demo" ? "（Demo 临时预览）" : ""}。`;
     render();
   } catch (error) {
     setText("candidateStatus", `加入失败：${error instanceof Error ? error.message : error}`);
@@ -933,6 +945,10 @@ byId("searchInput").addEventListener("input", (event) => {
 });
 byId("loadMore").addEventListener("click", loadMore);
 byId("wechatRecheck").addEventListener("click", load);
+byId("appNoticeClose").addEventListener("click", () => {
+  state.flash = "";
+  renderFlash();
+});
 byId("discoverOpen").addEventListener("click", () => setCandidateModal(true));
 byId("candidateClose").addEventListener("click", () => setCandidateModal(false));
 byId("candidateSearchForm").addEventListener("submit", searchCandidates);
@@ -993,7 +1009,7 @@ const setSettings = (open) => {
   if (open) renderSettings();
 };
 const openSettings = () => {
-  window.location.hash = "#/settings";
+  window.location.hash = "#/help-settings";
   setSettings(true);
 };
 const closeSettings = () => {
@@ -1022,7 +1038,7 @@ byId("settingsModal").addEventListener("click", (event) => {
 });
 function applyHashRoute() {
   const parts = window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
-  if (parts[0] === "settings") {
+  if (parts[0] === "help-settings") {
     setSettings(true);
     return;
   }
@@ -1045,12 +1061,16 @@ function applyHashRoute() {
   if (state.payload) render();
 }
 window.addEventListener("hashchange", applyHashRoute);
-window.addEventListener("resize", () => {
-  if (!window.matchMedia("(max-width: 720px)").matches) {
+function syncResponsiveShell() {
+  if (window.matchMedia("(max-width: 720px)").matches) {
+    document.body.classList.remove("sidebar-collapsed");
+  } else {
     setMobileSidebar(false);
     setMobileDetail(false);
   }
-});
+}
+window.addEventListener("resize", syncResponsiveShell);
 
 applyHashRoute();
+syncResponsiveShell();
 load();

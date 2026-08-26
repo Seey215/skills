@@ -76,7 +76,7 @@ export async function readWechatStatus(options = {}) {
   }
 
   try {
-    const contactsResult = await execute(bin, ["contacts", "--format", "json"], commandOptions);
+    const contactsResult = await execute(bin, ["contacts", "--limit", "500", "--format", "json"], commandOptions);
     const contacts = parseArray(contactsResult.stdout);
     return {
       ready: true,
@@ -126,7 +126,11 @@ export async function searchWechatContacts(query, options = {}) {
       const result = await execFile(file, args, execOptions);
       return { stdout: String(result.stdout || ""), stderr: String(result.stderr || "") };
     });
-  const result = await execute(bin, ["contacts", "--format", "json"], commandOptions);
+  const result = await execute(
+    bin,
+    ["contacts", "--query", String(query).trim(), "--limit", "20", "--format", "json"],
+    commandOptions,
+  );
   const contacts = parseArray(result.stdout)
     .filter((contact) => !String(contact.username || "").includes("@chatroom"))
     .filter((contact) =>

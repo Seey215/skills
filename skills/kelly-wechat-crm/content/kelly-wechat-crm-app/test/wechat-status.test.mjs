@@ -3,11 +3,13 @@ import test from "node:test";
 import { readWechatStatus, searchWechatContacts } from "../wechat-status.mjs";
 
 test("returns only sanitized readiness for a healthy connector", async () => {
+  let contactArgs;
   const execute = async (_bin, args) => {
     if (args[0] === "--version") return { stdout: "wechat-cli-rs 0.1.3\n", stderr: "" };
     if (args[0] === "sessions") {
       return { stdout: JSON.stringify([{ chat: "private chat", last_message: "private message" }]), stderr: "" };
     }
+    contactArgs = args;
     return {
       stdout: JSON.stringify([
         { username: "wxid_private", nick_name: "Private name" },
@@ -22,6 +24,7 @@ test("returns only sanitized readiness for a healthy connector", async () => {
   assert.equal(status.version, "0.1.3");
   assert.equal(status.contactsCount, 2);
   assert.equal(status.sessionsReadable, true);
+  assert.deepEqual(contactArgs, ["contacts", "--limit", "500", "--format", "json"]);
   assert.equal(JSON.stringify(status).includes("Private"), false);
 });
 
@@ -41,16 +44,21 @@ test("distinguishes an installed but uninitialized connector", async () => {
 });
 
 test("searches people locally without returning groups or unrelated contacts", async () => {
-  const execute = async () => ({
-    stdout: JSON.stringify([
-      { username: "wxid_chen", nick_name: "陈老板", remark: "连锁餐饮" },
-      { username: "wxid_other", nick_name: "小雨", remark: "摄影" },
-      { username: "growth@chatroom", nick_name: "餐饮增长群", remark: "" },
-    ]),
-    stderr: "",
-  });
+  let contactArgs;
+  const execute = async (_bin, args) => {
+    contactArgs = args;
+    return {
+      stdout: JSON.stringify([
+        { username: "wxid_chen", nick_name: "陈老板", remark: "连锁餐饮" },
+        { username: "wxid_other", nick_name: "小雨", remark: "摄影" },
+        { username: "growth@chatroom", nick_name: "餐饮增长群", remark: "" },
+      ]),
+      stderr: "",
+    };
+  };
   const result = await searchWechatContacts("餐饮", { execute });
   assert.equal(result.totalMatches, 1);
+  assert.deepEqual(contactArgs, ["contacts", "--query", "餐饮", "--limit", "20", "--format", "json"]);
   assert.deepEqual(result.results, [{ username: "wxid_chen", displayName: "陈老板", remark: "连锁餐饮" }]);
 });
 

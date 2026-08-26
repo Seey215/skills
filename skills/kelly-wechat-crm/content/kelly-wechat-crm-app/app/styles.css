@@ -261,9 +261,59 @@ body.sidebar-collapsed .nav-item {
 }
 .main {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
+}
+.view-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mode-badge {
+  padding: 2px 6px;
+  border: 1px solid #d5a857;
+  border-radius: 999px;
+  background: #fff8e9;
+  color: #805b17;
+  font-size: 9px;
+  font-weight: 750;
+}
+.mode-badge[hidden] {
+  display: none;
+}
+.app-notice {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 650;
+}
+.app-notice[hidden] {
+  display: none;
+}
+.app-notice span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.app-notice button {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.app-notice button:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .connector-status {
   display: flex;
@@ -969,7 +1019,7 @@ h2 {
     display: none;
   }
   .main {
-    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
     height: 100dvh;
   }
   .mobile-bar {

@@ -40,7 +40,7 @@
         </header>
         <section class="workspace-header">
           <div>
-            <span class="eyebrow" id="viewEyebrow"></span>
+            <div class="view-meta"><span class="eyebrow" id="viewEyebrow"></span><span class="mode-badge" id="modeBadge" hidden></span></div>
             <h1 id="viewTitle"></h1>
             <p id="viewSummary"></p>
           </div>
@@ -68,6 +68,10 @@
             <a id="wechatInstallLink" href="https://wechat-cli.com/" target="_blank" rel="noreferrer" hidden>打开官网</a>
             <button id="wechatRecheck" type="button">重新检测</button>
           </div>
+        </section>
+        <section class="app-notice" id="appNotice" role="status" hidden>
+          <span id="appNoticeText"></span>
+          <button id="appNoticeClose" type="button" aria-label="关闭提示" title="关闭">x</button>
         </section>
         <section class="metrics" id="metrics" aria-label="Summary metrics"></section>
         <section class="content-split" id="contentSplit">
@@ -135,7 +139,7 @@
         </div>
         <footer class="goal-form-footer">
           <button type="button" id="goalCancel">取消</button>
-          <button class="primary-action" type="submit">提交目标 CR</button>
+          <button class="primary-action" type="submit">保存目标</button>
         </footer>
       </form>
     </div>

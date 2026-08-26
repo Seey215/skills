@@ -110,6 +110,7 @@ def test_demo_ui(browser, base_url: str) -> None:
     page.locator('#goalForm button[type="submit"]').click()
     page.locator("#goalModal").wait_for(state="hidden")
     assert "/people" in page.url
+    assert "目标已保存" in page.locator("#appNotice").inner_text()
 
     page.locator("#discoverOpen").click()
     page.locator("#candidateQuery").fill("Lina")
@@ -117,12 +118,18 @@ def test_demo_ui(browser, base_url: str) -> None:
     page.locator(".candidate-row input").check()
     page.locator("#candidatePromote").click()
     page.locator(".record-row", has_text="Lina").wait_for(timeout=5_000)
+    assert "已加入 1 位重点联系人" in page.locator("#appNotice").inner_text()
 
     page.locator("#settingsOpen").click()
     assert page.locator("#settingsModal").is_visible()
+    assert "#/help-settings" in page.url
     page.locator("[data-settings-tab='resources']").click()
     assert page.locator("#settingsGrid").get_by_text("kelly-wechat-crm-actions").is_visible()
     page.locator("#settingsClose").click()
+    page.goto(f"{base_url}/?demo=1#/settings")
+    page.wait_for_load_state("networkidle")
+    assert page.locator("#listTitle").inner_text() == "系统状态"
+    assert page.locator("#settingsModal").is_hidden()
     page.locator("#sidebarClose").click()
     assert page.locator("body.sidebar-collapsed").count() == 1
     assert_no_horizontal_overflow(page)

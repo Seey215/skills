@@ -222,6 +222,8 @@ for (const route of ["/auth/status", "/auth/start", "/auth/callback", "/auth/spa
 // obtaining a credential, which a hosted-only runtime never needs.
 if (!contents["app/js/app.js"].includes("createAirAppConnectGate"))
   throw new Error("Browser setup must use busabase-sdk/airapp-gate's createAirAppConnectGate().");
+if (!contents["app/js/app.js"].includes('window.location.hash = "#/help-settings"'))
+  throw new Error("Help & Settings must use a route distinct from the settings Base.");
 if (!contents["app/js/app.js"].includes('fetch("__wechat/status"'))
   throw new Error("Browser setup must check the local WeChat connector after the Busabase gate.");
 if (!serverSource.includes('"/__wechat/status"'))
